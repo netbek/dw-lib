@@ -8,6 +8,38 @@ import re
 import yaml
 
 
+class TestDuckDBSystemSettings:
+    @pytest.fixture(scope="function")
+    def settings_dict(self) -> Generator[dict, Any, None]:
+        with open("/app/tests/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+            settings = yaml.safe_load(fp)
+        yield settings
+
+    def test_memory_limit_absolute_value(self, settings_dict: dict):
+        """Test that memory limit as absolute value is preserved."""
+        settings_dict["peers"]["duckdb"]["settings"] = {"memory_limit": "8GB"}
+        settings = ZincSettings(**settings_dict)
+        assert re.search(r"^\d+(\.\d+)?GB$", settings.peers["duckdb"].settings.memory_limit)
+
+    def test_memory_limit_percentage_value(self, settings_dict: dict):
+        """Test that memory limit as percentage value is converted to absolute value in GB."""
+        settings_dict["peers"]["duckdb"]["settings"] = {"memory_limit": "50%"}
+        settings = ZincSettings(**settings_dict)
+        assert re.search(r"^\d+(\.\d+)?GB$", settings.peers["duckdb"].settings.memory_limit)
+
+    def test_threads_absolute_value(self, settings_dict: dict):
+        """Test that threads as absolute value is preserved."""
+        settings_dict["peers"]["duckdb"]["settings"] = {"threads": 2}
+        settings = ZincSettings(**settings_dict)
+        assert isinstance(settings.peers["duckdb"].settings.threads, int)
+
+    def test_threads_percentage_value(self, settings_dict: dict):
+        """Test that threads as percentage value is converted to absolute value."""
+        settings_dict["peers"]["duckdb"]["settings"] = {"threads": "50%"}
+        settings = ZincSettings(**settings_dict)
+        assert isinstance(settings.peers["duckdb"].settings.threads, int)
+
+
 class TestCanConnect:
     @pytest.fixture(scope="function")
     def settings(self) -> Generator[ZincSettings, Any, None]:

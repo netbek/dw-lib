@@ -161,13 +161,13 @@ class ZincSettings(BaseModel):
             # Check that source peer exists
             if mirror_settings.peers.source not in self.peers:
                 raise ValueError(
-                    f"mirrors.{mirror_name}.peers.source references unknown peer '{mirror_settings.peers.source}'"
+                    f"mirrors.{mirror_name}.peers.source references unknown peer '{mirror_settings.peers.source}'."
                 )
 
             # Check that destination peer exists
             if mirror_settings.peers.destination not in self.peers:
                 raise ValueError(
-                    f"mirrors.{mirror_name}.peers.destination references unknown peer '{mirror_settings.peers.destination}'"
+                    f"mirrors.{mirror_name}.peers.destination references unknown peer '{mirror_settings.peers.destination}'."
                 )
 
             source_peer = self.peers[mirror_settings.peers.source]
@@ -187,13 +187,13 @@ class ZincSettings(BaseModel):
                     or not destination_table_identifier.is_fully_qualified()
                 ):
                     raise ValueError(
-                        f"mirrors.{mirror_name}.tables source and destination table identifiers must be fully qualified"
+                        f"mirrors.{mirror_name}.tables source and destination table identifiers must be fully qualified."
                     )
 
                 # Check that table indexes are supported by adapter
                 if table.indexes and destination_peer.type != AdapterType.POSTGRES:
                     raise ValueError(
-                        f"Table indexes are only supported for '{AdapterType.POSTGRES}' adapter"
+                        f"Table indexes are not supported by '{destination_peer.type}' adapter."
                     )
 
         return self

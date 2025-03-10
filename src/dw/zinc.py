@@ -27,7 +27,7 @@ class Zinc:
             elif peer_settings.type == AdapterType.POSTGRES:
                 peer_class = PostgresAdapter
             else:
-                raise ValueError(f"Peer type '{peer_settings.type}' not suppported.")
+                raise ValueError(f"Peer type '{peer_settings.type}' is not suppported.")
 
             self.peers[peer_name] = peer_class(peer_settings)
 

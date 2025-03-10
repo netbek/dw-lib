@@ -15,6 +15,12 @@ class TestDuckDBSystemSettings:
             settings = yaml.safe_load(fp)
         yield settings
 
+    def test_extra_settings(self, settings_dict: dict):
+        """Test that extra settings are allowed."""
+        settings_dict["peers"]["duckdb"]["settings"] = {"foo": "bar"}
+        settings = ZincSettings(**settings_dict)
+        assert settings.peers["duckdb"].settings.foo == "bar"
+
     def test_memory_limit_absolute_value(self, settings_dict: dict):
         """Test that memory limit as absolute value is preserved."""
         settings_dict["peers"]["duckdb"]["settings"] = {"memory_limit": "8GB"}

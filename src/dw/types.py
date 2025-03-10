@@ -3,6 +3,9 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import Any, Dict, List, Optional
 
+import math
+import psutil
+
 
 class AdapterType(StrEnum):
     DUCKDB = "duckdb"
@@ -71,11 +74,49 @@ def table_identifier_from_string(
     return class_.from_string(identifier)
 
 
+def calculate_memory_limit(percent) -> str:
+    amount = round(psutil.virtual_memory().total / (1024**3) * percent / 100, 1)
+    return f"{amount}GB"
+
+
+def calculate_threads(percent) -> int:
+    return int(math.floor(psutil.cpu_count(logical=True) * percent / 100))
+
+
+class DuckDBSystemSettings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    memory_limit: Optional[str] = calculate_memory_limit(80)
+    threads: Optional[int | str] = calculate_threads(100)
+
+    @field_validator("memory_limit", mode="before")
+    @classmethod
+    def convert_memory_limit(cls, value):
+        if isinstance(value, str) and value.endswith("%"):
+            try:
+                percent = float(value.strip("%"))
+                return calculate_memory_limit(percent)
+            except ValueError:
+                raise ValueError("Invalid percentage format for memory_limit.")
+        return value
+
+    @field_validator("threads", mode="before")
+    @classmethod
+    def convert_threads(cls, value):
+        if isinstance(value, str) and value.endswith("%"):
+            try:
+                percent = float(value.strip("%"))
+                return calculate_threads(percent)
+            except ValueError:
+                raise ValueError("Invalid percentage format for threads.")
+        return value
+
+
 class DuckDBSettings(BaseModel):
     database: Path | str
     schema_: str = Field(default="main", serialization_alias="schema")
-    extensions: Optional[List[str]] = []
-    settings: Optional[Dict[str, Any]] = {}
+    extensions: Optional[List[str]] = None
+    settings: Optional[DuckDBSystemSettings] = None
 
 
 class PostgresSettings(BaseModel):
@@ -107,7 +148,7 @@ class ZincMirrorPeersSettings(BaseModel):
 class ZincMirrorTableIndexSettings(BaseModel):
     name: Optional[str] = None
     columns: List[str] = Field(min_length=1)
-    type: TableIndexType = Field(default=TableIndexType.BTREE)
+    type: TableIndexType = TableIndexType.BTREE
 
     @classmethod
     def generate_index_name(cls, adapter_type: AdapterType, table: str, columns: List[str]) -> str:

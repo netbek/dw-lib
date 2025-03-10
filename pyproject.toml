@@ -1,0 +1,63 @@
+[project]
+name = "dw"
+version = "0.0.1"
+description = "Tools for working with Postgres, ClickHouse and DuckDB."
+readme = "README.md"
+authors = [
+    { name = "Hein Bekker", email = "hein@netbek.co.za" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb==1.2.1",
+    "duckdb-engine==0.15.0",
+    "psycopg2-binary==2.9.10",
+    "pydantic==2.10.6",
+    "pyyaml==6.0.2",
+    "sqlalchemy==2.0.38",
+    "sqlmodel==0.0.24",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "isort==6.0.1",
+    "pandas==2.2.3",
+    "pytest==8.3.5",
+    "ruff==0.9.10",
+]
+
+[tool.isort]
+force_alphabetical_sort = true
+line_length = 100
+profile = "black"
+py_version = 312
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
+
+[tool.pytest.ini_options]
+addopts = "--no-header -vv"
+norecursedirs = [
+    "*.egg",
+    ".*",
+    "_darcs",
+    "build",
+    "CVS",
+    "dist",
+    "node_modules",
+    "venv",
+    "{arch}",
+    ".venv",
+    "__pycache__",
+]
+python_classes = ["Test*"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+testpaths = ["tests"]

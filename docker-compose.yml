@@ -1,0 +1,30 @@
+name: dw-lib
+
+services:
+  postgres:
+    image: postgres:17.4-alpine3.21
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+      - TZ=UTC
+
+  app:
+    image: dw-lib-app:latest
+    container_name: app
+    build: .
+    environment:
+      - TZ=UTC
+    working_dir: /app
+    volumes:
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./README.md:/app/README.md
+      - ./uv.lock:/app/uv.lock
+      - ./src:/app/src
+      - ./tests:/app/tests
+    depends_on:
+      - postgres
+    stop_grace_period: 0s
+    command: /bin/bash
+    stdin_open: true
+    tty: true

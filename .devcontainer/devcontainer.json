@@ -1,0 +1,45 @@
+{
+  "name": "dw-lib",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/app",
+  "shutdownAction": "none",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.isort",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "njpwerner.autodocstring",
+        "samuelcolvin.jinjahtml",
+        "tamasfe.even-better-toml",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+          },
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        },
+        "autoDocstring.startOnNewLine": true,
+        "breadcrumbs.enabled": false,
+        "editor.formatOnSave": false,
+        "files.associations": {
+          "*.sql": "jinja-sql"
+        },
+        "files.eol": "\n",
+        "isort.args": ["--settings-path", "/app/pyproject.toml"],
+        "isort.importStrategy": "fromEnvironment",
+        "python.defaultInterpreterPath": "/app/.venv/bin/python",
+        "python.experiments.enabled": false,
+        "python.languageServer": "Pylance",
+        "ruff.format.args": ["--config", "/app/pyproject.toml"],
+        "ruff.organizeImports": false,
+        "telemetry.telemetryLevel": "off"
+      }
+    }
+  }
+}

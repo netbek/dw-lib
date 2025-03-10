@@ -26,22 +26,25 @@ class DuckDBAdapter(BaseAdapter):
     def create_client(self) -> Generator[duckdb.DuckDBPyConnection, Any, None]:
         conn = duckdb.connect(self.settings.database)
 
-        # Apply settings before installing extensions, in case a custom home directory is specified
-        for name, value in self.settings.settings.items():
-            # Generate quoted value because SET statement does not support parameters
-            if isinstance(value, int):
-                quoted_value = value
-            else:
-                quoted_value = f"'{value}'"
+        if self.settings.settings:
+            # Apply settings before installing extensions, in case a custom home directory is specified
+            for name, value in self.settings.settings.model_dump().items():
+                # Generate quoted value because SET statement does not support parameters
+                if isinstance(value, int):
+                    quoted_value = value
+                else:
+                    quoted_value = f"'{value}'"
 
-            conn.execute(f"set {name} to {quoted_value};")
+                statement = f"set {name} to {quoted_value};"
+                conn.execute(statement)
 
-        for extension in self.settings.extensions:
-            statement = f"""
-            install {extension};
-            load {extension};
-            """
-            conn.execute(statement)
+        if self.settings.extensions:
+            for extension in self.settings.extensions:
+                statement = f"""
+                install {extension};
+                load {extension};
+                """
+                conn.execute(statement)
 
         yield conn
 

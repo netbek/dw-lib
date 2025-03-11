@@ -8,14 +8,14 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "duckdb==1.2.1",
-    "duckdb-engine==0.15.0",
-    "psutil==7.0.0",
-    "psycopg2-binary==2.9.10",
-    "pydantic==2.10.6",
-    "pyyaml==6.0.2",
-    "sqlalchemy==2.0.38",
-    "sqlmodel==0.0.24",
+    "duckdb>=1.2.1",
+    "duckdb-engine>=0.15.0",
+    "psutil>=7.0.0",
+    "psycopg2-binary>=2.9.10",
+    "pydantic>=2.10.6",
+    "pyyaml>=6.0.2",
+    "sqlalchemy>=2.0.38",
+    "sqlmodel>=0.0.24",
 ]
 
 [build-system]
@@ -24,10 +24,10 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "isort==6.0.1",
-    "pandas==2.2.3",
-    "pytest==8.3.5",
-    "ruff==0.9.10",
+    "isort>=6.0.1",
+    "pandas>=2.2.3",
+    "pytest>=8.3.5",
+    "ruff>=0.9.10",
 ]
 
 [tool.isort]

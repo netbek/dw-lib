@@ -83,22 +83,22 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "duckdb", specifier = "==1.2.1" },
-    { name = "duckdb-engine", specifier = "==0.15.0" },
-    { name = "psutil", specifier = "==7.0.0" },
-    { name = "psycopg2-binary", specifier = "==2.9.10" },
-    { name = "pydantic", specifier = "==2.10.6" },
-    { name = "pyyaml", specifier = "==6.0.2" },
-    { name = "sqlalchemy", specifier = "==2.0.38" },
-    { name = "sqlmodel", specifier = "==0.0.24" },
+    { name = "duckdb", specifier = ">=1.2.1" },
+    { name = "duckdb-engine", specifier = ">=0.15.0" },
+    { name = "psutil", specifier = ">=7.0.0" },
+    { name = "psycopg2-binary", specifier = ">=2.9.10" },
+    { name = "pydantic", specifier = ">=2.10.6" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "sqlalchemy", specifier = ">=2.0.38" },
+    { name = "sqlmodel", specifier = ">=0.0.24" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "isort", specifier = "==6.0.1" },
-    { name = "pandas", specifier = "==2.2.3" },
-    { name = "pytest", specifier = "==8.3.5" },
-    { name = "ruff", specifier = "==0.9.10" },
+    { name = "isort", specifier = ">=6.0.1" },
+    { name = "pandas", specifier = ">=2.2.3" },
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "ruff", specifier = ">=0.9.10" },
 ]
 
 [[package]]

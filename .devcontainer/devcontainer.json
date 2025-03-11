@@ -36,7 +36,8 @@
         "python.defaultInterpreterPath": "/app/.venv/bin/python",
         "python.experiments.enabled": false,
         "python.languageServer": "Pylance",
-        "ruff.format.args": ["--config", "/app/pyproject.toml"],
+        "ruff.configuration": "/home/analyst/pyproject.toml",
+        "ruff.nativeServer": "on",
         "ruff.organizeImports": false,
         "telemetry.telemetryLevel": "off"
       }

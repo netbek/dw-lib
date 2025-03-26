@@ -53,6 +53,6 @@ services:
       - clickhouse
       - postgres
     stop_grace_period: 0s
-    command: /bin/bash
+    command: /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- /bin/bash
     stdin_open: true
     tty: true

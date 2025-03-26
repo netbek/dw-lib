@@ -9,6 +9,9 @@ RUN apt-get autoremove --yes && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/81b1373f17855a4dc21156cfe1694c31d7d1792e/wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
 WORKDIR /app
 
 COPY pyproject.toml /app/pyproject.toml

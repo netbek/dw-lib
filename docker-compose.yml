@@ -2,6 +2,7 @@ name: dw-lib
 
 services:
   clickhouse:
+    container_name: clickhouse
     image: clickhouse/clickhouse-server:25.3.1.2703-alpine
     environment:
       - CLICKHOUSE_USER=default
@@ -9,18 +10,35 @@ services:
       - CLICKHOUSE_DB=default
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - TZ=UTC
+    healthcheck:
+      test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    deploy:
+      restart_policy:
+        condition: on-failure
 
   postgres:
+    container_name: postgres
     image: postgres:17.4-alpine3.21
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test
       - TZ=UTC
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    deploy:
+      restart_policy:
+        condition: on-failure
 
   app:
-    image: dw-lib-app:latest
     container_name: app
+    image: dw-lib-app:latest
     build: .
     environment:
       - TZ=UTC

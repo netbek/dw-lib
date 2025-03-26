@@ -44,10 +44,10 @@ class PeerDB:
     def config(self) -> dict:
         return self._config
 
-    def _load_config_yaml(self) -> dict:
+    def _load_config_data(self) -> dict:
         with open(self._config_path) as fp:
-            config = yaml.safe_load(fp)
-        return config
+            data = yaml.safe_load(fp)
+        return data
 
     def _load_config(self) -> dict:
         def process_node(node: dict) -> dict:
@@ -63,7 +63,7 @@ class PeerDB:
 
             return node
 
-        config = self._load_config_yaml()
+        config = self._load_config_data()
 
         if "users" not in config:
             config["users"] = {}

@@ -1,0 +1,52 @@
+api_url: http://localhost:3000/api
+
+settings:
+  PEERDB_NULLABLE: "true"
+
+peers:
+  source:
+    type: 3
+    postgres_config:
+      host: postgres
+      port: 5432
+      user: postgres
+      password: postgres
+      database: test
+
+  destination:
+    type: 8
+    clickhouse_config:
+      host: clickhouse
+      http_port: 8123
+      tcp_port: 9000
+      user: default
+      password: default
+      database: default
+
+mirrors:
+  +do_initial_snapshot: false
+  +resync: false
+
+  cdc_small:
+    source_name: source
+    destination_name: destination
+    table_mappings:
+    - source_table_identifier: public.table_1
+      destination_table_identifier: table_1
+    resync: true
+
+  cdc_large:
+    source_name: source
+    destination_name: destination
+    table_mappings:
+    - source_table_identifier: public.table_2
+      destination_table_identifier: table_2
+    - source_table_identifier: public.table_3
+      destination_table_identifier: table_3
+
+publications:
+  publication_1:
+  - private.table_1
+  - private.table_2
+  publication_2:
+  - private.table_3

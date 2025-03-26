@@ -57,21 +57,6 @@ class BaseTest:
 
 
 class TestEmptyConfig(BaseTest):
-    @pytest.fixture(scope="function")
-    def postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[List[Table], Any, None]:
-        for table_def in table_defs:
-            postgres_adapter.create_table(*table_def)
-
-        table_names = [table_def[0] for table_def in table_defs]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
     def test_func(self, monkeypatch):
         monkeypatch.setattr("dw.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
         expected = {
@@ -93,6 +78,7 @@ class TestSourcePeerMissingTable(BaseTest):
         for table_def in table_defs[:1]:
             postgres_adapter.create_table(*table_def)
 
+        # Create some tables
         table_names = [table_def[0] for table_def in table_defs[:1]]
         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
 
@@ -118,6 +104,7 @@ class TestOK(BaseTest):
         for table_def in table_defs:
             postgres_adapter.create_table(*table_def)
 
+        # Create all tables
         table_names = [table_def[0] for table_def in table_defs]
         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
 

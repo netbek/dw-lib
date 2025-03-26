@@ -20,5 +20,5 @@ jobs:
 
       - run: |
           docker compose up -d
-          docker compose exec app pytest --ignore tests/adapters/test_clickhouse.py
+          docker compose exec app pytest
           docker compose down

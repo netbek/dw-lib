@@ -1,7 +1,7 @@
 from .adapters.clickhouse import ClickHouseAdapter
 from .adapters.duckdb import DuckDBAdapter
-from .adapters.exceptions import TableNotFoundException
 from .adapters.postgres import PostgresAdapter
+from .exceptions import TableNotFoundException
 from .peerdb import PeerDB
 from .types import (
     AdapterType,

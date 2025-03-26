@@ -1,7 +1,7 @@
+from .adapters.clickhouse import ClickHouseAdapter
+from .adapters.postgres import PostgresAdapter
 from .constants import PEERDB_SOURCE_PEER
-from dw.adapters.clickhouse import ClickHouseAdapter
-from dw.adapters.postgres import PostgresAdapter
-from dw.types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
+from .types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
 
 import httpx
 import pydash

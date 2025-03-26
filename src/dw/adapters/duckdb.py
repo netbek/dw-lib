@@ -1,7 +1,7 @@
+from ..adapters.base import BaseAdapter
+from ..types import AdapterType, DuckDBSettings
 from collections.abc import Generator
 from contextlib import contextmanager
-from dw.adapters.base import BaseAdapter
-from dw.types import AdapterType, DuckDBSettings
 from pathlib import Path
 from sqlalchemy import URL
 from sqlmodel import Table

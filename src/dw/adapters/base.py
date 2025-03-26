@@ -6,9 +6,6 @@ from sqlmodel import Table
 from typing import Any, Generator, List, Optional, overload
 
 
-class TableNotFoundException(Exception): ...
-
-
 class BaseAdapter(ABC):
     def __init__(self, settings: BaseModel) -> None:
         self.settings = settings

@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from contextlib import contextmanager
-from dw.adapters.base import BaseAdapter, TableNotFoundException
+from dw.adapters.base import BaseAdapter
+from dw.adapters.exceptions import TableNotFoundException
 from dw.types import AdapterType, PostgresIdentifier, PostgresSettings, PostgresTableIdentifier
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError

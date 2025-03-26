@@ -1,6 +1,6 @@
-from .adapters.base import TableNotFoundException
 from .adapters.clickhouse import ClickHouseAdapter
 from .adapters.duckdb import DuckDBAdapter
+from .adapters.exceptions import TableNotFoundException
 from .adapters.postgres import PostgresAdapter
 from .types import (
     AdapterType,

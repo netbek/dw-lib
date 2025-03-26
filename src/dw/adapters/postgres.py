@@ -1,9 +1,11 @@
 from collections.abc import Generator
 from contextlib import contextmanager
-from dw.adapters.base import BaseAdapter
+from dw.adapters.base import BaseAdapter, TableNotFoundException
 from dw.types import AdapterType, PostgresIdentifier, PostgresSettings, PostgresTableIdentifier
 from sqlalchemy import URL
-from sqlmodel import create_engine, MetaData, Session, Table
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.schema import CreateTable
+from sqlmodel import MetaData, Session, Table
 from typing import Any, List, Optional
 
 import psycopg2
@@ -167,7 +169,23 @@ class PostgresAdapter(BaseAdapter):
     def get_create_table_statement(
         self, table: str, database: Optional[str] = None, schema: Optional[str] = None
     ) -> None:
-        raise NotImplementedError()
+        if database is None:
+            database = self.settings.database
+
+        if schema is None:
+            schema = self.settings.schema_
+
+        url = self.create_url(
+            **self.settings.model_copy(update={"database": database}).model_dump(
+                by_alias=True, exclude=["schema_"]
+            )
+        )
+        table_metadata = self.get_table(table, database=database, schema=schema)
+
+        with self.create_engine(url=url) as engine:
+            statement = str(CreateTable(table_metadata).compile(engine))
+
+        return statement
 
     def drop_table(
         self, table: str, database: Optional[str] = None, schema: Optional[str] = None
@@ -223,11 +241,20 @@ class PostgresAdapter(BaseAdapter):
                 by_alias=True, exclude=["schema_"]
             )
         )
-        engine = create_engine(url, echo=False)
-        metadata = MetaData(schema=schema)
-        metadata.reflect(bind=engine, views=True)
 
-        return metadata.tables.get(f"{schema}.{table}")
+        with self.create_engine(url=url) as engine:
+            metadata = MetaData(schema=schema)
+
+            try:
+                metadata.reflect(bind=engine, views=True, only=[table])
+                table_metadata = metadata.tables.get(f"{schema}.{table}")
+            except InvalidRequestError as exc:
+                if "requested table(s) not available" in str(exc):
+                    raise TableNotFoundException()
+                else:
+                    raise exc
+
+        return table_metadata
 
     def get_table_replica_identity(
         self,
@@ -314,11 +341,13 @@ class PostgresAdapter(BaseAdapter):
                 by_alias=True, exclude=["schema_"]
             )
         )
-        engine = create_engine(url, echo=False)
-        metadata = MetaData(schema=schema)
-        metadata.reflect(bind=engine, views=True)
 
-        return pydash.sort_by(list(metadata.tables.values()), lambda table: table.name)
+        with self.create_engine(url=url) as engine:
+            metadata = MetaData(schema=schema)
+            metadata.reflect(bind=engine, views=True)
+            tables = pydash.sort_by(list(metadata.tables.values()), lambda table: table.name)
+
+        return tables
 
     def has_user(self, username: str) -> bool:
         statement = """

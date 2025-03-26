@@ -1,7 +1,8 @@
 from clickhouse_connect.driver.client import Client
+from clickhouse_connect.driver.exceptions import DatabaseError
 from collections.abc import Generator
 from contextlib import contextmanager
-from dw.adapters.base import BaseAdapter
+from dw.adapters.base import BaseAdapter, TableNotFoundException
 from dw.types import (
     AdapterType,
     ClickHouseIdentifier,
@@ -9,7 +10,8 @@ from dw.types import (
     ClickHouseTableIdentifier,
 )
 from sqlalchemy import URL
-from sqlmodel import create_engine, MetaData, Session, Table
+from sqlalchemy.exc import InvalidRequestError
+from sqlmodel import MetaData, Session, Table
 from typing import Any, List, Optional
 
 import clickhouse_connect
@@ -184,8 +186,16 @@ class ClickHouseAdapter(BaseAdapter):
         statement = "show create table {database:Identifier}.{table:Identifier};"
 
         with self.create_client() as client:
-            statement = client.command(statement, parameters={"database": database, "table": table})
-            statement = statement.replace("\\n", "\n")
+            try:
+                statement = client.command(
+                    statement, parameters={"database": database, "table": table}
+                )
+                statement = statement.replace("\\n", "\n")
+            except DatabaseError as exc:
+                if f"Table `{table}` doesn't exist" in str(exc):
+                    raise TableNotFoundException()
+                else:
+                    raise exc
 
         return statement
 
@@ -220,11 +230,20 @@ class ClickHouseAdapter(BaseAdapter):
             database = self.settings.database
 
         url = self.create_url(**self.settings.model_dump())
-        engine = create_engine(url, echo=False)
-        metadata = MetaData(schema=database)
-        metadata.reflect(bind=engine, views=True)
 
-        return metadata.tables.get(f"{database}.{table}")
+        with self.create_engine(url=url) as engine:
+            metadata = MetaData(schema=database)
+
+            try:
+                metadata.reflect(bind=engine, views=True, only=[table])
+                table_metadata = metadata.tables.get(f"{database}.{table}")
+            except InvalidRequestError as exc:
+                if "requested table(s) not available" in str(exc):
+                    raise TableNotFoundException()
+                else:
+                    raise exc
+
+        return table_metadata
 
     def get_table_replica_identity(self, table: str, database: Optional[str] = None) -> None:
         raise NotImplementedError()
@@ -246,11 +265,13 @@ class ClickHouseAdapter(BaseAdapter):
             database = self.settings.database
 
         url = self.create_url(**self.settings.model_dump())
-        engine = create_engine(url, echo=False)
-        metadata = MetaData(schema=database)
-        metadata.reflect(bind=engine, views=True)
 
-        return pydash.sort_by(list(metadata.tables.values()), lambda table: table.name)
+        with self.create_engine(url=url) as engine:
+            metadata = MetaData(schema=database)
+            metadata.reflect(bind=engine, views=True)
+            tables = pydash.sort_by(list(metadata.tables.values()), lambda table: table.name)
+
+        return tables
 
     def has_user(self, username: str) -> bool:
         statement = "select 1 from system.users where name = {username:String};"

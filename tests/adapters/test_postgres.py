@@ -1,4 +1,5 @@
-from dw import PostgresAdapter, PostgresSettings, PostgresTableIdentifier
+from ..asserts import assert_equal_ignoring_whitespace
+from dw import PostgresAdapter, PostgresSettings, PostgresTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
 from typing import Any, Generator
 
@@ -110,8 +111,8 @@ class TestPostgresAdapter:
         assert postgres_adapter.has_table(postgres_table.name) is True
 
     def test_get_table_non_existent(self, postgres_adapter: PostgresAdapter):
-        table = postgres_adapter.get_table("non_existent")
-        assert table is None
+        with pytest.raises(TableNotFoundException):
+            postgres_adapter.get_table("non_existent")
 
     def test_get_table_existent(self, postgres_adapter: PostgresAdapter, postgres_table: Table):
         table = postgres_adapter.get_table(postgres_table.name)
@@ -134,6 +135,22 @@ class TestPostgresAdapter:
 
         postgres_adapter.drop_table(table)
         assert postgres_adapter.has_table(table) is False
+
+    def test_get_create_table_statement(
+        self, postgres_adapter: PostgresAdapter, postgres_table: Table
+    ):
+        with pytest.raises(TableNotFoundException):
+            postgres_adapter.get_create_table_statement("non_existent")
+
+        expected = f"""
+        CREATE TABLE {postgres_adapter.settings.schema_}.{postgres_table.name} (
+            id BIGINT,
+            updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
+        )
+        """
+        assert_equal_ignoring_whitespace(
+            postgres_adapter.get_create_table_statement(postgres_table.name), expected
+        )
 
     def test_list_tables_empty_database(self, postgres_adapter: PostgresAdapter):
         assert postgres_adapter.list_tables() == []

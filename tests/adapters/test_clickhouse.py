@@ -1,6 +1,10 @@
 from ..asserts import assert_equal_ignoring_whitespace
-from clickhouse_connect.driver.exceptions import DatabaseError
-from dw import ClickHouseAdapter, ClickHouseSettings, ClickHouseTableIdentifier
+from dw import (
+    ClickHouseAdapter,
+    ClickHouseSettings,
+    ClickHouseTableIdentifier,
+    TableNotFoundException,
+)
 from sqlmodel import Table, text
 from typing import Any, Generator
 
@@ -120,8 +124,8 @@ class TestClickHouseAdapter:
         assert clickhouse_adapter.has_table(clickhouse_table.name) is True
 
     def test_get_table_non_existent(self, clickhouse_adapter: ClickHouseAdapter):
-        table = clickhouse_adapter.get_table("non_existent")
-        assert table is None
+        with pytest.raises(TableNotFoundException):
+            clickhouse_adapter.get_table("non_existent")
 
     def test_get_table_existent(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
@@ -153,7 +157,7 @@ class TestClickHouseAdapter:
     def test_get_create_table_statement(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
-        with pytest.raises(DatabaseError):
+        with pytest.raises(TableNotFoundException):
             clickhouse_adapter.get_create_table_statement("non_existent")
 
         expected = f"""

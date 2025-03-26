@@ -1,3 +1,4 @@
+from .adapters.base import TableNotFoundException
 from .adapters.clickhouse import ClickHouseAdapter
 from .adapters.duckdb import DuckDBAdapter
 from .adapters.postgres import PostgresAdapter
@@ -29,6 +30,7 @@ __all__ = (
     "PostgresIdentifier",
     "PostgresSettings",
     "PostgresTableIdentifier",
+    "TableNotFoundException",
     "Zinc",
     "ZincMirrorSettings",
     "ZincSettings",

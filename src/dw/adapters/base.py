@@ -6,6 +6,9 @@ from sqlmodel import Table
 from typing import List, Optional, overload
 
 
+class TableNotFoundException(Exception): ...
+
+
 class BaseAdapter(ABC):
     def __init__(self, settings: BaseModel) -> None:
         self.settings = settings
@@ -44,8 +47,8 @@ class BaseAdapter(ABC):
     def create_client(): ...
 
     @contextmanager
-    def create_engine(self):
-        engine = create_engine(self.url, echo=False)
+    def create_engine(self, url=None):
+        engine = create_engine(url or self.url, echo=False)
 
         yield engine
 

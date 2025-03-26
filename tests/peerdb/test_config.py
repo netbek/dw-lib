@@ -1,14 +1,12 @@
-from sqlmodel import Table
-from typing import Any, Generator, List
-
-from dw.types import ClickHouseSettings, PostgresSettings
 from dw.adapters.clickhouse import ClickHouseAdapter
 from dw.adapters.postgres import PostgresAdapter
 from dw.peerdb import PeerDB
+from dw.types import ClickHouseSettings, PostgresSettings
+from sqlmodel import Table
+from typing import Any, Generator, List
 
 import pytest
 import yaml
-
 
 table_defs = [
     (

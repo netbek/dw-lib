@@ -1,0 +1,3 @@
+# PeerDB
+PEERDB_SOURCE_PEER = "source"
+PEERDB_DESTINATION_PEER = "destination"

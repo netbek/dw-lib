@@ -60,8 +60,7 @@ vscode() {
 
 test() {
     docker compose up -d
-    until [ "$(docker inspect -f '{{.State.Health.Status}}' clickhouse)" == "healthy" ] && [ "$(docker inspect -f '{{.State.Health.Status}}' postgres)" == "healthy" ]; do sleep 1; done
-    docker compose exec app pytest
+    docker compose exec app /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- pytest
     docker compose down
 }
 

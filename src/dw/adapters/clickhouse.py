@@ -95,11 +95,10 @@ class ClickHouseAdapter(BaseAdapter):
         session.close()
 
     def can_connect(self) -> bool:
-        with self.create_client() as conn:
-            conn.execute("select 1;")
-            row = conn.fetchone()
+        with self.create_client() as client:
+            result = client.query("select 1;").first_row == (1,)
 
-        return row == (1,)
+        return result
 
     def has_database(self, database: str) -> bool:
         statement = "select 1 from system.databases where name = {database:String};"

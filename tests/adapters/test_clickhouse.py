@@ -44,6 +44,36 @@ class TestClickHouseAdapter:
 
         clickhouse_adapter.drop_table(table)
 
+    def test_create_url(self, clickhouse_adapter: ClickHouseAdapter):
+        url = clickhouse_adapter.create_url(
+            host="clickhouse",
+            http_port=8123,
+            tcp_port=9000,
+            username="guest",
+            password="secret",
+            database="data",
+        )
+        assert str(url) == "clickhouse://guest:***@clickhouse:8123/data"
+        assert (
+            url.render_as_string(hide_password=False)
+            == "clickhouse://guest:secret@clickhouse:8123/data"
+        )
+
+        url = clickhouse_adapter.create_url(
+            host="clickhouse",
+            http_port=8123,
+            tcp_port=9000,
+            username="guest",
+            password="secret",
+            database="data",
+            driver="http",
+        )
+        assert str(url) == "clickhouse+http://guest:***@clickhouse:8123/data"
+        assert (
+            url.render_as_string(hide_password=False)
+            == "clickhouse+http://guest:secret@clickhouse:8123/data"
+        )
+
     def test_create_client(self, clickhouse_adapter: ClickHouseAdapter):
         with clickhouse_adapter.create_client() as client:
             actual = client.query(
@@ -60,6 +90,9 @@ class TestClickHouseAdapter:
                 )
             ).all()
         assert actual == [(1,)]
+
+    def test_can_connect(self, clickhouse_adapter: ClickHouseAdapter):
+        assert clickhouse_adapter.can_connect() is True
 
     def test_has_database_non_existent(self, clickhouse_adapter: ClickHouseAdapter):
         assert clickhouse_adapter.has_database("non_existent") is False

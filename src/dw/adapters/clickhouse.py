@@ -3,14 +3,14 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dw.adapters.base import BaseAdapter
 from dw.types import (
+    AdapterType,
     ClickHouseIdentifier,
     ClickHouseSettings,
     ClickHouseTableIdentifier,
-    AdapterType,
 )
 from sqlalchemy import URL
-from sqlmodel import create_engine, MetaData, Table, Session
-from typing import List, Optional, Any
+from sqlmodel import create_engine, MetaData, Session, Table
+from typing import Any, List, Optional
 
 import clickhouse_connect
 import pydash

@@ -12,19 +12,11 @@ import pytest
 
 
 class TestClickHouseAdapter:
-    @pytest.fixture(scope="session")
-    def clickhouse_adapter(self) -> Generator[ClickHouseAdapter, Any, None]:
-        settings = ClickHouseSettings(
-            host="clickhouse",
-            http_port=8123,
-            tcp_port=9000,
-            username="default",
-            password="default",
-            database="default",
-            secure=False,
-            driver="http",
-        )
-        yield ClickHouseAdapter(settings)
+    @pytest.fixture(scope="class")
+    def clickhouse_adapter(
+        self, clickhouse_settings: ClickHouseSettings
+    ) -> Generator[ClickHouseAdapter, Any, None]:
+        yield ClickHouseAdapter(clickhouse_settings)
 
     @pytest.fixture(scope="function")
     def clickhouse_table(

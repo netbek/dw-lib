@@ -1,14 +1,16 @@
 # from sqlalchemy import text
 from dw import DuckDBAdapter, DuckDBSettings
+from typing import Any, Generator
 
 import pytest
 
 
 class TestDuckDBAdapter:
     @pytest.fixture(scope="class")
-    def duckdb_adapter(self):
-        settings = DuckDBSettings(database="/app/temp/test.duckdb")
-        yield DuckDBAdapter(settings)
+    def duckdb_adapter(
+        self, duckdb_settings: DuckDBSettings
+    ) -> Generator[DuckDBAdapter, Any, None]:
+        yield DuckDBAdapter(duckdb_settings)
 
     def test_create_url(self, duckdb_adapter: DuckDBAdapter):
         url = duckdb_adapter.create_url(database=":memory:")

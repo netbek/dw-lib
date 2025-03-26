@@ -8,11 +8,10 @@ import pytest
 
 class TestPostgresAdapter:
     @pytest.fixture(scope="class")
-    def postgres_adapter(self):
-        settings = PostgresSettings(
-            host="postgres", port=5432, username="postgres", password="postgres", database="test"
-        )
-        yield PostgresAdapter(settings)
+    def postgres_adapter(
+        self, postgres_settings: PostgresSettings
+    ) -> Generator[PostgresAdapter, Any, None]:
+        yield PostgresAdapter(postgres_settings)
 
     @pytest.fixture(scope="function")
     def postgres_user(self, postgres_adapter: PostgresAdapter) -> Generator[str, Any, None]:

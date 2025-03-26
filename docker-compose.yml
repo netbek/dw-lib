@@ -32,6 +32,7 @@ services:
       - ./src:/app/src
       - ./tests:/app/tests
     depends_on:
+      - clickhouse
       - postgres
     stop_grace_period: 0s
     command: /bin/bash

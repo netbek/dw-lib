@@ -3,7 +3,6 @@ from sqlmodel import Table
 from typing import Any, Generator, List
 
 import pytest
-import yaml
 
 table_defs = [
     (

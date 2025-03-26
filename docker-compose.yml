@@ -1,6 +1,15 @@
 name: dw-lib
 
 services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.3.1.2703-alpine
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=default
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - TZ=UTC
+
   postgres:
     image: postgres:17.4-alpine3.21
     environment:

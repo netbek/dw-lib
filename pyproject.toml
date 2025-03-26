@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "clickhouse-connect>=0.8.15",
+    "clickhouse-sqlalchemy",
     "duckdb>=1.2.1",
     "duckdb-engine>=0.15.0",
     "psutil>=7.0.0",
@@ -64,3 +65,6 @@ python_classes = ["Test*"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }

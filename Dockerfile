@@ -3,7 +3,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.6.5 /uv /uvx /bin/
 
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
-    libpq-dev
+    gcc git libpq-dev python-dev-is-python3
 
 RUN apt-get autoremove --yes && \
     apt-get clean && \

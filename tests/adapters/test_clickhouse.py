@@ -1,9 +1,6 @@
+from ..asserts import assert_equal_ignoring_whitespace
 from clickhouse_connect.driver.exceptions import DatabaseError
 from dw import ClickHouseAdapter, ClickHouseSettings, ClickHouseTableIdentifier
-
-from ..asserts import assert_equal_ignoring_whitespace
-
-
 from sqlmodel import Table, text
 from typing import Any, Generator
 

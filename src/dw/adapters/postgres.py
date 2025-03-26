@@ -219,7 +219,9 @@ class PostgresAdapter(BaseAdapter):
             schema = self.settings.schema_
 
         url = self.create_url(
-            **self.settings.model_copy(update={"database": database}).model_dump(by_alias=True)
+            **self.settings.model_copy(update={"database": database}).model_dump(
+                by_alias=True, exclude=["schema_"]
+            )
         )
         engine = create_engine(url, echo=False)
         metadata = MetaData(schema=schema)
@@ -308,7 +310,9 @@ class PostgresAdapter(BaseAdapter):
             schema = self.settings.schema_
 
         url = self.create_url(
-            **self.settings.model_copy(update={"database": database}).model_dump(by_alias=True)
+            **self.settings.model_copy(update={"database": database}).model_dump(
+                by_alias=True, exclude=["schema_"]
+            )
         )
         engine = create_engine(url, echo=False)
         metadata = MetaData(schema=schema)

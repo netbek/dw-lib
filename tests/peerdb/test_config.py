@@ -1,7 +1,4 @@
-from dw.adapters.clickhouse import ClickHouseAdapter
-from dw.adapters.postgres import PostgresAdapter
-from dw.peerdb import PeerDB
-from dw.types import ClickHouseSettings, PostgresSettings
+from dw import ClickHouseAdapter, ClickHouseSettings, PeerDB, PostgresAdapter, PostgresSettings
 from sqlmodel import Table
 from typing import Any, Generator, List
 

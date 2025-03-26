@@ -36,3 +36,6 @@ class TestDuckDBAdapter:
     #             ).bindparams(database="test")
     #         ).all()
     #     assert actual == [(1,)]
+
+    def test_can_connect(self, duckdb_adapter: DuckDBAdapter):
+        assert duckdb_adapter.can_connect() is True

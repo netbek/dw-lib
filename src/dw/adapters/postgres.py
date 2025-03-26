@@ -68,9 +68,9 @@ class PostgresAdapter(BaseAdapter):
     def can_connect(self) -> bool:
         with self.create_client() as (conn, cur):
             cur.execute("select 1;")
-            row = cur.fetchone()
+            result = cur.fetchone() == (1,)
 
-        return row == (1,)
+        return result
 
     def has_database(self, database: str) -> bool:
         statement = """

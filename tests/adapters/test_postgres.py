@@ -81,6 +81,9 @@ class TestPostgresAdapter:
             ).all()
         assert actual == [(1,)]
 
+    def test_can_connect(self, postgres_adapter: PostgresAdapter):
+        assert postgres_adapter.can_connect() is True
+
     def test_has_database_non_existent(self, postgres_adapter: PostgresAdapter):
         assert postgres_adapter.has_database("non_existent") is False
 

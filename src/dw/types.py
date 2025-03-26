@@ -8,12 +8,45 @@ import psutil
 
 
 class AdapterType(StrEnum):
+    CLICKHOUSE = "clickhouse"
     DUCKDB = "duckdb"
     POSTGRES = "postgres"
 
 
 class TableIndexType(StrEnum):
     BTREE = "btree"
+
+
+class ClickHouseIdentifier:
+    @classmethod
+    def quote(cls, identifier: str) -> str:
+        return f"`{identifier}`"
+
+    @classmethod
+    def unquote(cls, identifier: str) -> str:
+        return identifier.strip("`")
+
+
+class ClickHouseTableIdentifier(ClickHouseIdentifier, BaseModel):
+    database: Optional[str] = Field(default=None, serialization_alias="database")
+    table: str = Field(serialization_alias="table")
+
+    @classmethod
+    def from_string(cls, identifier: str) -> "ClickHouseTableIdentifier":
+        parts = [cls.unquote(part) for part in identifier.split(".")]
+
+        if len(parts) == 2:
+            return cls(database=parts[0], table=parts[1])
+        elif len(parts) == 1:
+            return cls(table=parts[0])
+        else:
+            raise ValueError()
+
+    def to_string(self) -> str:
+        if self.database is not None:
+            return f"{self.quote(self.database)}.{self.quote(self.table)}"
+        else:
+            return self.quote(self.table)
 
 
 class PostgresIdentifier:
@@ -111,6 +144,17 @@ class DuckDBSystemSettings(BaseModel):
             except ValueError:
                 raise ValueError("Invalid percentage format for threads.")
         return value
+
+
+class ClickHouseSettings(BaseModel):
+    host: str
+    http_port: int
+    tcp_port: int
+    username: str
+    password: str
+    database: str
+    secure: Optional[bool] = Field(default=False)
+    driver: Optional[str] = Field(default=None)
 
 
 class DuckDBSettings(BaseModel):

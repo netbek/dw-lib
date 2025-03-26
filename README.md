@@ -1,6 +1,6 @@
 # dw
 
-Tools for working with Postgres and DuckDB.
+Tools for working with Postgres, ClickHouse, and DuckDB.
 
 ## Installation
 

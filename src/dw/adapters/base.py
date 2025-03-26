@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pydantic import BaseModel
-from sqlalchemy import create_engine, URL
+from sqlalchemy import create_engine, Engine, URL
 from sqlmodel import Table
-from typing import List, Optional, overload
+from typing import Any, Generator, List, Optional, overload
 
 
 class TableNotFoundException(Exception): ...
@@ -47,8 +47,8 @@ class BaseAdapter(ABC):
     def create_client(): ...
 
     @contextmanager
-    def create_engine(self, url=None):
-        engine = create_engine(url or self.url, echo=False)
+    def create_engine(self, url: Optional[URL] = None) -> Generator[Engine, Any, None]:
+        engine = create_engine((url or self.url).render_as_string(hide_password=False), echo=False)
 
         yield engine
 

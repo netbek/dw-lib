@@ -30,7 +30,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh precommit_hook
     ```
 
-5. Build the Docker images:
+5. Build the Docker image:
 
     ```shell
     ./scripts/run.sh build

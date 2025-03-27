@@ -1,6 +1,7 @@
 from .constants import PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
+from .exceptions import MirrorNotFoundException
 from .types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
 
 import httpx
@@ -29,9 +30,6 @@ def to_postgres_settings(postgres_config: dict) -> PostgresSettings:
         database=postgres_config["database"],
         schema_="public",
     )
-
-
-class MirrorNotFoundException(Exception): ...
 
 
 class PeerDB:

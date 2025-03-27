@@ -1,4 +1,4 @@
-from dw import ClickHouseSettings, DuckDBSettings, PostgresSettings
+from dw_lib import ClickHouseSettings, DuckDBSettings, PostgresSettings
 from typing import Any, Generator
 
 import pytest

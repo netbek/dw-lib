@@ -1,5 +1,5 @@
 from ...asserts import assert_equal_ignoring_whitespace
-from dw import (
+from dw_lib import (
     ClickHouseAdapter,
     ClickHouseSettings,
     ClickHouseTableIdentifier,

@@ -1,4 +1,4 @@
-from dw import ClickHouseAdapter, ClickHouseSettings, PeerDB, PostgresAdapter, PostgresSettings
+from dw_lib import ClickHouseAdapter, ClickHouseSettings, PeerDB, PostgresAdapter, PostgresSettings
 from sqlmodel import Table
 from typing import Any, Generator, List
 
@@ -58,7 +58,7 @@ class BaseTest:
 
 class TestEmptyConfig(BaseTest):
     def test_func(self, monkeypatch):
-        monkeypatch.setattr("dw.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
+        monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
         expected = {
             "mirrors": {},
             "peers": {},

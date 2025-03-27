@@ -1,5 +1,5 @@
 # from sqlalchemy import text
-from dw import DuckDBAdapter, DuckDBSettings
+from dw_lib import DuckDBAdapter, DuckDBSettings
 from typing import Any, Generator
 
 import pytest

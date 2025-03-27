@@ -1,5 +1,5 @@
 from ..asserts import assert_list_of_dicts_equal_ignore_order
-from dw import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
+from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
 from typing import Any, Generator
 
 import psycopg2

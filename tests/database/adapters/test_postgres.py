@@ -1,5 +1,10 @@
 from ...asserts import assert_equal_ignoring_whitespace
-from dw import PostgresAdapter, PostgresSettings, PostgresTableIdentifier, TableNotFoundException
+from dw_lib import (
+    PostgresAdapter,
+    PostgresSettings,
+    PostgresTableIdentifier,
+    TableNotFoundException,
+)
 from sqlmodel import Table, text
 from typing import Any, Generator
 

@@ -1,8 +1,10 @@
-# dw
+# dw-lib
 
 Tools for working with Postgres, ClickHouse, and DuckDB.
 
 ## Installation
+
+## Development
 
 1. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:
 
@@ -28,12 +30,16 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh precommit_hook
     ```
 
-## Development
+5. Build the Docker images:
+
+    ```shell
+    ./scripts/run.sh build
+    ```
 
 | Command                    | Description                                                         |
 |----------------------------|---------------------------------------------------------------------|
-| `./scripts/run.sh build`   | Build the Docker images.                                            |
-| `./scripts/run.sh destroy` | Delete the Docker images, volumes and network.                      |
+| `./scripts/run.sh build`   | Build the Docker image.                                             |
+| `./scripts/run.sh destroy` | Delete the Docker image and network.                                |
 | `./scripts/run.sh clean`   | Delete temporary files and directories, e.g. `__pycache__`          |
 | `./scripts/run.sh up`      | Start the Docker services.                                          |
 | `./scripts/run.sh down`    | Stop the Docker services.                                           |

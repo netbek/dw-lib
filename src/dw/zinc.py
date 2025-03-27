@@ -1,5 +1,5 @@
-from .adapters.duckdb import DuckDBAdapter
-from .adapters.postgres import PostgresAdapter
+from .database.adapters.duckdb import DuckDBAdapter
+from .database.adapters.postgres import PostgresAdapter
 from .types import (
     AdapterType,
     DuckDBTableIdentifier,

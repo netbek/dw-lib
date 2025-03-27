@@ -1,6 +1,6 @@
-from .adapters.clickhouse import ClickHouseAdapter
-from .adapters.postgres import PostgresAdapter
 from .constants import PEERDB_SOURCE_PEER
+from .database.adapters.clickhouse import ClickHouseAdapter
+from .database.adapters.postgres import PostgresAdapter
 from .types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
 
 import httpx

@@ -1,4 +1,4 @@
-from ..asserts import assert_equal_ignoring_whitespace
+from ...asserts import assert_equal_ignoring_whitespace
 from dw import (
     ClickHouseAdapter,
     ClickHouseSettings,

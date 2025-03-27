@@ -1,5 +1,5 @@
+from ...types import AdapterType, DuckDBSettings
 from ..adapters.base import BaseAdapter
-from ..types import AdapterType, DuckDBSettings
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path

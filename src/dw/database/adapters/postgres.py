@@ -1,6 +1,6 @@
+from ...exceptions import TableNotFoundException
+from ...types import AdapterType, PostgresIdentifier, PostgresSettings, PostgresTableIdentifier
 from ..adapters.base import BaseAdapter
-from ..exceptions import TableNotFoundException
-from ..types import AdapterType, PostgresIdentifier, PostgresSettings, PostgresTableIdentifier
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import URL

@@ -1,6 +1,11 @@
+from ...exceptions import TableNotFoundException
+from ...types import (
+    AdapterType,
+    ClickHouseIdentifier,
+    ClickHouseSettings,
+    ClickHouseTableIdentifier,
+)
 from ..adapters.base import BaseAdapter
-from ..exceptions import TableNotFoundException
-from ..types import AdapterType, ClickHouseIdentifier, ClickHouseSettings, ClickHouseTableIdentifier
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
 from collections.abc import Generator

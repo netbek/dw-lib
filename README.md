@@ -4,6 +4,30 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 
 ## Installation
 
+1. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:
+
+    ```shell
+    ./scripts/install.sh docker
+    ```
+
+2. Install uv:
+
+    ```shell
+    ./scripts/install.sh uv
+    ```
+
+3. Install pre-commit:
+
+    ```shell
+    ./scripts/install.sh precommit
+    ```
+
+4. Install pre-commit hook:
+
+    ```shell
+    ./scripts/install.sh precommit_hook
+    ```
+
 ## Development
 
 | Command                    | Description                                                         |

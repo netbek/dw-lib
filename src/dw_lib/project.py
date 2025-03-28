@@ -2,6 +2,7 @@ from .constants import HOME_DIR, PROJECTS_DIR, TEMPLATE_PROJECT_DIR
 from .utils.filesystem import rmtree, symlink
 from .utils.template import render_template
 from functools import cached_property
+from jinja2 import DebugUndefined
 from pathlib import Path
 from prefect import get_client
 from prefect.client.schemas.filters import DeploymentFilter, DeploymentFilterTags
@@ -131,10 +132,13 @@ class Project:
 
         shutil.copytree(TEMPLATE_PROJECT_DIR, self.directory)
 
-        context = {"project_name": self.name, "prefect_version": prefect.__version__}
-        render_template(os.path.join(self.directory, "README.md"), context)
-        render_template(os.path.join(self.directory, "prefect.yaml"), context)
-        render_template(os.path.join(self.dbt_directory, "dbt_project.yml"), context)
+        kwargs = {
+            "context": {"project_name": self.name, "prefect_version": prefect.__version__},
+            "undefined": DebugUndefined,
+        }
+        render_template(os.path.join(self.directory, "README.md"), **kwargs)
+        render_template(os.path.join(self.directory, "prefect.yaml"), **kwargs)
+        render_template(os.path.join(self.dbt_directory, "dbt_project.yml"), **kwargs)
 
     def sync_dbt_directory(self):
         """Copy global files to the project dbt directory."""

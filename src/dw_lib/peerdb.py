@@ -3,7 +3,7 @@ from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import MirrorNotFoundException
 from .types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
-from .utils.template import render_jinja_template
+from .utils.template import render_template
 from pathlib import Path
 
 import httpx
@@ -45,7 +45,7 @@ class PeerDB:
         return self._config
 
     def _load_config_data(self) -> dict:
-        data = render_jinja_template(self._config_path)
+        data = render_template(self._config_path)
         data = yaml.safe_load(data)
         return data
 

@@ -2,7 +2,6 @@ name: dw-lib
 
 services:
   clickhouse:
-    container_name: clickhouse
     image: clickhouse/clickhouse-server:25.3.2.39-alpine
     environment:
       - CLICKHOUSE_USER=default
@@ -20,7 +19,6 @@ services:
         condition: on-failure
 
   postgres:
-    container_name: postgres
     image: postgres:17.4-alpine3.21
     environment:
       - POSTGRES_USER=postgres
@@ -37,7 +35,6 @@ services:
         condition: on-failure
 
   app:
-    container_name: app
     image: dw-lib-app:latest
     build: .
     environment:

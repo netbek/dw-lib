@@ -1,6 +1,7 @@
 from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_settings import BaseSettings
 from typing import Any, Dict, List, Optional
 
 import math
@@ -146,7 +147,7 @@ class DuckDBSystemSettings(BaseModel):
         return value
 
 
-class ClickHouseSettings(BaseModel):
+class ClickHouseSettings(BaseSettings):
     host: str
     http_port: int
     tcp_port: int
@@ -157,14 +158,14 @@ class ClickHouseSettings(BaseModel):
     driver: Optional[str] = Field(default=None)
 
 
-class DuckDBSettings(BaseModel):
+class DuckDBSettings(BaseSettings):
     database: Path | str
     schema_: str = Field(default="main", serialization_alias="schema")
     extensions: Optional[List[str]] = None
     settings: Optional[DuckDBSystemSettings] = None
 
 
-class PostgresSettings(BaseModel):
+class PostgresSettings(BaseSettings):
     host: str
     port: int
     username: str
@@ -173,20 +174,20 @@ class PostgresSettings(BaseModel):
     schema_: str = Field(default="public", serialization_alias="schema")
 
 
-class DbtSettings(BaseModel):
+class DbtSettings(BaseSettings):
     directory: Path | str
     config: dict
 
 
-class PeerDBSettings(BaseModel):
+class PeerDBSettings(BaseSettings):
     config: dict
 
 
-class PrefectSettings(BaseModel):
+class PrefectSettings(BaseSettings):
     config: dict
 
 
-class NotebookSettings(BaseModel):
+class NotebookSettings(BaseSettings):
     directory: Path | str
 
 

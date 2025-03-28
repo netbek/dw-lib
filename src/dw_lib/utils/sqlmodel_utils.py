@@ -60,6 +60,11 @@ SQLGLOT_TO_PYTHON_TYPE = {
     sqlglot.expressions.DataType.Type.DATE32: datetime.date,  # Date32
     sqlglot.expressions.DataType.Type.DATETIME: datetime.datetime,  # DateTime
     sqlglot.expressions.DataType.Type.DATETIME64: datetime.datetime,  # DateTime64
+    sqlglot.expressions.DataType.Type.DECIMAL: float,  # Decimal
+    sqlglot.expressions.DataType.Type.DECIMAL32: float,  # Decimal32
+    sqlglot.expressions.DataType.Type.DECIMAL64: float,  # Decimal64
+    sqlglot.expressions.DataType.Type.DECIMAL128: float,  # Decimal128
+    sqlglot.expressions.DataType.Type.DECIMAL256: float,  # Decimal256
     sqlglot.expressions.DataType.Type.DOUBLE: float,  # Float64
     sqlglot.expressions.DataType.Type.FLOAT: float,  # Float32
     sqlglot.expressions.DataType.Type.INT: int,  # Int32

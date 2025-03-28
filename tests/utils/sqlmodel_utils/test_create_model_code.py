@@ -32,6 +32,11 @@ create or replace table {table_identifier.to_string()}
     `int16` Int16,
     `uint8` UInt8,
     `int8` Int8,
+    `decimal256` Decimal256(1),
+    `decimal128` Decimal128(1),
+    `decimal64` Decimal64(1),
+    `decimal32` Decimal32(1),
+    `decimal` Decimal,
     `float64` Float64,
     `float32` Float32,
     `bool` Boolean,
@@ -91,6 +96,11 @@ order by `uint64`
                     {"name": "int16", "data_type": "Int16"},
                     {"name": "uint8", "data_type": "UInt8"},
                     {"name": "int8", "data_type": "Int8"},
+                    {"name": "decimal256", "data_type": "Decimal256(1)"},
+                    {"name": "decimal128", "data_type": "Decimal128(1)"},
+                    {"name": "decimal64", "data_type": "Decimal64(1)"},
+                    {"name": "decimal32", "data_type": "Decimal32(1)"},
+                    {"name": "decimal", "data_type": "Decimal"},
                     {"name": "float64", "data_type": "Float64"},
                     {"name": "float32", "data_type": "Float32"},
                     {"name": "bool", "data_type": "Boolean"},
@@ -126,6 +136,11 @@ CREATE TABLE {table_identifier.database}.{table_identifier.table}
     `int16` Int16,
     `uint8` UInt8,
     `int8` Int8,
+    `decimal256` Decimal(76, 1),
+    `decimal128` Decimal(38, 1),
+    `decimal64` Decimal(18, 1),
+    `decimal32` Decimal(9, 1),
+    `decimal` Decimal(10, 0),
     `float64` Float64,
     `float32` Float32,
     `bool` Bool,
@@ -169,6 +184,11 @@ class {python_class}(BaseMixin, SQLModel, table=True):
     int16: int = Field(sa_column=Column(name='int16', type_=types.Int16, nullable=False))
     uint8: int = Field(sa_column=Column(name='uint8', type_=types.UInt8, nullable=False))
     int8: int = Field(sa_column=Column(name='int8', type_=types.Int8, nullable=False))
+    decimal256: float = Field(sa_column=Column(name='decimal256', type_=types.Decimal(76, 1), nullable=False))
+    decimal128: float = Field(sa_column=Column(name='decimal128', type_=types.Decimal(38, 1), nullable=False))
+    decimal64: float = Field(sa_column=Column(name='decimal64', type_=types.Decimal(18, 1), nullable=False))
+    decimal32: float = Field(sa_column=Column(name='decimal32', type_=types.Decimal(9, 1), nullable=False))
+    decimal: float = Field(sa_column=Column(name='decimal', type_=types.Decimal(10, 0), nullable=False))
     float64: float = Field(sa_column=Column(name='float64', type_=types.Float64, nullable=False))
     float32: float = Field(sa_column=Column(name='float32', type_=types.Float32, nullable=False))
     bool: bool = Field(sa_column=Column(name='bool', type_=types.Boolean, nullable=False))

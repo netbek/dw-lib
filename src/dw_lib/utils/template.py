@@ -19,7 +19,11 @@ def env_var(var: str, default: Optional[str] = None) -> str:
 def render_template(
     file_path: str, context: Optional[dict] = None, undefined: Type[Undefined] = Undefined
 ) -> str:
-    env = Environment(loader=FileSystemLoader("/"), undefined=undefined)
+    env = Environment(
+        loader=FileSystemLoader("/"),
+        extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"],
+        undefined=undefined,
+    )
     env.globals["env_var"] = env_var
     template = env.get_template(str(file_path))
 

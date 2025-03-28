@@ -6,7 +6,6 @@ from ..types import (
     PostgresSettings,
     PrefectSettings,
 )
-from .template import render_jinja_template
 from .yaml_utils import safe_load_file
 from pathlib import Path
 from pydantic import Field
@@ -106,7 +105,7 @@ def create_notebook_settings(directory: Path | str) -> NotebookSettings:
 
 def create_peerdb_settings(config_path: Path | str) -> PeerDBSettings:
     class Settings(PeerDBSettings):
-        config_path: Path | str = Field(default_factory=lambda: render_jinja_template(config_path))
+        config_path: Path | str = Field(default_factory=lambda: config_path)
 
     return Settings
 

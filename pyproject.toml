@@ -18,6 +18,7 @@ dependencies = [
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "livereload>=2.7.1",
+    "polyfactory>=2.20.0",
     "prefect==3.0.10",
     "prefect-dbt==0.6.4",
     "prefect-jupyter==0.3.1",

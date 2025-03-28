@@ -1,4 +1,4 @@
-from jinja2 import Environment
+from jinja2 import Environment, StrictUndefined
 from typing import Any, Optional
 
 import re
@@ -6,7 +6,9 @@ import sqlparse
 
 RE_HAS_JINJA = re.compile(r"({[{%#]|[#}%]})")
 
-jinja_env = Environment(extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"])
+jinja_env = Environment(
+    extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"], undefined=StrictUndefined
+)
 
 
 def render_statement(

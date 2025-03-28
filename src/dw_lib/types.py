@@ -180,7 +180,7 @@ class DbtSettings(BaseSettings):
 
 
 class PeerDBSettings(BaseSettings):
-    config: dict
+    config_path: Path | str
 
 
 class PrefectSettings(BaseSettings):

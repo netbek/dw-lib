@@ -1,4 +1,5 @@
-from dw_lib import ClickHouseAdapter, ClickHouseSettings, PeerDB, PostgresAdapter, PostgresSettings
+from ..fixtures.database import DatabaseTest
+from dw_lib import PeerDB, PostgresAdapter
 from sqlmodel import Table
 from typing import Any, Generator, List
 
@@ -42,21 +43,7 @@ table_defs = [
 ]
 
 
-class BaseTest:
-    @pytest.fixture(scope="class")
-    def clickhouse_adapter(
-        self, clickhouse_settings: ClickHouseSettings
-    ) -> Generator[ClickHouseAdapter, Any, None]:
-        yield ClickHouseAdapter(clickhouse_settings)
-
-    @pytest.fixture(scope="class")
-    def postgres_adapter(
-        self, postgres_settings: PostgresSettings
-    ) -> Generator[PostgresAdapter, Any, None]:
-        yield PostgresAdapter(postgres_settings)
-
-
-class TestEmptyConfig(BaseTest):
+class TestEmptyConfig(DatabaseTest):
     def test_func(self, monkeypatch):
         monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
         expected = {
@@ -70,7 +57,7 @@ class TestEmptyConfig(BaseTest):
         assert PeerDB(None).config == expected
 
 
-class TestSourcePeerMissingTable(BaseTest):
+class TestSourcePeerMissingTable(DatabaseTest):
     @pytest.fixture(scope="function")
     def postgres_tables(
         self, postgres_adapter: PostgresAdapter
@@ -96,7 +83,7 @@ class TestSourcePeerMissingTable(BaseTest):
         )
 
 
-class TestOK(BaseTest):
+class TestOK(DatabaseTest):
     @pytest.fixture(scope="function")
     def postgres_tables(
         self, postgres_adapter: PostgresAdapter

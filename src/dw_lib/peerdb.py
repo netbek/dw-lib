@@ -3,6 +3,8 @@ from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import MirrorNotFoundException
 from .types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
+from .utils.template import render_template
+from pathlib import Path
 
 import httpx
 import pydash
@@ -33,7 +35,7 @@ def to_postgres_settings(postgres_config: dict) -> PostgresSettings:
 
 
 class PeerDB:
-    def __init__(self, config_path: str) -> None:
+    def __init__(self, config_path: Path | str) -> None:
         self._config_path = config_path
         self._config = self._load_config()
         self._headers = {"Content-Type": "application/json"}
@@ -43,8 +45,8 @@ class PeerDB:
         return self._config
 
     def _load_config_data(self) -> dict:
-        with open(self._config_path) as fp:
-            data = yaml.safe_load(fp)
+        data = render_template(self._config_path)
+        data = yaml.safe_load(data)
         return data
 
     def _load_config(self) -> dict:

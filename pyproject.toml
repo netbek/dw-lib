@@ -10,16 +10,32 @@ requires-python = ">=3.12"
 dependencies = [
     "clickhouse-connect>=0.8.15",
     "clickhouse-sqlalchemy",
+    "dbt-artifacts-parser==0.8.1",
+    "dbt-clickhouse",
+    "dbt-core==1.8.9", # Pinned because of dbt-clickhouse and prefect-dbt
     "duckdb>=1.2.1",
     "duckdb-engine>=0.15.0",
     "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "livereload>=2.7.1",
+    "polyfactory>=2.20.0",
+    "prefect==3.0.10",
+    "prefect-dbt==0.6.4",
+    "prefect-jupyter==0.3.1",
+    "prefect-shell==0.3.1",
     "psutil>=7.0.0",
     "psycopg2-binary>=2.9.10",
-    "pydantic>=2.10.6",
+    "pydantic>=2.10.6,<2.11", # Pinned because of prefect
+    "pydantic-settings>=2.8.1",
     "pydash>=8.0.5",
+    "python-dateutil>=2.9.0.post0",
     "pyyaml>=6.0.2",
+    "rich>=13.9.4",
     "sqlalchemy>=2.0.38",
+    "sqlglot>=25.34.0,<26", # Pinned because of breaking changes in 26.x. ClickHouse ORDER BY keys are not parsed consistently.
     "sqlmodel>=0.0.24",
+    "sqlparse>=0.5.3",
+    "typer>=0.12.5,<0.13", # Pinned because of prefect
 ]
 
 [build-system]
@@ -66,6 +82,8 @@ python_classes = ["Test*"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
+filterwarnings = "ignore::DeprecationWarning:dbt_common.invocation" # https://github.com/dbt-labs/dbt-core/issues/9791
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.8.9-batch" }

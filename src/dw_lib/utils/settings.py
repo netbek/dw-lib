@@ -12,8 +12,6 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
-import yaml
-
 
 def create_postgres_settings(env_prefix: str) -> PostgresSettings:
     class Settings(PostgresSettings):
@@ -108,12 +106,7 @@ def create_notebook_settings(directory: Path | str) -> NotebookSettings:
 
 def create_peerdb_settings(config_path: Path | str) -> PeerDBSettings:
     class Settings(PeerDBSettings):
-        model_config = SettingsConfigDict(env_file="/usr/local/share/dw/peerdb.env", extra="ignore")
-
-        api_url: str = Field(validation_alias="peerdb_api_url")
-        config: dict = Field(
-            default_factory=lambda: yaml.safe_load(render_jinja_template(config_path))
-        )
+        config_path: Path | str = Field(default_factory=lambda: render_jinja_template(config_path))
 
     return Settings
 

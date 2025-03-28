@@ -15,20 +15,15 @@ app.add_typer(peerdb_app)
 @typer_async
 async def install(project_name: str) -> None:
     project = Project.from_name(project_name)
-    peerdb_config = PeerDB.prepare_config(
-        project.settings.peerdb.config,
-        dbt_project_dir=project.dbt_directory,
-        generate_exclude=True,
-    )
-    peerdb = PeerDB(project.settings.peerdb.api_url)
+    peerdb = PeerDB(project.settings.peerdb.config_path)
     source_peer = SourcePeer(project.settings.source_db)
     destination_peer = DestinationPeer(
         project.settings.destination_db,
-        peerdb_config["peers"][PEERDB_DESTINATION_PEER]["clickhouse_config"]["database"],
+        peerdb.config["peers"][PEERDB_DESTINATION_PEER]["clickhouse_config"]["database"],
     )
-    source_user = peerdb_config["users"].get(PEERDB_SOURCE_PEER)
+    source_user = peerdb.config["users"].get(PEERDB_SOURCE_PEER)
 
-    peerdb.update_settings(peerdb_config["settings"])
+    peerdb.update_settings(peerdb.config["settings"])
     app.console.print("Updated PeerDB settings", style="green")
 
     if source_user:
@@ -38,14 +33,14 @@ async def install(project_name: str) -> None:
             style="green",
         )
 
-        for schema in peerdb_config["publication_schemas"]:
+        for schema in peerdb.config["publication_schemas"]:
             source_peer.grant_user_privileges(source_user["username"], schema)
             app.console.print(
                 f"Granted privileges to user '{source_user['username']}' on source schema '{schema}'",
                 style="green",
             )
 
-    for mirror in peerdb_config["mirrors"].values():
+    for mirror in peerdb.config["mirrors"].values():
         for table_mapping in mirror["table_mappings"]:
             if "replica_identity" in table_mapping:
                 source_table_identifier = PostgresTableIdentifier.from_string(
@@ -62,7 +57,7 @@ async def install(project_name: str) -> None:
                     style="green",
                 )
 
-    for publication in peerdb_config["publications"].values():
+    for publication in peerdb.config["publications"].values():
         source_peer.create_publication(
             publication["name"], publication["table_identifiers"], replace=True
         )
@@ -77,14 +72,14 @@ async def install(project_name: str) -> None:
         style="green",
     )
 
-    for peer in peerdb_config["peers"].values():
+    for peer in peerdb.config["peers"].values():
         peerdb.create_peer(peer)
         app.console.print(
             f"Created PeerDB peer '{peer['name']}'",
             style="green",
         )
 
-    for mirror in peerdb_config["mirrors"].values():
+    for mirror in peerdb.config["mirrors"].values():
         peerdb.create_mirror(mirror)
         app.console.print(
             f"Created PeerDB mirror '{mirror['flow_job_name']}'",
@@ -96,41 +91,36 @@ async def install(project_name: str) -> None:
 @typer_async
 async def uninstall(project_name: str) -> None:
     project = Project.from_name(project_name)
-    peerdb_config = PeerDB.prepare_config(
-        project.settings.peerdb.config,
-        dbt_project_dir=project.dbt_directory,
-        generate_exclude=False,
-    )
-    peerdb = PeerDB(project.settings.peerdb.api_url)
+    peerdb = PeerDB(project.settings.peerdb.config_path)
     source_peer = SourcePeer(project.settings.source_db)
     destination_peer = DestinationPeer(
         project.settings.destination_db,
-        peerdb_config["peers"][PEERDB_DESTINATION_PEER]["clickhouse_config"]["database"],
+        peerdb.config["peers"][PEERDB_DESTINATION_PEER]["clickhouse_config"]["database"],
     )
-    source_user = peerdb_config["users"].get(PEERDB_SOURCE_PEER)
+    source_user = peerdb.config["users"].get(PEERDB_SOURCE_PEER)
 
-    for mirror in peerdb_config["mirrors"].values():
+    for mirror in peerdb.config["mirrors"].values():
         peerdb.drop_mirror(mirror)
         app.console.print(
             f"Dropped PeerDB mirror '{mirror['flow_job_name']}'",
             style="green",
         )
 
-    for peer in peerdb_config["peers"].values():
+    for peer in peerdb.config["peers"].values():
         peerdb.drop_peer(peer)
         app.console.print(
             f"Dropped PeerDB peer '{peer['name']}'",
             style="green",
         )
 
-    for publication in peerdb_config["publications"].values():
+    for publication in peerdb.config["publications"].values():
         source_peer.drop_publication(publication["name"])
         app.console.print(
             f"Dropped publication '{publication['name']}' on source",
             style="green",
         )
 
-    for mirror in peerdb_config["mirrors"].values():
+    for mirror in peerdb.config["mirrors"].values():
         for table_mapping in mirror["table_mappings"]:
             if "replica_identity" in table_mapping:
                 source_table_identifier = PostgresTableIdentifier.from_string(
@@ -149,7 +139,7 @@ async def uninstall(project_name: str) -> None:
                 )
 
     if source_user:
-        for schema in peerdb_config["publication_schemas"]:
+        for schema in peerdb.config["publication_schemas"]:
             source_peer.revoke_user_privileges(source_user["username"], schema)
             app.console.print(
                 f"Revoked privileges from user '{source_user['username']}' on source schema '{schema}'",

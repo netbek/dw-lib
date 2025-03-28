@@ -157,7 +157,7 @@ class Project:
         self.sync_dbt_directory()
 
     async def delete(self):
-        from package.cli.prefect_cli import delete_deployment
+        from dw_lib.cli.prefect_cli import delete_deployment
 
         async with get_client() as client:
             filter = DeploymentFilter(tags=DeploymentFilterTags(any_=[self.name]))

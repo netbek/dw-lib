@@ -266,8 +266,8 @@ def create_model_code(
 
     imports = [
         "from clickhouse_sqlalchemy import engines",
-        "from package.polyfactory.mixins import BaseMixin",
-        "from package.sqlalchemy.clickhouse import types",
+        "from dw_lib.polyfactory.mixins import BaseMixin",
+        "from dw_lib.sqlalchemy.clickhouse import types",
         "from sqlmodel import Column, Field, SQLModel",
     ]
 
@@ -341,8 +341,8 @@ def create_model_code(
 
     imports = [
         f"from .{model_filename} import {model_name}",
-        "from package.polyfactory.factories.sqlmodel_factory import SQLModelFactory",
-        "from package.polyfactory.mixins import PeerDBFactoryMixin",
+        "from dw_lib.polyfactory.factories.sqlmodel_factory import SQLModelFactory",
+        "from dw_lib.polyfactory.mixins import PeerDBFactoryMixin",
     ]
 
     lines = []

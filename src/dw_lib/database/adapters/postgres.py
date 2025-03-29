@@ -222,13 +222,12 @@ class PostgresAdapter(BaseAdapter):
         table_metadata = Table(table_metadata.name, MetaData(option_schema), *columns)
 
         with self.create_engine(url=url) as engine:
-            statement = str(
-                CreateTable(
-                    table_metadata,
-                    include_foreign_key_constraints=option_include_foreign_key_constraint,
-                    if_not_exists=option_if_not_exists,
-                ).compile(engine)
-            )
+            kwargs = {"if_not_exists": option_if_not_exists}
+
+            if not option_include_foreign_key_constraint:
+                kwargs["include_foreign_key_constraints"] = []
+
+            statement = str(CreateTable(table_metadata, **kwargs).compile(engine))
 
         return statement
 

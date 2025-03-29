@@ -1,13 +1,19 @@
 from ...exceptions import TableNotFoundException
-from ...types import AdapterType, PostgresIdentifier, PostgresSettings, PostgresTableIdentifier
+from ...types import (
+    AdapterType,
+    CreateTableStatementOptions,
+    PostgresIdentifier,
+    PostgresSettings,
+    PostgresTableIdentifier,
+)
 from ..adapters.base import BaseAdapter
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.schema import CreateTable, ForeignKeyConstraint
-from sqlmodel import MetaData, Session, Table
-from typing import Any, List, Optional, Sequence
+from sqlalchemy.schema import CreateTable
+from sqlmodel import Column, MetaData, Session, Table
+from typing import Any, List, Optional
 
 import psycopg2
 import pydash
@@ -172,14 +178,24 @@ class PostgresAdapter(BaseAdapter):
         table: str,
         database: Optional[str] = None,
         schema: Optional[str] = None,
-        include_foreign_key_constraints: Optional[Sequence[ForeignKeyConstraint]] = None,
-        if_not_exists: bool = False,
+        options: Optional[CreateTableStatementOptions] = None,
     ) -> None:
         if database is None:
             database = self.settings.database
 
         if schema is None:
             schema = self.settings.schema_
+
+        if not options:
+            options = {}
+
+        option_schema = options.get("schema", schema)
+        option_if_not_exists = options.get("if_not_exists")
+        option_include_autoincrement = options.get("include_autoincrement")
+        option_include_index = options.get("include_index")
+        option_include_primary_key_constraint = options.get("include_primary_key_constraint")
+        option_include_foreign_key_constraint = options.get("include_foreign_key_constraint")
+        option_include_unique_constraint = options.get("include_unique_constraint")
 
         url = self.create_url(
             **self.settings.model_copy(update={"database": database}).model_dump(
@@ -188,12 +204,29 @@ class PostgresAdapter(BaseAdapter):
         )
         table_metadata = self.get_table(table, database=database, schema=schema)
 
+        columns = [
+            Column(
+                name=column.name,
+                type_=column.type,
+                autoincrement=column.autoincrement if option_include_autoincrement else None,
+                # default=column.default,
+                index=column.index if option_include_index else None,
+                unique=column.unique if option_include_unique_constraint else None,
+                nullable=column.nullable,
+                primary_key=column.primary_key if option_include_primary_key_constraint else None,
+                server_default=column.server_default,
+                # server_onupdate=column.server_onupdate,
+            )
+            for column in table_metadata.columns
+        ]
+        table_metadata = Table(table_metadata.name, MetaData(option_schema), *columns)
+
         with self.create_engine(url=url) as engine:
             statement = str(
                 CreateTable(
                     table_metadata,
-                    include_foreign_key_constraints=include_foreign_key_constraints,
-                    if_not_exists=if_not_exists,
+                    include_foreign_key_constraints=option_include_foreign_key_constraint,
+                    if_not_exists=option_if_not_exists,
                 ).compile(engine)
             )
 

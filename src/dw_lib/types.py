@@ -2,7 +2,7 @@ from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 import math
 import psutil
@@ -16,6 +16,16 @@ class AdapterType(StrEnum):
 
 class TableIndexType(StrEnum):
     BTREE = "btree"
+
+
+class CreateTableStatementOptions(TypedDict):
+    schema: Optional[str] = None
+    if_not_exists: Optional[bool] = False
+    include_autoincrement: Optional[bool] = False
+    include_index: Optional[bool] = False
+    include_primary_key_constraint: Optional[bool] = False
+    include_foreign_key_constraint: Optional[bool] = False
+    include_unique_constraint: Optional[bool] = False
 
 
 class ClickHouseIdentifier:

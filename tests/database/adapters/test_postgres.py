@@ -140,21 +140,32 @@ class TestPostgresAdapter:
         postgres_adapter.drop_table(table)
         assert postgres_adapter.has_table(table) is False
 
-    def test_get_create_table_statement(
-        self, postgres_adapter: PostgresAdapter, postgres_table: Table
-    ):
+    def test_get_create_table_statement_non_existent(self, postgres_adapter: PostgresAdapter):
         with pytest.raises(TableNotFoundException):
             postgres_adapter.get_create_table_statement("non_existent")
 
+    def test_get_create_table_statement_existent(
+        self, postgres_adapter: PostgresAdapter, postgres_table: Table
+    ):
+        actual = postgres_adapter.get_create_table_statement(postgres_table.name)
         expected = f"""
         CREATE TABLE {postgres_adapter.settings.schema_}.{postgres_table.name} (
             id BIGINT,
             updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
         )
         """
-        assert_equal_ignoring_whitespace(
-            postgres_adapter.get_create_table_statement(postgres_table.name), expected
+        assert_equal_ignoring_whitespace(actual, expected)
+
+        actual = postgres_adapter.get_create_table_statement(
+            postgres_table.name, options={"schema": "other_schema"}
         )
+        expected = f"""
+        CREATE TABLE other_schema.{postgres_table.name} (
+            id BIGINT,
+            updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
+        )
+        """
+        assert_equal_ignoring_whitespace(actual, expected)
 
     def test_list_tables_empty_database(self, postgres_adapter: PostgresAdapter):
         assert postgres_adapter.list_tables() == []

@@ -5,9 +5,9 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.schema import CreateTable
+from sqlalchemy.schema import CreateTable, ForeignKeyConstraint
 from sqlmodel import MetaData, Session, Table
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Sequence
 
 import psycopg2
 import pydash
@@ -168,7 +168,12 @@ class PostgresAdapter(BaseAdapter):
             cur.execute(statement)
 
     def get_create_table_statement(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self,
+        table: str,
+        database: Optional[str] = None,
+        schema: Optional[str] = None,
+        include_foreign_key_constraints: Optional[Sequence[ForeignKeyConstraint]] = None,
+        if_not_exists: bool = False,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -184,7 +189,13 @@ class PostgresAdapter(BaseAdapter):
         table_metadata = self.get_table(table, database=database, schema=schema)
 
         with self.create_engine(url=url) as engine:
-            statement = str(CreateTable(table_metadata).compile(engine))
+            statement = str(
+                CreateTable(
+                    table_metadata,
+                    include_foreign_key_constraints=include_foreign_key_constraints,
+                    if_not_exists=if_not_exists,
+                ).compile(engine)
+            )
 
         return statement
 

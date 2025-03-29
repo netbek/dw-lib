@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
+from sqlalchemy.schema import ForeignKeyConstraint
 from sqlmodel import Table
-from typing import Any, Generator, List, Optional, overload
+from typing import Any, Generator, List, Optional, overload, Sequence
 
 
 class BaseAdapter(ABC):
@@ -122,7 +123,12 @@ class BaseAdapter(ABC):
     @overload
     @abstractmethod
     def get_create_table_statement(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self,
+        table: str,
+        database: Optional[str] = None,
+        schema: Optional[str] = None,
+        include_foreign_key_constraints: Optional[Sequence[ForeignKeyConstraint]] = None,
+        if_not_exists: bool = False,
     ) -> None: ...
 
     @abstractmethod

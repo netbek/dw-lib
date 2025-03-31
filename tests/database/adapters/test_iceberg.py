@@ -79,10 +79,19 @@ class TestIcebergAdapter:
 
         #     print(conn.fetchall())
 
+    def test_get_table(self, iceberg_adapter: IcebergAdapter, iceberg_table: Table):
+        namespace, table = iceberg_table.name()
+        assert iceberg_adapter.get_table(table, namespace=namespace) == iceberg_table
+
+    def test_drop_tables(self, iceberg_adapter: IcebergAdapter, iceberg_table: Table):
+        assert_count_equal(iceberg_adapter.list_tables(), [iceberg_table.name()])
+        iceberg_adapter.drop_tables()
+        assert_count_equal(iceberg_adapter.list_tables(), [])
+
     def test_list_tables_empty_catalog(self, iceberg_adapter: IcebergAdapter):
-        assert iceberg_adapter.list_tables() == []
+        assert_count_equal(iceberg_adapter.list_tables(), [])
 
     def test_list_tables_populated_catalog(
         self, iceberg_adapter: IcebergAdapter, iceberg_table: Table
     ):
-        assert_count_equal([iceberg_table.name()], iceberg_adapter.list_tables())
+        assert_count_equal(iceberg_adapter.list_tables(), [iceberg_table.name()])

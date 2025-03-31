@@ -67,7 +67,10 @@ class IcebergAdapter(BaseAdapter):
         else:
             self.catalog.create_namespace(namespace, properties=properties)
 
-    def drop_namespace(self, namespace: str):
+    def drop_namespace(self, namespace: str, cascade: Optional[bool] = False):
+        if cascade:
+            self.drop_tables(namespace)
+
         self.catalog.drop_namespace(namespace)
 
     def has_table(self, table: str, namespace: Optional[str] = None) -> bool:
@@ -122,7 +125,7 @@ class IcebergAdapter(BaseAdapter):
     def truncate_table(self):
         raise NotImplementedError()
 
-    def get_table(self, table: str, namespace: Optional[str] = None):
+    def get_table(self, table: str, namespace: Optional[str] = None) -> Table:
         if namespace is None:
             namespace = self.settings.namespace
 
@@ -134,8 +137,12 @@ class IcebergAdapter(BaseAdapter):
     def set_table_replica_identity(self):
         raise NotImplementedError()
 
-    def drop_tables(self):
-        raise NotImplementedError()
+    def drop_tables(self, namespace: Optional[str] = None) -> None:
+        if namespace is None:
+            namespace = self.settings.namespace
+
+        for namespace, table in self.list_tables(namespace=namespace):
+            self.drop_table(table, namespace=namespace)
 
     def list_tables(self, namespace: Optional[str] = None) -> List[Identifier]:
         if namespace is None:

@@ -1,5 +1,6 @@
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.duckdb import DuckDBAdapter
+from .database.adapters.iceberg import IcebergAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import TableNotFoundException
 from .peerdb import PeerDB
@@ -10,6 +11,7 @@ from .types import (
     ClickHouseTableIdentifier,
     DuckDBSettings,
     DuckDBTableIdentifier,
+    IcebergSettings,
     PostgresIdentifier,
     PostgresSettings,
     PostgresTableIdentifier,
@@ -27,6 +29,8 @@ __all__ = (
     "DuckDBAdapter",
     "DuckDBSettings",
     "DuckDBTableIdentifier",
+    "IcebergAdapter",
+    "IcebergSettings",
     "PeerDB",
     "PostgresAdapter",
     "PostgresIdentifier",

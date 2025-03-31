@@ -1,0 +1,14 @@
+catalog:
+  default:
+    type: sql
+    uri: postgresql+psycopg2://iceberg:iceberg@postgres:5432/iceberg
+    warehouse: s3://iceberg/
+    s3.endpoint: http://minio:9000
+    s3.access-key-id: admin
+    s3.secret-access-key: password
+    s3.region: us-east-1
+
+  # sqlite:
+  #     type: sql
+  #     uri: sqlite:////app/temp/pyiceberg_catalog.db
+  #     warehouse: file:///app/temp

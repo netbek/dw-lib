@@ -11,6 +11,7 @@ import psutil
 class AdapterType(StrEnum):
     CLICKHOUSE = "clickhouse"
     DUCKDB = "duckdb"
+    ICEBERG = "iceberg"
     POSTGRES = "postgres"
 
 
@@ -173,6 +174,23 @@ class DuckDBSettings(BaseSettings):
     schema_: str = Field(default="main", serialization_alias="schema")
     extensions: Optional[List[str]] = None
     settings: Optional[DuckDBSystemSettings] = None
+
+
+class IcebergCatalog(BaseModel):
+    type: str = "sql"
+    uri: str
+    warehouse: str
+    s3_endpoint: Optional[str] = Field(None, alias="s3.endpoint")
+    s3_access_key_id: Optional[str] = Field(None, alias="s3.access-key-id")
+    s3_secret_access_key: Optional[str] = Field(None, alias="s3.secret-access-key")
+    s3_region: Optional[str] = Field(None, alias="s3.region")
+
+
+class IcebergSettings(BaseModel):
+    catalog: Dict[str, IcebergCatalog]
+
+    def find_catalog(self, name: str) -> Optional[IcebergCatalog]:
+        return self.catalog.get(name)
 
 
 class PostgresSettings(BaseSettings):

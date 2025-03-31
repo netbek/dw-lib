@@ -1,7 +1,8 @@
-from dw_lib import ClickHouseSettings, DuckDBSettings, PostgresSettings
+from dw_lib import ClickHouseSettings, DuckDBSettings, IcebergSettings, PostgresSettings
 from typing import Any, Generator
 
 import pytest
+import yaml
 
 
 @pytest.fixture(scope="session")
@@ -21,6 +22,13 @@ def clickhouse_settings() -> Generator[ClickHouseSettings, Any, None]:
 @pytest.fixture(scope="session")
 def duckdb_settings() -> Generator[DuckDBSettings, Any, None]:
     yield DuckDBSettings(database="/app/temp/test.duckdb")
+
+
+@pytest.fixture(scope="session")
+def iceberg_settings() -> Generator[IcebergSettings, Any, None]:
+    with open("/app/tests/docker/app/.pyiceberg.yaml") as fp:
+        config = yaml.safe_load(fp)
+    yield IcebergSettings(**config)
 
 
 @pytest.fixture(scope="session")

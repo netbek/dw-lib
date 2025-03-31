@@ -25,8 +25,32 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test
       - TZ=UTC
+    volumes:
+      - ./tests/docker/postgres/docker-entrypoint-initdb.d/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  minio:
+    image: minio/minio:RELEASE.2025-03-12T18-04-18Z
+    build:
+      context: .
+      dockerfile: ./tests/docker/minio/Dockerfile
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - TZ=UTC
+    entrypoint: /bin/sh -c /entrypoint.sh
+    volumes:
+      - ./tests/docker/wait-for-it/wait-for-it.sh:/wait-for-it.sh:ro
+      - ./tests/docker/minio/entrypoint.sh:/entrypoint.sh:ro
+    healthcheck:
+      test: mc ready local
       interval: 1s
       timeout: 1s
       retries: 10
@@ -38,18 +62,20 @@ services:
     image: dw-lib-app:latest
     build: .
     environment:
+      - AWS_EC2_METADATA_DISABLED=true # https://github.com/apache/arrow/issues/39184
       - TZ=UTC
     working_dir: /app
     volumes:
-      - ./pyproject.toml:/app/pyproject.toml
-      - ./README.md:/app/README.md
-      - ./uv.lock:/app/uv.lock
-      - ./src:/app/src
-      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./README.md:/app/README.md:ro
+      - ./uv.lock:/app/uv.lock:ro
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
     depends_on:
       - clickhouse
       - postgres
+      - minio
     stop_grace_period: 0s
-    command: /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- /bin/bash
+    command: /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- /wait-for-it.sh minio:9000 -- /bin/bash
     stdin_open: true
     tty: true

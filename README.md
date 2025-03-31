@@ -1,6 +1,6 @@
 # dw-lib
 
-Tools for working with Postgres, ClickHouse, and DuckDB.
+Tools for working with Postgres, ClickHouse, DuckDB, and Iceberg.
 
 ## Installation
 

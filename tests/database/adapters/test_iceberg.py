@@ -1,14 +1,9 @@
+from ...asserts import assert_count_equal
 from dw_lib import IcebergAdapter, IcebergSettings
+from pyiceberg.table import Table
 from typing import Any, Generator
 
 import pytest
-import re
-
-
-def get_version_from_path(path):
-    match = re.search(r"/metadata/([\w-]+)\.metadata\.json", path)
-    if match:
-        return match.group(1)
 
 
 class TestIcebergAdapter:
@@ -16,31 +11,52 @@ class TestIcebergAdapter:
     def iceberg_adapter(
         self, iceberg_settings: IcebergSettings
     ) -> Generator[IcebergAdapter, Any, None]:
-        yield IcebergAdapter(iceberg_settings.find_catalog("default"))
+        iceberg_adapter = IcebergAdapter(iceberg_settings)
+        iceberg_adapter.create_namespace(iceberg_settings.namespace)
+        yield iceberg_adapter
+        iceberg_adapter.drop_namespace(iceberg_settings.namespace)
 
     @pytest.fixture(scope="function")
-    def iceberg_namespace(self, iceberg_adapter: IcebergAdapter) -> Generator[str, Any, None]:
-        namespace = "default"
-        iceberg_adapter.create_namespace(namespace)
-        yield namespace
-        iceberg_adapter.drop_namespace(namespace)
-
-    def test_create_table(self, iceberg_adapter: IcebergAdapter, iceberg_namespace: str):
+    def iceberg_table(self, iceberg_adapter: IcebergAdapter) -> Generator[Table, Any, None]:
         table = "test_table"
         statement = f"""
-        create table if not exists {table} (
+        create table {table} (
+            id bigint,
+            updated_at timestamp default now()
+        );
+        """
+        yield iceberg_adapter.create_table(table, statement)
+        iceberg_adapter.drop_table(table)
+
+    def test_has_namespace_non_existent(self, iceberg_adapter: IcebergAdapter):
+        assert iceberg_adapter.has_namespace("non_existent") is False
+
+    def test_has_namespace_existent(self, iceberg_adapter: IcebergAdapter):
+        assert iceberg_adapter.has_namespace(iceberg_adapter.settings.namespace) is True
+
+    def test_has_table_non_existent(self, iceberg_adapter: IcebergAdapter):
+        assert iceberg_adapter.has_table("non_existent") is False
+
+    def test_has_table_existent(self, iceberg_adapter: IcebergAdapter, iceberg_table: Table):
+        namespace, table = iceberg_table.name()
+        assert iceberg_adapter.has_table(table, namespace=namespace) is True
+
+    def test_create_and_drop_table(self, iceberg_adapter: IcebergAdapter):
+        table = "test_table"
+        statement = f"""
+        create table {table} (
             id bigint,
             updated_at timestamp default now()
         );
         """
 
-        assert iceberg_adapter.has_table(table, namespace=iceberg_namespace) is False
+        assert iceberg_adapter.has_table(table) is False
 
-        iceberg_adapter.create_table(table, statement, namespace=iceberg_namespace)
-        assert iceberg_adapter.has_table(table, namespace=iceberg_namespace) is True
+        iceberg_adapter.create_table(table, statement)
+        assert iceberg_adapter.has_table(table) is True
 
-        iceberg_adapter.drop_table(table, namespace=iceberg_namespace)
-        assert iceberg_adapter.has_table(table, namespace=iceberg_namespace) is False
+        iceberg_adapter.drop_table(table)
+        assert iceberg_adapter.has_table(table) is False
 
         # t = pa.Table.from_pylist(
         #     [
@@ -62,3 +78,11 @@ class TestIcebergAdapter:
         #     )
 
         #     print(conn.fetchall())
+
+    def test_list_tables_empty_catalog(self, iceberg_adapter: IcebergAdapter):
+        assert iceberg_adapter.list_tables() == []
+
+    def test_list_tables_populated_catalog(
+        self, iceberg_adapter: IcebergAdapter, iceberg_table: Table
+    ):
+        assert_count_equal([iceberg_table.name()], iceberg_adapter.list_tables())

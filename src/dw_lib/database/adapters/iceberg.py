@@ -95,12 +95,14 @@ class IcebergAdapter(BaseAdapter):
             else:
                 return self.catalog.load_table(f"{namespace}.{table}")
 
-        schema = self._get_arrow_table_schema(table, statement)
+        schema = self.get_arrow_schema_from_create_table_statement(table, statement)
 
         return self.catalog.create_table(f"{namespace}.{table}", schema=schema)
 
     @lru_cache
-    def _get_arrow_table_schema(self, table: str, statement: str) -> pyarrow.lib.Table:
+    def get_arrow_schema_from_create_table_statement(
+        self, table: str, statement: str
+    ) -> pyarrow.lib.Schema:
         duckdb_adapter = DuckDBAdapter(DuckDBSettings(database=":memory:"))
 
         with duckdb_adapter.create_client() as conn:

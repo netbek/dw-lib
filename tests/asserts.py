@@ -11,7 +11,14 @@ def assert_equal_ignoring_whitespace(actual, expected):
     assert strip_whitespace(actual) == strip_whitespace(expected)
 
 
-def assert_list_of_dicts_equal_ignore_order(a, b):
+def assert_count_equal(a, b):
+    """
+    Asserts that two lists have the same elements, ignoring order.
+    """
+    assert Counter(list(a)) == Counter(list(b)), "Lists have different elements"
+
+
+def assert_count_equal_dicts(a, b):
     """
     Asserts that two lists of dictionaries have the same elements, ignoring order.
     """
@@ -24,10 +31,3 @@ def assert_list_of_dicts_equal_ignore_order(a, b):
     b_tuples = sorted(map(dict_to_tuple, b))
 
     assert a_tuples == b_tuples, "Lists have different elements"
-
-
-def assert_count_equal(a, b):
-    """
-    Asserts that two lists have the same elements, ignoring order.
-    """
-    assert Counter(list(a)) == Counter(list(b)), "Lists have different elements"

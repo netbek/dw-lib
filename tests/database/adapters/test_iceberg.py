@@ -1,8 +1,10 @@
-from ...asserts import assert_count_equal
+from ...asserts import assert_count_equal, assert_count_equal_dicts
 from dw_lib import IcebergAdapter, IcebergSettings
 from pyiceberg.table import Table
 from typing import Any, Generator
 
+import datetime
+import pyarrow
 import pytest
 
 
@@ -50,11 +52,29 @@ class TestIcebergAdapter:
         );
         """
 
+        # Test that table can be created
         assert iceberg_adapter.has_table(table) is False
-
-        iceberg_adapter.create_table(table, statement)
+        iceberg_table = iceberg_adapter.create_table(table, statement)
         assert iceberg_adapter.has_table(table) is True
 
+        # Test that data can be appended to table
+        now = datetime.datetime.now()
+        df = pyarrow.Table.from_pylist(
+            [
+                {"id": 1},
+                {"id": 2, "updated_at": now},
+            ],
+            schema=iceberg_table.schema().as_arrow(),
+        )
+        iceberg_table.append(df)
+        actual = iceberg_table.scan().to_arrow().to_pylist()
+        expected = [
+            {"id": 1, "updated_at": None},
+            {"id": 2, "updated_at": now},
+        ]
+        assert_count_equal_dicts(actual, expected)
+
+        # Test that table can be dropped
         iceberg_adapter.drop_table(table)
         assert iceberg_adapter.has_table(table) is False
 

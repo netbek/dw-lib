@@ -11,6 +11,12 @@ jinja_env = Environment(
 )
 
 
+def escape_sql_value(value):
+    if isinstance(value, str):
+        return value.replace("'", "''")
+    return value
+
+
 def render_statement(
     statement: str, context: Optional[dict[str, Any]] = None, pretty: bool = False
 ) -> str:

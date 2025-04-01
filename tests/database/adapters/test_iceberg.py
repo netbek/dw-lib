@@ -1,5 +1,5 @@
-from ...asserts import assert_count_equal, assert_count_equal_dicts
-from dw_lib import IcebergAdapter, IcebergSettings
+from ...asserts import assert_count_equal
+from dw_lib import DuckDBAdapter, DuckDBSettings, IcebergAdapter, IcebergSettings
 from pyiceberg.table import Table
 from typing import Any, Generator
 
@@ -10,13 +10,17 @@ import pytest
 
 class TestIcebergAdapter:
     @pytest.fixture(scope="class")
+    def duckdb_adapter(self) -> Generator[DuckDBAdapter, Any, None]:
+        yield DuckDBAdapter(DuckDBSettings(database=":memory:", extensions=["iceberg"]))
+
+    @pytest.fixture(scope="class")
     def iceberg_adapter(
         self, iceberg_settings: IcebergSettings
     ) -> Generator[IcebergAdapter, Any, None]:
         iceberg_adapter = IcebergAdapter(iceberg_settings)
         iceberg_adapter.create_namespace(iceberg_settings.namespace)
         yield iceberg_adapter
-        iceberg_adapter.drop_namespace(iceberg_settings.namespace)
+        iceberg_adapter.drop_namespace(iceberg_settings.namespace, cascade=True)
 
     @pytest.fixture(scope="function")
     def iceberg_table(self, iceberg_adapter: IcebergAdapter) -> Generator[Table, Any, None]:
@@ -43,7 +47,9 @@ class TestIcebergAdapter:
         namespace, table = iceberg_table.name()
         assert iceberg_adapter.has_table(table, namespace=namespace) is True
 
-    def test_create_and_drop_table(self, iceberg_adapter: IcebergAdapter):
+    def test_create_and_drop_table(
+        self, iceberg_adapter: IcebergAdapter, duckdb_adapter: DuckDBAdapter
+    ):
         table = "test_table"
         statement = f"""
         create table {table} (
@@ -67,37 +73,33 @@ class TestIcebergAdapter:
             schema=iceberg_table.schema().as_arrow(),
         )
         iceberg_table.append(df)
+
+        # Test that data can be fetched using PyIceberg
         actual = iceberg_table.scan().to_arrow().to_pylist()
         expected = [
             {"id": 1, "updated_at": None},
             {"id": 2, "updated_at": now},
         ]
-        assert_count_equal_dicts(actual, expected)
+        assert_count_equal(actual, expected)
+
+        # Test that data can be fetched using DuckDB
+        with duckdb_adapter.create_client() as conn:
+            statement = duckdb_adapter.get_create_secret_statement_for_iceberg(
+                iceberg_adapter.settings, replace=True
+            )
+            conn.execute(statement)
+
+            statement = "select * from iceberg_scan(?);"
+            actual = (
+                conn.query(statement, params=[iceberg_table.metadata_location])
+                .to_arrow_table()
+                .to_pylist()
+            )
+        assert_count_equal(actual, expected)
 
         # Test that table can be dropped
         iceberg_adapter.drop_table(table)
         assert iceberg_adapter.has_table(table) is False
-
-        # t = pa.Table.from_pylist(
-        #     [
-        #         {
-        #             "id": 1,
-        #         }
-        #     ],
-        #     schema=arrow_table_schema,
-        # )
-        # iceberg_table.append(t)
-
-        # print(iceberg_table.scan(selected_fields=["id"]).to_pandas())
-
-        # with duckdb_adapter.create_client() as conn:
-        #     # conn.execute("set unsafe_enable_version_guessing = true;")
-
-        #     conn.execute(
-        #         f"describe select id, uuid from iceberg_scan('{warehouse_path}/default.db/{table}/metadata/latest.metadata.json');"
-        #     )
-
-        #     print(conn.fetchall())
 
     def test_get_table(self, iceberg_adapter: IcebergAdapter, iceberg_table: Table):
         namespace, table = iceberg_table.name()

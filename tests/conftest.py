@@ -33,6 +33,7 @@ def iceberg_settings() -> Generator[IcebergSettings, Any, None]:
         s3_access_key_id="admin",
         s3_secret_access_key="password",
         s3_region="us-east-1",
+        is_minio=True,
     )
 
 

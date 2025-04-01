@@ -184,6 +184,7 @@ class IcebergSettings(BaseSettings):
     s3_access_key_id: Optional[str] = Field(None, serialization_alias="s3.access-key-id")
     s3_secret_access_key: Optional[str] = Field(None, serialization_alias="s3.secret-access-key")
     s3_region: Optional[str] = Field(None, serialization_alias="s3.region")
+    is_minio: Optional[bool] = False
     catalog: Optional[str] = "default"
     namespace: Optional[str] = "default"
 

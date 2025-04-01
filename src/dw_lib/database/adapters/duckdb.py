@@ -1,11 +1,13 @@
-from ...types import AdapterType, DuckDBSettings
+from ...types import AdapterType, DuckDBSettings, IcebergSettings
 from ..adapters.base import BaseAdapter
+from ..utils import escape_sql_value
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from sqlalchemy import URL
 from sqlmodel import Table
 from typing import Any, List, Optional
+from urllib.parse import urlparse
 
 import duckdb
 
@@ -180,3 +182,35 @@ class DuckDBAdapter(BaseAdapter):
 
     def list_publications(self) -> List[str]:
         raise NotImplementedError()
+
+    def get_create_secret_statement_for_iceberg(
+        self,
+        iceberg_settings: IcebergSettings,
+        secret: Optional[str] = "s3_secret",
+        replace: Optional[bool] = False,
+    ):
+        parsed_s3_endpoint = urlparse(iceberg_settings.s3_endpoint)
+
+        if parsed_s3_endpoint.scheme == "https":
+            use_ssl = "true"
+        else:
+            use_ssl = "false"
+
+        if iceberg_settings.is_minio:
+            url_style = "path"
+        else:
+            url_style = "vhost"
+
+        statement = f"""
+        {"create or replace" if replace else "create"} secret {secret} (
+            type s3,
+            key_id '{escape_sql_value(iceberg_settings.s3_access_key_id)}',
+            secret '{escape_sql_value(iceberg_settings.s3_secret_access_key)}',
+            region '{escape_sql_value(iceberg_settings.s3_region)}',
+            endpoint '{escape_sql_value(parsed_s3_endpoint.netloc)}',
+            url_style '{escape_sql_value(url_style)}',
+            use_ssl '{escape_sql_value(use_ssl)}'
+        );
+        """
+
+        return statement

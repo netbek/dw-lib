@@ -9,6 +9,8 @@ services:
       - CLICKHOUSE_DB=default
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - TZ=UTC
+    ports:
+      - 18123:8123
     healthcheck:
       test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
       interval: 1s
@@ -25,6 +27,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test
       - TZ=UTC
+    ports:
+      - 15432:5432
     volumes:
       - ./tests/docker/postgres/docker-entrypoint-initdb.d/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
@@ -46,6 +50,8 @@ services:
       - MINIO_ROOT_PASSWORD=password
       - TZ=UTC
     entrypoint: /bin/sh -c /entrypoint.sh
+    ports:
+      - 19001:9001
     volumes:
       - ./tests/docker/wait-for-it/wait-for-it.sh:/wait-for-it.sh:ro
       - ./tests/docker/minio/entrypoint.sh:/entrypoint.sh:ro

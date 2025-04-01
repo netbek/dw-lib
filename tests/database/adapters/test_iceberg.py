@@ -74,7 +74,7 @@ class TestIcebergAdapter:
         )
         iceberg_table.append(df)
 
-        # Test that data can be fetched using PyIceberg
+        # Test that data can be read using PyIceberg
         actual = iceberg_table.scan().to_arrow().to_pylist()
         expected = [
             {"id": 1, "updated_at": None},
@@ -82,7 +82,7 @@ class TestIcebergAdapter:
         ]
         assert_count_equal(actual, expected)
 
-        # Test that data can be fetched using DuckDB
+        # Test that data can be read using DuckDB
         with duckdb_adapter.create_client() as conn:
             statement = duckdb_adapter.get_create_secret_statement_for_iceberg(
                 iceberg_adapter.settings, replace=True

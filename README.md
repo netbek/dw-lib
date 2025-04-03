@@ -2,35 +2,41 @@
 
 Tools for working with Postgres, ClickHouse, and DuckDB.
 
-## Installation
+## Install
 
 ## Development
 
-1. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:
+1. Clone the repo and its submodules:
+
+    ```shell
+    git clone --recurse-submodules https://github.com/netbek/dw-lib.git
+    ```
+
+2. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:
 
     ```shell
     ./scripts/install.sh docker
     ```
 
-2. Install uv:
+3. Install [uv v0.6.12 or higher](https://docs.astral.sh/uv/getting-started/installation/). Follow the links for instructions or run this script:
 
     ```shell
     ./scripts/install.sh uv
     ```
 
-3. Install pre-commit:
+4. Install pre-commit:
 
     ```shell
     ./scripts/install.sh precommit
     ```
 
-4. Install pre-commit hook:
+5. Install pre-commit hook:
 
     ```shell
     ./scripts/install.sh precommit_hook
     ```
 
-5. Build the Docker image:
+6. Build the Docker image:
 
     ```shell
     ./scripts/run.sh build

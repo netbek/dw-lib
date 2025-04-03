@@ -9,6 +9,8 @@ services:
       - CLICKHOUSE_DB=default
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - TZ=UTC
+    ports:
+      - 18123:8123
     healthcheck:
       test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
       interval: 1s
@@ -25,6 +27,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test
       - TZ=UTC
+    ports:
+      - 15432:5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 1s

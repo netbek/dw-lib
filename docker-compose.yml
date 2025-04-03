@@ -45,11 +45,12 @@ services:
       - TZ=UTC
     working_dir: /app
     volumes:
-      - ./pyproject.toml:/app/pyproject.toml
-      - ./README.md:/app/README.md
-      - ./uv.lock:/app/uv.lock
-      - ./src:/app/src
-      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./README.md:/app/README.md:ro
+      - ./uv.lock:/app/uv.lock:ro
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./tests/docker/wait-for-it/wait-for-it.sh:/wait-for-it.sh:ro
     depends_on:
       - clickhouse
       - postgres

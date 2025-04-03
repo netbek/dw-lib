@@ -1,4 +1,4 @@
-from ..asserts import assert_list_of_dicts_equal_ignore_order
+from ..asserts import assert_count_equal
 from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
 from typing import Any, Generator
 
@@ -167,7 +167,7 @@ class TestMirrorBasicSettings:
                 {"id": 4, "category_id": "B"},
                 {"id": 5, "category_id": "A"},
             ]
-            assert_list_of_dicts_equal_ignore_order(actual, expected)
+            assert_count_equal(actual, expected)
 
         # Teardown
         with postgres_adapter.create_client() as (conn, cur):
@@ -217,7 +217,7 @@ class TestMirrorBasicSettings:
                 {"id": 4, "category_id": "B"},
                 {"id": 5, "category_id": "A"},
             ]
-            assert_list_of_dicts_equal_ignore_order(actual, expected)
+            assert_count_equal(actual, expected)
 
             cur.execute("""
             select lower(indexdef)
@@ -283,7 +283,7 @@ class TestMirrorAdvancedSettings:
                 .to_dict(orient="records")
             )
             expected = [{"id": 2, "category_id": "A"}, {"id": 5, "category_id": "A"}]
-            assert_list_of_dicts_equal_ignore_order(actual, expected)
+            assert_count_equal(actual, expected)
 
         # Teardown
         with postgres_adapter.create_client() as (conn, cur):
@@ -327,7 +327,7 @@ class TestMirrorAdvancedSettings:
             columns = [desc[0] for desc in cur.description]
             actual = [dict(zip(columns, row)) for row in rows]
             expected = [{"id": 2, "category_id": "A"}, {"id": 5, "category_id": "A"}]
-            assert_list_of_dicts_equal_ignore_order(actual, expected)
+            assert_count_equal(actual, expected)
 
             cur.execute("""
             select lower(indexdef)

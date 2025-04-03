@@ -5,23 +5,24 @@ settings:
 
 peers:
   source:
-    type: 3
-    postgres_config:
+    type: postgres
+    settings:
       host: postgres
       port: 5432
-      user: postgres
+      username: postgres
       password: postgres
       database: test
 
   destination:
-    type: 8
-    clickhouse_config:
+    type: clickhouse
+    settings:
       host: clickhouse
       http_port: 8123
       tcp_port: 9000
-      user: default
+      username: default
       password: default
       database: default
+      secure: false
 
 mirrors:
   +do_initial_snapshot: false

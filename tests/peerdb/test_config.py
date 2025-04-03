@@ -108,27 +108,53 @@ class TestOK(DatabaseTest):
             },
             "peers": {
                 "source": {
-                    "type": 3,
-                    "postgres_config": {
-                        "host": "postgres",
-                        "port": 5432,
-                        "user": "postgres",
-                        "password": "postgres",
-                        "database": "test",
-                    },
                     "name": "source",
+                    "adapter": {
+                        "type": "postgres",
+                        "settings": {
+                            "host": "postgres",
+                            "port": 5432,
+                            "username": "postgres",
+                            "password": "postgres",
+                            "database": "test",
+                        },
+                    },
+                    "peerdb": {
+                        "type": 3,
+                        "postgres_config": {
+                            "host": "postgres",
+                            "port": 5432,
+                            "user": "postgres",
+                            "password": "postgres",
+                            "database": "test",
+                        },
+                    },
                 },
                 "destination": {
-                    "type": 8,
-                    "clickhouse_config": {
-                        "host": "clickhouse",
-                        "http_port": 8123,
-                        "tcp_port": 9000,
-                        "user": "default",
-                        "password": "default",
-                        "database": "default",
-                    },
                     "name": "destination",
+                    "adapter": {
+                        "type": "clickhouse",
+                        "settings": {
+                            "host": "clickhouse",
+                            "http_port": 8123,
+                            "tcp_port": 9000,
+                            "username": "default",
+                            "password": "default",
+                            "database": "default",
+                            "secure": False,
+                        },
+                    },
+                    "peerdb": {
+                        "type": 8,
+                        "clickhouse_config": {
+                            "host": "clickhouse",
+                            "port": 9000,
+                            "user": "default",
+                            "database": "default",
+                            "password": "default",
+                            "disable_tls": True,
+                        },
+                    },
                 },
             },
             "mirrors": {

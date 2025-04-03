@@ -105,6 +105,11 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
 class DuckDBTableIdentifier(PostgresTableIdentifier): ...
 
 
+ADAPTER_TYPE_TO_PEERDB_TYPE_MAP = {
+    AdapterType.CLICKHOUSE: 8,
+    AdapterType.POSTGRES: 3,
+}
+
 ADAPTER_TYPE_TO_TABLE_IDENTIFIER_MAP = {
     AdapterType.DUCKDB: DuckDBTableIdentifier,
     AdapterType.POSTGRES: PostgresTableIdentifier,

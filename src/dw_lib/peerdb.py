@@ -2,36 +2,19 @@ from .constants import PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import MirrorNotFoundException
-from .types import ClickHouseSettings, PostgresSettings, PostgresTableIdentifier
+from .types import (
+    AdapterType,
+    ClickHouseSettings,
+    PostgresSettings,
+    PostgresTableIdentifier,
+    ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
+)
 from .utils.template import render_template
 from pathlib import Path
 
 import httpx
 import pydash
 import yaml
-
-
-def to_clickhouse_settings(clickhouse_config: dict) -> ClickHouseSettings:
-    return ClickHouseSettings(
-        host=clickhouse_config["host"],
-        port=clickhouse_config["port"],
-        username=clickhouse_config["user"],
-        password=clickhouse_config["password"],
-        database=clickhouse_config["database"],
-        driver="native",
-        secure=not clickhouse_config.get("disable_tls", False),
-    )
-
-
-def to_postgres_settings(postgres_config: dict) -> PostgresSettings:
-    return PostgresSettings(
-        host=postgres_config["host"],
-        port=postgres_config["port"],
-        username=postgres_config["user"],
-        password=postgres_config["password"],
-        database=postgres_config["database"],
-        schema_="public",
-    )
 
 
 class PeerDB:
@@ -81,7 +64,37 @@ class PeerDB:
             config["peers"] = process_node(config["peers"])
 
             for key, value in config["peers"].items():
-                config["peers"][key]["name"] = key
+                if value["type"] == AdapterType.CLICKHOUSE:
+                    peerdb_config = {
+                        "type": ADAPTER_TYPE_TO_PEERDB_TYPE_MAP[value["type"]],
+                        "clickhouse_config": {
+                            "host": value["settings"]["host"],
+                            "port": value["settings"]["tcp_port"],
+                            "user": value["settings"]["username"],
+                            "password": value["settings"]["password"],
+                            "database": value["settings"]["database"],
+                            "disable_tls": not value["settings"]["secure"],
+                        },
+                    }
+                elif value["type"] == AdapterType.POSTGRES:
+                    peerdb_config = {
+                        "type": ADAPTER_TYPE_TO_PEERDB_TYPE_MAP[value["type"]],
+                        "postgres_config": {
+                            "host": value["settings"]["host"],
+                            "port": value["settings"]["port"],
+                            "user": value["settings"]["username"],
+                            "password": value["settings"]["password"],
+                            "database": value["settings"]["database"],
+                        },
+                    }
+                else:
+                    raise Exception(f"Adapter type '{value['type']}' is not supported")
+
+                config["peers"][key] = {
+                    "name": key,
+                    "adapter": value,
+                    "peerdb": peerdb_config,
+                }
         else:
             config["peers"] = {}
 
@@ -97,8 +110,9 @@ class PeerDB:
                 if not source_peer:
                     raise Exception(f"Peer '{PEERDB_SOURCE_PEER}' not found in PeerDB config")
 
-                postgres_settings = to_postgres_settings(source_peer["postgres_config"])
-                source_adapter = PostgresAdapter(postgres_settings)
+                source_adapter = PostgresAdapter(
+                    PostgresSettings(**source_peer["adapter"]["settings"])
+                )
                 source_tables = source_adapter.list_tables()
 
                 # Validate the table mappings

@@ -17,21 +17,14 @@ async def install(project_name: str) -> None:
     project = Project.from_name(project_name)
     peerdb = PeerDB(project.settings.peerdb.config_path)
     source_peer = SourcePeer(project.settings.source_db)
-    destination_peer = DestinationPeer(
-        project.settings.destination_db,
-        peerdb.config["peers"][PEERDB_DESTINATION_PEER]["clickhouse_config"]["database"],
-    )
     source_user = peerdb.config["users"].get(PEERDB_SOURCE_PEER)
 
     peerdb.update_settings(peerdb.config["settings"])
-    app.console.print("Updated PeerDB settings", style="green")
+    app.console.print("Updated settings", style="green")
 
     if source_user:
         source_peer.create_user(**source_user)
-        app.console.print(
-            f"Created user '{source_user['username']}' on source",
-            style="green",
-        )
+        app.console.print(f"Created user '{source_user['username']}' on source", style="green")
 
         for schema in peerdb.config["publication_schemas"]:
             source_peer.grant_user_privileges(source_user["username"], schema)
@@ -61,30 +54,15 @@ async def install(project_name: str) -> None:
         source_peer.create_publication(
             publication["name"], publication["table_identifiers"], replace=True
         )
-        app.console.print(
-            f"Created publication '{publication['name']}' on source",
-            style="green",
-        )
-
-    destination_peer.create_database(destination_peer.database)
-    app.console.print(
-        f"Created database '{destination_peer.database}' on destination",
-        style="green",
-    )
+        app.console.print(f"Created publication '{publication['name']}' on source", style="green")
 
     for peer in peerdb.config["peers"].values():
-        peerdb.create_peer(peer)
-        app.console.print(
-            f"Created PeerDB peer '{peer['name']}'",
-            style="green",
-        )
+        peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
+        app.console.print(f"Created peer '{peer['name']}'", style="green")
 
     for mirror in peerdb.config["mirrors"].values():
         peerdb.create_mirror(mirror)
-        app.console.print(
-            f"Created PeerDB mirror '{mirror['flow_job_name']}'",
-            style="green",
-        )
+        app.console.print(f"Created mirror '{mirror['flow_job_name']}'", style="green")
 
 
 @peerdb_app.command()
@@ -101,24 +79,15 @@ async def uninstall(project_name: str) -> None:
 
     for mirror in peerdb.config["mirrors"].values():
         peerdb.drop_mirror(mirror)
-        app.console.print(
-            f"Dropped PeerDB mirror '{mirror['flow_job_name']}'",
-            style="green",
-        )
+        app.console.print(f"Dropped mirror '{mirror['flow_job_name']}'", style="green")
 
     for peer in peerdb.config["peers"].values():
-        peerdb.drop_peer(peer)
-        app.console.print(
-            f"Dropped PeerDB peer '{peer['name']}'",
-            style="green",
-        )
+        peerdb.drop_peer({"name": peer["name"], **peer["peerdb"]})
+        app.console.print(f"Dropped peer '{peer['name']}'", style="green")
 
     for publication in peerdb.config["publications"].values():
         source_peer.drop_publication(publication["name"])
-        app.console.print(
-            f"Dropped publication '{publication['name']}' on source",
-            style="green",
-        )
+        app.console.print(f"Dropped publication '{publication['name']}' on source", style="green")
 
     for mirror in peerdb.config["mirrors"].values():
         for table_mapping in mirror["table_mappings"]:
@@ -147,13 +116,9 @@ async def uninstall(project_name: str) -> None:
             )
 
         source_peer.drop_user(source_user["username"])
-        app.console.print(
-            f"Dropped user '{source_user['username']}' on source",
-            style="green",
-        )
+        app.console.print(f"Dropped user '{source_user['username']}' on source", style="green")
 
-    destination_peer.drop_database(destination_peer.database)
+    destination_peer.drop_tables()
     app.console.print(
-        f"Dropped database '{destination_peer.database}' on destination",
-        style="green",
+        f"Dropped tables of '{destination_peer.database}' database on destination", style="green"
     )

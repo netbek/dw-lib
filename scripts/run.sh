@@ -36,7 +36,7 @@ clean() {
 }
 
 destroy() {
-    docker compose down -v --rmi local
+    docker compose down -v --remove-orphans --rmi local
     docker builder prune -f
 }
 

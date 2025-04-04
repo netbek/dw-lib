@@ -82,9 +82,9 @@ _precommit_hook_install() {
     echo "${tput_green}Installed pre-commit hook${tput_reset}"
 }
 
-if ([ "$1" == "--help" ] || [ -z "$1" ]); then
+if [[ "$1" == "--help" || "$1" == "-h" ]] || [ -z "$1" ]; then
     _help
-    exit 1
+    exit 0
 fi
 
 cd "${root_dir}"
@@ -94,7 +94,7 @@ for package in "$@"; do
     shift
 
     if command_exists "$cmd"; then
-        $cmd
+        "$cmd"
     else
         echo "${tput_red}Error: Package must be one of: docker, mkcert, precommit, precommit_hook, tilt, uv${tput_reset}"
     fi

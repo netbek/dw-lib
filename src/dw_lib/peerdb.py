@@ -6,6 +6,7 @@ from .types import (
     ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
     AdapterType,
     ClickHouseSettings,
+    PeerDBMirror,
     PeerDBPeer,
     PeerDBSetting,
     PostgresSettings,
@@ -215,10 +216,11 @@ class PeerDB:
                     f"Failed to drop peer '{peer['name']}' (error {response.status_code}: {response.text})"
                 )
 
-    def list_mirrors(self) -> list:
+    def list_mirrors(self) -> List[PeerDBMirror]:
         url = f"{self.config['api_url']}/v1/mirrors/list"
         response = httpx.get(url, headers=self._headers)
-        mirrors = response.json().get("items", [])
+        mirrors = response.json().get("mirrors", [])
+        mirrors = [PeerDBMirror(**mirror) for mirror in mirrors]
 
         return mirrors
 

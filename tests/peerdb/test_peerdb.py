@@ -1,13 +1,14 @@
-from dw_lib import PeerDB, PostgresAdapter, PostgresSettings
-from pytest_docker.plugin import get_docker_services, Services
+from ..asserts import assert_count_equal
+from ..conftest import PeerDBTest
+from dw_lib import PeerDB, PostgresAdapter
+from dw_lib.types import PeerDBPeer, PeerDBSetting
 from sqlmodel import Table
-from typing import Any, Generator, Iterator, List, Union
+from typing import Any, Generator, List
 
-import httpx
+import copy
 import os
 import pydash
 import pytest
-import yaml
 
 table_defs = [
     (
@@ -47,7 +48,7 @@ table_defs = [
 ]
 
 
-class TestLoadConfig:
+class TestLoadConfig(PeerDBTest):
     @pytest.fixture(scope="function")
     def some_postgres_tables(
         self, postgres_adapter: PostgresAdapter
@@ -114,7 +115,7 @@ class TestLoadConfig:
                         "type": "postgres",
                         "settings": {
                             "host": "localhost",
-                            "port": 15432,
+                            "port": 25432,
                             "username": "postgres",
                             "password": "postgres",
                             "database": "test",
@@ -124,7 +125,7 @@ class TestLoadConfig:
                         "type": 3,
                         "postgres_config": {
                             "host": "localhost",
-                            "port": 15432,
+                            "port": 25432,
                             "user": "postgres",
                             "password": "postgres",
                             "database": "test",
@@ -137,8 +138,8 @@ class TestLoadConfig:
                         "type": "clickhouse",
                         "settings": {
                             "host": "localhost",
-                            "http_port": 18123,
-                            "tcp_port": 19000,
+                            "http_port": 28123,
+                            "tcp_port": 29000,
                             "username": "default",
                             "password": "default",
                             "database": "default",
@@ -149,7 +150,7 @@ class TestLoadConfig:
                         "type": 8,
                         "clickhouse_config": {
                             "host": "localhost",
-                            "port": 19000,
+                            "port": 29000,
                             "user": "default",
                             "database": "default",
                             "password": "default",
@@ -208,107 +209,109 @@ class TestLoadConfig:
         assert PeerDB(config_path).config == expected
 
 
-class PeerDBTest:
+class TestSettings(PeerDBTest):
     @pytest.fixture(scope="function")
-    def docker_compose_file(self, pytestconfig):
-        return [
-            os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.database.yml"),
-            os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.peerdb.yml"),
+    def postgres_tables(
+        self, postgres_adapter: PostgresAdapter
+    ) -> Generator[List[Table], Any, None]:
+        for table_def in table_defs:
+            postgres_adapter.create_table(*table_def)
+
+        # Create all tables
+        table_names = [table_def[0] for table_def in table_defs]
+        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
+
+        yield tables
+
+        for table_name in table_names:
+            postgres_adapter.drop_table(table_name)
+
+    @pytest.fixture(scope="function")
+    def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
+        for peer in peerdb.config["peers"].values():
+            peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
+
+        for mirror in peerdb.config["mirrors"].values():
+            peerdb.create_mirror(mirror)
+
+        yield None
+
+        for mirror in peerdb.config["mirrors"].values():
+            peerdb.drop_mirror(mirror)
+
+        for peer in peerdb.config["peers"].values():
+            peerdb.drop_peer({"name": peer["name"], **peer["peerdb"]})
+
+    def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
+        settings = peerdb.list_settings()
+        assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None
+
+        peerdb.update_settings({"PEERDB_NULLABLE": "false"})
+        settings = peerdb.list_settings()
+        assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "false"
+
+        peerdb.update_settings({"PEERDB_NULLABLE": "true"})
+        settings = peerdb.list_settings()
+        assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
+
+    # def test_create_and_drop_peer(self, postgres_tables: List[Table], peerdb: PeerDB):
+    #     peer = copy.deepcopy(peerdb.config["peers"]["source"])
+    #     peer = {"name": peer["name"], **peer["peerdb"]}
+
+    #     assert peerdb.has_peer(peer) is False
+
+    #     peerdb.create_peer(peer)
+    #     assert peerdb.has_peer(peer) is True
+
+    #     peerdb.drop_peer(peer)
+    #     assert peerdb.has_peer(peer) is False
+
+    def test_list_peers(
+        self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
+    ):
+        actual = [peer.model_dump() for peer in peerdb.list_peers()]
+        expected = [
+            {"name": "source", "type": "POSTGRES"},
+            {"name": "destination", "type": "CLICKHOUSE"},
         ]
+        assert_count_equal(actual, expected)
 
-    @pytest.fixture(scope="function")
-    def docker_compose_project_name(self) -> str:
-        return "dw-lib"  # Pin the project name to avoid creating multiple stacks
+    # def test_create_and_drop_mirror(
+    #     self, postgres_tables: List[Table], peerdb: PeerDB, peers: List[PeerDBPeer]
+    # ):
+    #     mirror = peerdb.config["mirrors"]["cdc_one"]
 
-    @pytest.fixture(scope="function")
-    def docker_setup(self):
-        return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
+    #     assert peerdb.has_mirror(mirror) is False
 
-    @pytest.fixture(scope="function")
-    def docker_services(
-        self,
-        docker_compose_command: str,
-        docker_compose_file: Union[List[str], str],
-        docker_compose_project_name: str,
-        docker_setup: str,
-        docker_cleanup: str,
-    ) -> Iterator[Services]:
-        with get_docker_services(
-            docker_compose_command,
-            docker_compose_file,
-            docker_compose_project_name,
-            docker_setup,
-            docker_cleanup,
-        ) as docker_service:
-            yield docker_service
+    #     peerdb.create_mirror(mirror)
+    #     assert peerdb.has_mirror(mirror) is True
 
-    @pytest.fixture(scope="function")
-    def postgres_adapter(
-        self, docker_services, postgres_settings: PostgresSettings
-    ) -> Generator[PostgresAdapter, Any, None]:
-        postgres_adapter = PostgresAdapter(postgres_settings)
+    #     peerdb.drop_mirror(mirror)
+    #     assert peerdb.has_mirror(mirror) is False
 
-        def is_responsive():
-            try:
-                with postgres_adapter.create_client() as (conn, cur):
-                    cur.execute("select 1;")
-                return True
-            except Exception:
-                return False
-
-        docker_services.wait_until_responsive(timeout=10, pause=1, check=is_responsive)
-
-        yield postgres_adapter
-
-    @pytest.fixture(scope="function")
-    def peerdb(self, pytestconfig, docker_services) -> Generator[str, Any, None]:
-        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
-
-        with open(config_path) as fp:
-            peerdb_config = yaml.safe_load(fp)
-
-        url = os.path.join(peerdb_config["api_url"], "v1/instance/info")
-
-        def is_responsive():
-            try:
-                response = httpx.get(url, headers={"Content-Type": "application/json"})
-                if response.status_code == 200 and response.json() == {
-                    "status": "INSTANCE_STATUS_READY"
-                }:
-                    return True
-            except Exception:
-                return False
-
-        docker_services.wait_until_responsive(timeout=10, pause=1, check=is_responsive)
-
-        yield PeerDB(config_path)
-
-
-# class TestSettings(PeerDBTest):
-#     @pytest.fixture(scope="function")
-#     def postgres_tables(
-#         self, postgres_adapter: PostgresAdapter
-#     ) -> Generator[List[Table], Any, None]:
-#         for table_def in table_defs:
-#             postgres_adapter.create_table(*table_def)
-
-#         # Create all tables
-#         table_names = [table_def[0] for table_def in table_defs]
-#         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-#         yield tables
-
-#         for table_name in table_names:
-#             postgres_adapter.drop_table(table_name)
-
-#     def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
-#         settings = peerdb.list_settings()
-#         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None
-
-#         peerdb.update_settings({"PEERDB_NULLABLE": "false"})
-#         settings = peerdb.list_settings()
-#         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "false"
-
-#         peerdb.update_settings({"PEERDB_NULLABLE": "true"})
-#         settings = peerdb.list_settings()
-#         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
+    def test_list_mirrors(
+        self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
+    ):
+        actual = [
+            mirror.model_dump(
+                include=["name", "sourceName", "sourceType", "destinationName", "destinationType"]
+            )
+            for mirror in peerdb.list_mirrors()
+        ]
+        expected = [
+            {
+                "name": "cdc_one",
+                "sourceName": "source",
+                "sourceType": "POSTGRES",
+                "destinationName": "destination",
+                "destinationType": "CLICKHOUSE",
+            },
+            {
+                "name": "cdc_many",
+                "sourceName": "source",
+                "sourceType": "POSTGRES",
+                "destinationName": "destination",
+                "destinationType": "CLICKHOUSE",
+            },
+        ]
+        assert_count_equal(actual, expected)

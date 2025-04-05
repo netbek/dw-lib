@@ -1,9 +1,10 @@
+from ...conftest import DatabaseTest
 from dw_lib import DuckDBAdapter
 
 # from sqlalchemy import text
 
 
-class TestDuckDBAdapter:
+class TestDuckDBAdapter(DatabaseTest):
     def test_create_url(self, duckdb_adapter: DuckDBAdapter):
         url = duckdb_adapter.create_url(database=":memory:")
         assert str(url) == "duckdb:///:memory:"

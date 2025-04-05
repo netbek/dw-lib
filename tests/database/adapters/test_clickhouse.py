@@ -1,4 +1,5 @@
 from ...asserts import assert_equal_ignoring_whitespace
+from ...conftest import DatabaseTest
 from dw_lib import ClickHouseAdapter, ClickHouseTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
 from typing import Any, Generator
@@ -6,7 +7,7 @@ from typing import Any, Generator
 import pytest
 
 
-class TestClickHouseAdapter:
+class TestClickHouseAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
     def clickhouse_table(
         self, clickhouse_adapter: ClickHouseAdapter

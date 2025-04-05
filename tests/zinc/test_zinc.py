@@ -1,4 +1,5 @@
 from ..asserts import assert_count_equal
+from ..conftest import DatabaseTest
 from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
 from typing import Any, Generator
 
@@ -50,7 +51,7 @@ class TestDuckDBSystemSettings:
         assert isinstance(settings.peers["duckdb"].settings.threads, int)
 
 
-class TestCanConnect:
+class TestCanConnect(DatabaseTest):
     @pytest.fixture(scope="function")
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
@@ -126,7 +127,7 @@ class TestCanConnect:
         assert 'database "foo" does not exist' in str(exc.value)
 
 
-class TestMirrorBasicSettings:
+class TestMirrorBasicSettings(DatabaseTest):
     @pytest.fixture(scope="class")
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
@@ -243,7 +244,7 @@ class TestMirrorBasicSettings:
             cur.execute("drop schema if exists duckdb cascade;")
 
 
-class TestMirrorAdvancedSettings:
+class TestMirrorAdvancedSettings(DatabaseTest):
     @pytest.fixture(scope="class")
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(

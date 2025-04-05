@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -342,11 +343,6 @@ class DbtSource(DbtBaseResource):
     source_name: str
 
 
-class PeerDBPeer(BaseModel):
-    name: str
-    type: Literal["CLICKHOUSE", "POSTGRES"]
-
-
 class PeerDBSetting(BaseModel):
     name: str
     defaultValue: str
@@ -355,6 +351,23 @@ class PeerDBSetting(BaseModel):
     applyMode: Literal["APPLY_MODE_IMMEDIATE", "APPLY_MODE_AFTER_RESUME", "APPLY_MODE_NEW_MIRROR"]
     targetForSetting: Literal["ALL", "QUEUES", "CLICKHOUSE", "SNOWFLAKE", "BIGQUERY"]
     value: Optional[str] = None
+
+
+class PeerDBPeer(BaseModel):
+    name: str
+    type: Literal["CLICKHOUSE", "POSTGRES"]
+
+
+class PeerDBMirror(BaseModel):
+    id: str
+    workflowId: str
+    name: str
+    sourceName: str
+    sourceType: str
+    destinationName: str
+    destinationType: str
+    createdAt: datetime
+    isCdc: bool
 
 
 class ZincDuckDBPeerSettings(DuckDBSettings):

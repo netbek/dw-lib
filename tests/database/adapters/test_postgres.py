@@ -1,4 +1,5 @@
 from ...asserts import assert_equal_ignoring_whitespace
+from ...conftest import DatabaseTest
 from dw_lib import PostgresAdapter, PostgresTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
 from typing import Any, Generator
@@ -6,7 +7,7 @@ from typing import Any, Generator
 import pytest
 
 
-class TestPostgresAdapter:
+class TestPostgresAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
     def postgres_user(self, postgres_adapter: PostgresAdapter) -> Generator[str, Any, None]:
         username = "test_user"

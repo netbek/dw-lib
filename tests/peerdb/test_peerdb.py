@@ -96,7 +96,7 @@ class TestLoadConfig(DatabaseTest):
             str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
         )
 
-    def test_complete(self, all_postgres_tables: List[Table]):
+    def test_complete_config_and_source(self, all_postgres_tables: List[Table]):
         expected = {
             "api_url": "http://localhost:3000/api",
             "settings": {

@@ -43,23 +43,9 @@ table_defs = [
 ]
 
 
-class TestEmptyConfig(DatabaseTest):
-    def test_func(self, monkeypatch):
-        monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
-        expected = {
-            "mirrors": {},
-            "peers": {},
-            "publication_schemas": [],
-            "publications": {},
-            "users": {},
-        }
-
-        assert PeerDB(None).config == expected
-
-
-class TestSourcePeerMissingTable(DatabaseTest):
+class TestLoadConfig(DatabaseTest):
     @pytest.fixture(scope="function")
-    def postgres_tables(
+    def some_postgres_tables(
         self, postgres_adapter: PostgresAdapter
     ) -> Generator[List[Table], Any, None]:
         for table_def in table_defs[:1]:
@@ -74,18 +60,8 @@ class TestSourcePeerMissingTable(DatabaseTest):
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
 
-    def test_func(self, postgres_tables: List[Table]):
-        with pytest.raises(Exception) as exc:
-            PeerDB("/app/tests/peerdb/fixtures/peerdb.yaml")
-
-        assert (
-            str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
-        )
-
-
-class TestOK(DatabaseTest):
     @pytest.fixture(scope="function")
-    def postgres_tables(
+    def all_postgres_tables(
         self, postgres_adapter: PostgresAdapter
     ) -> Generator[List[Table], Any, None]:
         for table_def in table_defs:
@@ -100,7 +76,27 @@ class TestOK(DatabaseTest):
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
 
-    def test_func(self, postgres_tables: List[Table]):
+    def test_empty_config(self, monkeypatch):
+        monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
+        expected = {
+            "mirrors": {},
+            "peers": {},
+            "publication_schemas": [],
+            "publications": {},
+            "users": {},
+        }
+
+        assert PeerDB(None).config == expected
+
+    def test_source_peer_missing_table(self, some_postgres_tables: List[Table]):
+        with pytest.raises(Exception) as exc:
+            PeerDB("/app/tests/peerdb/fixtures/peerdb.yaml")
+
+        assert (
+            str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
+        )
+
+    def test_complete(self, all_postgres_tables: List[Table]):
         expected = {
             "api_url": "http://localhost:3000/api",
             "settings": {

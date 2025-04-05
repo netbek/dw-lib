@@ -3,11 +3,11 @@ from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import MirrorNotFoundException
 from .types import (
+    ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
     AdapterType,
     ClickHouseSettings,
     PostgresSettings,
     PostgresTableIdentifier,
-    ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
 )
 from .utils.template import render_template
 from pathlib import Path

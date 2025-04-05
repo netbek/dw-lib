@@ -36,22 +36,10 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh precommit_hook
     ```
 
-6. Build the Docker image:
-
-    ```shell
-    ./scripts/run.sh build
-    ```
-
 | Command                    | Description                                                         |
 |----------------------------|---------------------------------------------------------------------|
-| `./scripts/run.sh build`   | Build the Docker image.                                             |
-| `./scripts/run.sh destroy` | Delete the Docker image and network.                                |
 | `./scripts/run.sh clean`   | Delete temporary files and directories, e.g. `__pycache__`          |
-| `./scripts/run.sh up`      | Start the Docker services.                                          |
-| `./scripts/run.sh down`    | Stop the Docker services.                                           |
-| `./scripts/run.sh shell`   | Start the Docker services and open an interactive shell.            |
-| `./scripts/run.sh vscode`  | Start the Docker services and open VS Code.                         |
-| `./scripts/run.sh test`    | Start the Docker services and run the unit tests.                   |
+| `./scripts/run.sh test`    | Run the unit tests.                                                 |
 
 ## License
 

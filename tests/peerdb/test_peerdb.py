@@ -98,7 +98,7 @@ class TestLoadConfig(DatabaseTest):
 
     def test_complete_config_and_source(self, all_postgres_tables: List[Table]):
         expected = {
-            "api_url": "http://localhost:3000/api",
+            "api_url": "http://peerdb-ui:3000/api",
             "settings": {
                 "PEERDB_NULLABLE": "true",
             },
@@ -154,7 +154,7 @@ class TestLoadConfig(DatabaseTest):
                 },
             },
             "mirrors": {
-                "cdc_small": {
+                "cdc_one": {
                     "source_name": "source",
                     "destination_name": "destination",
                     "table_mappings": [
@@ -165,9 +165,9 @@ class TestLoadConfig(DatabaseTest):
                     ],
                     "resync": True,
                     "do_initial_snapshot": False,
-                    "flow_job_name": "cdc_small",
+                    "flow_job_name": "cdc_one",
                 },
-                "cdc_large": {
+                "cdc_many": {
                     "source_name": "source",
                     "destination_name": "destination",
                     "table_mappings": [
@@ -182,7 +182,7 @@ class TestLoadConfig(DatabaseTest):
                     ],
                     "do_initial_snapshot": False,
                     "resync": False,
-                    "flow_job_name": "cdc_large",
+                    "flow_job_name": "cdc_many",
                 },
             },
             "publications": {

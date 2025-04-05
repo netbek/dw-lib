@@ -2,7 +2,7 @@ from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 import math
 import psutil
@@ -340,6 +340,21 @@ class DbtSource(DbtBaseResource):
     config: DbtSourceConfig
     original_config: Optional[DbtTable] = None
     source_name: str
+
+
+class PeerDBPeer(BaseModel):
+    name: str
+    type: Literal["CLICKHOUSE", "POSTGRES"]
+
+
+class PeerDBSetting(BaseModel):
+    name: str
+    defaultValue: str
+    description: str
+    valueType: Literal["INT", "UINT", "STRING", "BOOL"]
+    applyMode: Literal["APPLY_MODE_IMMEDIATE", "APPLY_MODE_AFTER_RESUME", "APPLY_MODE_NEW_MIRROR"]
+    targetForSetting: Literal["ALL", "QUEUES", "CLICKHOUSE", "SNOWFLAKE", "BIGQUERY"]
+    value: Optional[str] = None
 
 
 class ZincDuckDBPeerSettings(DuckDBSettings):

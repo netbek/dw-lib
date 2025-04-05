@@ -6,11 +6,14 @@ from .types import (
     ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
     AdapterType,
     ClickHouseSettings,
+    PeerDBPeer,
+    PeerDBSetting,
     PostgresSettings,
     PostgresTableIdentifier,
 )
 from .utils.template import render_template
 from pathlib import Path
+from typing import Dict, List
 
 import httpx
 import pydash
@@ -155,7 +158,15 @@ class PeerDB:
 
         return config
 
-    def update_settings(self, settings: dict) -> None:
+    def list_settings(self) -> List[PeerDBSetting]:
+        url = f"{self.config['api_url']}/v1/dynamic_settings"
+        response = httpx.get(url, headers=self._headers)
+        settings = response.json().get("settings", [])
+        settings = [PeerDBSetting(**setting) for setting in settings]
+
+        return settings
+
+    def update_settings(self, settings: Dict[str, str]) -> None:
         url = f"{self.config['api_url']}/v1/dynamic_settings"
 
         for key, value in settings.items():
@@ -167,13 +178,19 @@ class PeerDB:
                     f"Failed to set {key}={value} (error {response.status_code}: {response.text})"
                 )
 
-    def has_peer(self, peer: dict) -> bool:
+    def list_peers(self) -> List[PeerDBPeer]:
         url = f"{self.config['api_url']}/v1/peers/list"
         response = httpx.get(url, headers=self._headers)
-        items = response.json().get("items", [])
-        matched_items = [item for item in items if item["name"] == peer["name"]]
+        peers = response.json().get("items", [])
+        peers = [PeerDBPeer(**peer) for peer in peers]
 
-        return bool(matched_items)
+        return peers
+
+    def has_peer(self, peer: dict) -> bool:
+        peers = self.list_peers()
+        matched = pydash.find(peers, lambda x: x.name == peer["name"])
+
+        return bool(matched)
 
     def create_peer(self, peer: dict) -> None:
         if not self.has_peer(peer):
@@ -197,6 +214,13 @@ class PeerDB:
                 raise Exception(
                     f"Failed to drop peer '{peer['name']}' (error {response.status_code}: {response.text})"
                 )
+
+    def list_mirrors(self) -> list:
+        url = f"{self.config['api_url']}/v1/mirrors/list"
+        response = httpx.get(url, headers=self._headers)
+        mirrors = response.json().get("items", [])
+
+        return mirrors
 
     def has_mirror(self, mirror: dict) -> bool:
         try:

@@ -1,4 +1,4 @@
-api_url: http://localhost:3000/api
+api_url: http://peerdb-ui:3000/api
 
 settings:
   PEERDB_NULLABLE: "true"
@@ -28,7 +28,7 @@ mirrors:
   +do_initial_snapshot: false
   +resync: false
 
-  cdc_small:
+  cdc_one:
     source_name: source
     destination_name: destination
     table_mappings:
@@ -36,7 +36,7 @@ mirrors:
       destination_table_identifier: table_1
     resync: true
 
-  cdc_large:
+  cdc_many:
     source_name: source
     destination_name: destination
     table_mappings:

@@ -1,9 +1,13 @@
-from dw_lib import PeerDB, PostgresAdapter
+from dw_lib import PeerDB, PostgresAdapter, PostgresSettings
+from pytest_docker.plugin import get_docker_services, Services
 from sqlmodel import Table
-from typing import Any, Generator, List
+from typing import Any, Generator, Iterator, List, Union
 
+import httpx
 import os
+import pydash
 import pytest
+import yaml
 
 table_defs = [
     (
@@ -99,7 +103,7 @@ class TestLoadConfig:
 
     def test_complete_config_and_source(self, pytestconfig, all_postgres_tables: List[Table]):
         expected = {
-            "api_url": "http://peerdb-ui:3000/api",
+            "api_url": "http://localhost:3000/api",
             "settings": {
                 "PEERDB_NULLABLE": "true",
             },
@@ -202,3 +206,109 @@ class TestLoadConfig:
 
         config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
         assert PeerDB(config_path).config == expected
+
+
+class PeerDBTest:
+    @pytest.fixture(scope="function")
+    def docker_compose_file(self, pytestconfig):
+        return [
+            os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.database.yml"),
+            os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.peerdb.yml"),
+        ]
+
+    @pytest.fixture(scope="function")
+    def docker_compose_project_name(self) -> str:
+        return "dw-lib"  # Pin the project name to avoid creating multiple stacks
+
+    @pytest.fixture(scope="function")
+    def docker_setup(self):
+        return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
+
+    @pytest.fixture(scope="function")
+    def docker_services(
+        self,
+        docker_compose_command: str,
+        docker_compose_file: Union[List[str], str],
+        docker_compose_project_name: str,
+        docker_setup: str,
+        docker_cleanup: str,
+    ) -> Iterator[Services]:
+        with get_docker_services(
+            docker_compose_command,
+            docker_compose_file,
+            docker_compose_project_name,
+            docker_setup,
+            docker_cleanup,
+        ) as docker_service:
+            yield docker_service
+
+    @pytest.fixture(scope="function")
+    def postgres_adapter(
+        self, docker_services, postgres_settings: PostgresSettings
+    ) -> Generator[PostgresAdapter, Any, None]:
+        postgres_adapter = PostgresAdapter(postgres_settings)
+
+        def is_responsive():
+            try:
+                with postgres_adapter.create_client() as (conn, cur):
+                    cur.execute("select 1;")
+                return True
+            except Exception:
+                return False
+
+        docker_services.wait_until_responsive(timeout=10, pause=1, check=is_responsive)
+
+        yield postgres_adapter
+
+    @pytest.fixture(scope="function")
+    def peerdb(self, pytestconfig, docker_services) -> Generator[str, Any, None]:
+        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
+
+        with open(config_path) as fp:
+            peerdb_config = yaml.safe_load(fp)
+
+        url = os.path.join(peerdb_config["api_url"], "v1/instance/info")
+
+        def is_responsive():
+            try:
+                response = httpx.get(url, headers={"Content-Type": "application/json"})
+                if response.status_code == 200 and response.json() == {
+                    "status": "INSTANCE_STATUS_READY"
+                }:
+                    return True
+            except Exception:
+                return False
+
+        docker_services.wait_until_responsive(timeout=10, pause=1, check=is_responsive)
+
+        yield PeerDB(config_path)
+
+
+# class TestSettings(PeerDBTest):
+#     @pytest.fixture(scope="function")
+#     def postgres_tables(
+#         self, postgres_adapter: PostgresAdapter
+#     ) -> Generator[List[Table], Any, None]:
+#         for table_def in table_defs:
+#             postgres_adapter.create_table(*table_def)
+
+#         # Create all tables
+#         table_names = [table_def[0] for table_def in table_defs]
+#         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
+
+#         yield tables
+
+#         for table_name in table_names:
+#             postgres_adapter.drop_table(table_name)
+
+#     def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
+#         settings = peerdb.list_settings()
+#         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None
+
+#         peerdb.update_settings({"PEERDB_NULLABLE": "false"})
+#         settings = peerdb.list_settings()
+#         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "false"
+
+#         peerdb.update_settings({"PEERDB_NULLABLE": "true"})
+#         settings = peerdb.list_settings()
+#         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"

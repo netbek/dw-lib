@@ -43,15 +43,18 @@ def postgres_settings() -> Generator[PostgresSettings, Any, None]:
 
 
 @pytest.fixture(scope="session")
+def docker_compose_file(pytestconfig):
+    return os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.database.yml")
+
+
+@pytest.fixture(scope="session")
 def docker_compose_project_name() -> str:
-    # Pin the project name to avoid creating multiple stacks
-    return "dw-lib"
+    return "dw-lib"  # Pin the project name to avoid creating multiple stacks
 
 
 @pytest.fixture(scope="session")
 def docker_setup():
-    # Stop the stack before starting a new one
-    return ["down -v", "up --build -d"]
+    return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
 
 @pytest.fixture(scope="session")
@@ -74,7 +77,7 @@ def clickhouse_adapter(
 
 
 @pytest.fixture(scope="function")
-def duckdb_adapter(duckdb_settings: DuckDBSettings):
+def duckdb_adapter(duckdb_settings: DuckDBSettings) -> Generator[DuckDBAdapter, Any, None]:
     yield DuckDBAdapter(duckdb_settings)
 
 

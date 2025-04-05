@@ -1,4 +1,4 @@
-from ...asserts import assert_count_equal
+from ..asserts import assert_count_equal
 from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
 from typing import Any, Generator
 
@@ -13,9 +13,7 @@ class TestDuckDBSystemSettings:
     @pytest.fixture(scope="function")
     def settings_dict(self, pytestconfig) -> Generator[dict, Any, None]:
         with open(
-            os.path.join(
-                pytestconfig.rootpath, "tests/integration/zinc/fixtures/basic_settings.yaml"
-            ),
+            os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/basic_settings.yaml"),
             "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
@@ -56,9 +54,7 @@ class TestCanConnect:
     @pytest.fixture(scope="function")
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
-            os.path.join(
-                pytestconfig.rootpath, "tests/integration/zinc/fixtures/basic_settings.yaml"
-            ),
+            os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/basic_settings.yaml"),
             "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
@@ -134,9 +130,7 @@ class TestMirrorBasicSettings:
     @pytest.fixture(scope="class")
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
-            os.path.join(
-                pytestconfig.rootpath, "tests/integration/zinc/fixtures/basic_settings.yaml"
-            ),
+            os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/basic_settings.yaml"),
             "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
@@ -253,9 +247,7 @@ class TestMirrorAdvancedSettings:
     @pytest.fixture(scope="class")
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
-            os.path.join(
-                pytestconfig.rootpath, "tests/integration/zinc/fixtures/advanced_settings.yaml"
-            ),
+            os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/advanced_settings.yaml"),
             "rt",
         ) as fp:
             settings = yaml.safe_load(fp)

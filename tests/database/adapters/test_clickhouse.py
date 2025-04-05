@@ -1,4 +1,4 @@
-from ....asserts import assert_equal_ignoring_whitespace
+from ...asserts import assert_equal_ignoring_whitespace
 from dw_lib import ClickHouseAdapter, ClickHouseTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
 from typing import Any, Generator

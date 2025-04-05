@@ -89,9 +89,7 @@ class TestLoadConfig:
         assert PeerDB(None).config == expected
 
     def test_source_peer_missing_table(self, pytestconfig, some_postgres_tables: List[Table]):
-        config_path = os.path.join(
-            pytestconfig.rootpath, "tests/integration/peerdb/fixtures/peerdb.yaml"
-        )
+        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
         with pytest.raises(Exception) as exc:
             PeerDB(config_path)
 
@@ -202,7 +200,5 @@ class TestLoadConfig:
             "publication_schemas": ["private", "public"],
         }
 
-        config_path = os.path.join(
-            pytestconfig.rootpath, "tests/integration/peerdb/fixtures/peerdb.yaml"
-        )
+        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
         assert PeerDB(config_path).config == expected

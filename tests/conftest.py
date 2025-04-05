@@ -43,11 +43,6 @@ def postgres_settings() -> Generator[PostgresSettings, Any, None]:
 
 
 @pytest.fixture(scope="session")
-def docker_compose_file(pytestconfig):
-    return os.path.join(pytestconfig.rootpath, "tests/integration/docker-compose.yml")
-
-
-@pytest.fixture(scope="session")
 def docker_compose_project_name() -> str:
     # Pin the project name to avoid creating multiple stacks
     return "dw-lib"

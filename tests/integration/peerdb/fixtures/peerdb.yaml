@@ -7,8 +7,8 @@ peers:
   source:
     type: postgres
     settings:
-      host: postgres
-      port: 5432
+      host: localhost
+      port: 15432
       username: postgres
       password: postgres
       database: test
@@ -16,9 +16,9 @@ peers:
   destination:
     type: clickhouse
     settings:
-      host: clickhouse
-      http_port: 8123
-      tcp_port: 9000
+      host: localhost
+      http_port: 18123
+      tcp_port: 19000
       username: default
       password: default
       database: default

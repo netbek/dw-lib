@@ -14,13 +14,15 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/build-push-action@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          tags: dw-lib:latest
+          version: "0.6.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
-      - run: |
-          docker compose up -d
-          docker compose exec app /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- pytest
-          docker compose down
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run tests
+        run: uv run --frozen pytest tests

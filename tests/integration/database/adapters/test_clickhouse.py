@@ -1,10 +1,5 @@
 from ....asserts import assert_equal_ignoring_whitespace
-from dw_lib import (
-    ClickHouseAdapter,
-    ClickHouseSettings,
-    ClickHouseTableIdentifier,
-    TableNotFoundException,
-)
+from dw_lib import ClickHouseAdapter, ClickHouseTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
 from typing import Any, Generator
 
@@ -12,12 +7,6 @@ import pytest
 
 
 class TestClickHouseAdapter:
-    @pytest.fixture(scope="class")
-    def clickhouse_adapter(
-        self, clickhouse_settings: ClickHouseSettings
-    ) -> Generator[ClickHouseAdapter, Any, None]:
-        yield ClickHouseAdapter(clickhouse_settings)
-
     @pytest.fixture(scope="function")
     def clickhouse_table(
         self, clickhouse_adapter: ClickHouseAdapter

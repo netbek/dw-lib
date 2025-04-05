@@ -1,4 +1,3 @@
-from ...fixtures.database import DatabaseTest
 from dw_lib.database import ClickHouseAdapter
 from dw_lib.types import ClickHouseTableIdentifier, DbtSource
 from dw_lib.utils.sqlmodel_utils import create_model_code
@@ -8,7 +7,7 @@ from typing import Any, Generator
 import pytest
 
 
-class TestCreateModelCode(DatabaseTest):
+class TestCreateModelCode:
     @pytest.fixture(scope="function")
     def table_identifier(
         self, clickhouse_adapter: ClickHouseAdapter

@@ -2,6 +2,7 @@ from ...asserts import assert_count_equal
 from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
 from typing import Any, Generator
 
+import os
 import psycopg2
 import pytest
 import re
@@ -10,8 +11,13 @@ import yaml
 
 class TestDuckDBSystemSettings:
     @pytest.fixture(scope="function")
-    def settings_dict(self) -> Generator[dict, Any, None]:
-        with open("/app/tests/unit/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+    def settings_dict(self, pytestconfig) -> Generator[dict, Any, None]:
+        with open(
+            os.path.join(
+                pytestconfig.rootpath, "tests/integration/zinc/fixtures/basic_settings.yaml"
+            ),
+            "rt",
+        ) as fp:
             settings = yaml.safe_load(fp)
         yield settings
 
@@ -48,16 +54,21 @@ class TestDuckDBSystemSettings:
 
 class TestCanConnect:
     @pytest.fixture(scope="function")
-    def settings(self) -> Generator[ZincSettings, Any, None]:
-        with open("/app/tests/unit/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+    def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
+        with open(
+            os.path.join(
+                pytestconfig.rootpath, "tests/integration/zinc/fixtures/basic_settings.yaml"
+            ),
+            "rt",
+        ) as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
 
-    def test_valid_peers(self, settings: ZincSettings):
+    def test_valid_peers(self, postgres_adapter: PostgresAdapter, settings: ZincSettings):
         zinc = Zinc(settings)
         assert zinc.can_connect() is True
 
-    def test_invalid_postgres_host(self, settings: ZincSettings):
+    def test_invalid_postgres_host(self, postgres_adapter: PostgresAdapter, settings: ZincSettings):
         """Test that exception is raised if Postgres host does not exist."""
         settings.peers["postgres"].host = "foo"
         zinc = Zinc(settings)
@@ -68,7 +79,7 @@ class TestCanConnect:
         assert exc.type == psycopg2.OperationalError
         assert 'could not translate host name "foo" to address' in str(exc.value)
 
-    def test_invalid_postgres_port(self, settings: ZincSettings):
+    def test_invalid_postgres_port(self, postgres_adapter: PostgresAdapter, settings: ZincSettings):
         """Test that exception is raised if Postgres port does not exist."""
         settings.peers["postgres"].port = 404
         zinc = Zinc(settings)
@@ -77,9 +88,11 @@ class TestCanConnect:
             zinc.can_connect()
 
         assert exc.type == psycopg2.OperationalError
-        assert re.search(r'connection to server at "postgres" .+ port 404 failed', str(exc.value))
+        assert re.search(r'connection to server at "localhost" .+ port 404 failed', str(exc.value))
 
-    def test_invalid_postgres_username(self, settings: ZincSettings):
+    def test_invalid_postgres_username(
+        self, postgres_adapter: PostgresAdapter, settings: ZincSettings
+    ):
         """Test that exception is raised if Postgres authentication failed."""
         settings.peers["postgres"].username = "foo"
         zinc = Zinc(settings)
@@ -90,7 +103,9 @@ class TestCanConnect:
         assert exc.type == psycopg2.OperationalError
         assert "password authentication failed" in str(exc.value)
 
-    def test_invalid_postgres_password(self, settings: ZincSettings):
+    def test_invalid_postgres_password(
+        self, postgres_adapter: PostgresAdapter, settings: ZincSettings
+    ):
         """Test that exception is raised if Postgres authentication failed."""
         settings.peers["postgres"].password = "foo"
         zinc = Zinc(settings)
@@ -101,7 +116,9 @@ class TestCanConnect:
         assert exc.type == psycopg2.OperationalError
         assert "password authentication failed" in str(exc.value)
 
-    def test_invalid_postgres_database(self, settings: ZincSettings):
+    def test_invalid_postgres_database(
+        self, postgres_adapter: PostgresAdapter, settings: ZincSettings
+    ):
         """Test that exception is raised if Postgres database does not exist."""
         settings.peers["postgres"].database = "foo"
         zinc = Zinc(settings)
@@ -115,18 +132,15 @@ class TestCanConnect:
 
 class TestMirrorBasicSettings:
     @pytest.fixture(scope="class")
-    def settings(self) -> Generator[ZincSettings, Any, None]:
-        with open("/app/tests/unit/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+    def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
+        with open(
+            os.path.join(
+                pytestconfig.rootpath, "tests/integration/zinc/fixtures/basic_settings.yaml"
+            ),
+            "rt",
+        ) as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
-
-    @pytest.fixture(scope="class")
-    def duckdb_adapter(self, settings: ZincSettings):
-        yield DuckDBAdapter(settings.peers["duckdb"])
-
-    @pytest.fixture(scope="class")
-    def postgres_adapter(self, settings: ZincSettings):
-        yield PostgresAdapter(settings.peers["postgres"])
 
     def test_postgres_to_duckdb(
         self,
@@ -237,18 +251,15 @@ class TestMirrorBasicSettings:
 
 class TestMirrorAdvancedSettings:
     @pytest.fixture(scope="class")
-    def settings(self) -> Generator[ZincSettings, Any, None]:
-        with open("/app/tests/unit/zinc/fixtures/advanced_settings.yaml", "rt") as fp:
+    def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
+        with open(
+            os.path.join(
+                pytestconfig.rootpath, "tests/integration/zinc/fixtures/advanced_settings.yaml"
+            ),
+            "rt",
+        ) as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
-
-    @pytest.fixture(scope="class")
-    def duckdb_adapter(self, settings: ZincSettings):
-        yield DuckDBAdapter(settings.peers["duckdb"])
-
-    @pytest.fixture(scope="class")
-    def postgres_adapter(self, settings: ZincSettings):
-        yield PostgresAdapter(settings.peers["postgres"])
 
     def test_postgres_to_duckdb(
         self,

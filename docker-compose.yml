@@ -51,6 +51,7 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./vendor/wait-for-it/wait-for-it.sh:/wait-for-it.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # Allow pytest-docker to spin up containers
     depends_on:
       - clickhouse
       - postgres

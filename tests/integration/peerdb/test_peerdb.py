@@ -1,8 +1,8 @@
-from ..fixtures.database import DatabaseTest
 from dw_lib import PeerDB, PostgresAdapter
 from sqlmodel import Table
 from typing import Any, Generator, List
 
+import os
 import pytest
 
 table_defs = [
@@ -43,7 +43,7 @@ table_defs = [
 ]
 
 
-class TestLoadConfig(DatabaseTest):
+class TestLoadConfig:
     @pytest.fixture(scope="function")
     def some_postgres_tables(
         self, postgres_adapter: PostgresAdapter
@@ -88,15 +88,18 @@ class TestLoadConfig(DatabaseTest):
 
         assert PeerDB(None).config == expected
 
-    def test_source_peer_missing_table(self, some_postgres_tables: List[Table]):
+    def test_source_peer_missing_table(self, pytestconfig, some_postgres_tables: List[Table]):
+        config_path = os.path.join(
+            pytestconfig.rootpath, "tests/integration/peerdb/fixtures/peerdb.yaml"
+        )
         with pytest.raises(Exception) as exc:
-            PeerDB("/app/tests/unit/peerdb/fixtures/peerdb.yaml")
+            PeerDB(config_path)
 
         assert (
             str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
         )
 
-    def test_complete_config_and_source(self, all_postgres_tables: List[Table]):
+    def test_complete_config_and_source(self, pytestconfig, all_postgres_tables: List[Table]):
         expected = {
             "api_url": "http://peerdb-ui:3000/api",
             "settings": {
@@ -108,8 +111,8 @@ class TestLoadConfig(DatabaseTest):
                     "adapter": {
                         "type": "postgres",
                         "settings": {
-                            "host": "postgres",
-                            "port": 5432,
+                            "host": "localhost",
+                            "port": 15432,
                             "username": "postgres",
                             "password": "postgres",
                             "database": "test",
@@ -118,8 +121,8 @@ class TestLoadConfig(DatabaseTest):
                     "peerdb": {
                         "type": 3,
                         "postgres_config": {
-                            "host": "postgres",
-                            "port": 5432,
+                            "host": "localhost",
+                            "port": 15432,
                             "user": "postgres",
                             "password": "postgres",
                             "database": "test",
@@ -131,9 +134,9 @@ class TestLoadConfig(DatabaseTest):
                     "adapter": {
                         "type": "clickhouse",
                         "settings": {
-                            "host": "clickhouse",
-                            "http_port": 8123,
-                            "tcp_port": 9000,
+                            "host": "localhost",
+                            "http_port": 18123,
+                            "tcp_port": 19000,
                             "username": "default",
                             "password": "default",
                             "database": "default",
@@ -143,8 +146,8 @@ class TestLoadConfig(DatabaseTest):
                     "peerdb": {
                         "type": 8,
                         "clickhouse_config": {
-                            "host": "clickhouse",
-                            "port": 9000,
+                            "host": "localhost",
+                            "port": 19000,
                             "user": "default",
                             "database": "default",
                             "password": "default",
@@ -199,4 +202,7 @@ class TestLoadConfig(DatabaseTest):
             "publication_schemas": ["private", "public"],
         }
 
-        assert PeerDB("/app/tests/unit/peerdb/fixtures/peerdb.yaml").config == expected
+        config_path = os.path.join(
+            pytestconfig.rootpath, "tests/integration/peerdb/fixtures/peerdb.yaml"
+        )
+        assert PeerDB(config_path).config == expected

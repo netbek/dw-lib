@@ -1,17 +1,21 @@
 peers:
   postgres:
     type: postgres
-    host: postgres
-    port: 5432
+    host: localhost
+    port: 15432
     username: postgres
     password: postgres
     database: test
 
   duckdb:
     type: duckdb
-    database: /app/temp/test.duckdb
+    database: tests/temp/test.duckdb
     extensions:
       - postgres
+    settings:
+      memory_limit: 8G
+      threads: 4
+      TimeZone: Africa/Johannesburg
 
 mirrors:
   postgres_to_duckdb:
@@ -21,6 +25,7 @@ mirrors:
     tables:
     - source: postgres.public.items
       destination: test.main.items
+      query: select * from postgres.public.items where category_id = 'A';
 
   duckdb_to_postgres:
     peers:
@@ -29,3 +34,6 @@ mirrors:
     tables:
     - source: test.main.items
       destination: postgres.duckdb.items
+      query: select * from test.main.items where category_id = 'A';
+      indexes:
+      - columns: [category_id]

@@ -1,10 +1,5 @@
 from ....asserts import assert_equal_ignoring_whitespace
-from dw_lib import (
-    PostgresAdapter,
-    PostgresSettings,
-    PostgresTableIdentifier,
-    TableNotFoundException,
-)
+from dw_lib import PostgresAdapter, PostgresTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
 from typing import Any, Generator
 
@@ -12,12 +7,6 @@ import pytest
 
 
 class TestPostgresAdapter:
-    @pytest.fixture(scope="class")
-    def postgres_adapter(
-        self, postgres_settings: PostgresSettings
-    ) -> Generator[PostgresAdapter, Any, None]:
-        yield PostgresAdapter(postgres_settings)
-
     @pytest.fixture(scope="function")
     def postgres_user(self, postgres_adapter: PostgresAdapter) -> Generator[str, Any, None]:
         username = "test_user"

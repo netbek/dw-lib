@@ -60,7 +60,7 @@ vscode() {
 
 test() {
     docker compose up -d
-    docker compose exec app /wait-for-it.sh postgres:5432 -- /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh peerdb-ui:3000 -- pytest
+    docker compose exec app /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- pytest
     docker compose down
 }
 

@@ -90,7 +90,7 @@ class TestLoadConfig(DatabaseTest):
 
     def test_source_peer_missing_table(self, some_postgres_tables: List[Table]):
         with pytest.raises(Exception) as exc:
-            PeerDB("/app/tests/peerdb/fixtures/peerdb.yaml")
+            PeerDB("/app/tests/unit/peerdb/fixtures/peerdb.yaml")
 
         assert (
             str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
@@ -199,4 +199,4 @@ class TestLoadConfig(DatabaseTest):
             "publication_schemas": ["private", "public"],
         }
 
-        assert PeerDB("/app/tests/peerdb/fixtures/peerdb.yaml").config == expected
+        assert PeerDB("/app/tests/unit/peerdb/fixtures/peerdb.yaml").config == expected

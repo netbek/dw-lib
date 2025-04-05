@@ -1,4 +1,4 @@
-from ..asserts import assert_count_equal
+from ...asserts import assert_count_equal
 from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
 from typing import Any, Generator
 
@@ -11,7 +11,7 @@ import yaml
 class TestDuckDBSystemSettings:
     @pytest.fixture(scope="function")
     def settings_dict(self) -> Generator[dict, Any, None]:
-        with open("/app/tests/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+        with open("/app/tests/unit/zinc/fixtures/basic_settings.yaml", "rt") as fp:
             settings = yaml.safe_load(fp)
         yield settings
 
@@ -49,7 +49,7 @@ class TestDuckDBSystemSettings:
 class TestCanConnect:
     @pytest.fixture(scope="function")
     def settings(self) -> Generator[ZincSettings, Any, None]:
-        with open("/app/tests/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+        with open("/app/tests/unit/zinc/fixtures/basic_settings.yaml", "rt") as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
 
@@ -116,7 +116,7 @@ class TestCanConnect:
 class TestMirrorBasicSettings:
     @pytest.fixture(scope="class")
     def settings(self) -> Generator[ZincSettings, Any, None]:
-        with open("/app/tests/zinc/fixtures/basic_settings.yaml", "rt") as fp:
+        with open("/app/tests/unit/zinc/fixtures/basic_settings.yaml", "rt") as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
 
@@ -238,7 +238,7 @@ class TestMirrorBasicSettings:
 class TestMirrorAdvancedSettings:
     @pytest.fixture(scope="class")
     def settings(self) -> Generator[ZincSettings, Any, None]:
-        with open("/app/tests/zinc/fixtures/advanced_settings.yaml", "rt") as fp:
+        with open("/app/tests/unit/zinc/fixtures/advanced_settings.yaml", "rt") as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
 

@@ -1,5 +1,5 @@
 from pydantic.main import IncEx
-from typing import Any, Optional
+from typing import Any
 
 import datetime
 import pydash
@@ -8,10 +8,10 @@ import pydash
 class BaseMixin:
     def model_dump_copy(
         self,
-        include: Optional[IncEx] = None,
-        exclude: Optional[IncEx] = None,
-        by_alias: Optional[bool] = False,
-        update: Optional[dict[str, Any]] = None,
+        include: IncEx | None = None,
+        exclude: IncEx | None = None,
+        by_alias: bool | None = False,
+        update: dict[str, Any] | None = None,
     ):
         data = self.model_dump(by_alias=by_alias, include=include, exclude=exclude)
 

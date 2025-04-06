@@ -13,7 +13,7 @@ from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.schema import CreateTable
 from sqlmodel import Column, MetaData, Session, Table
-from typing import Any, List, Optional
+from typing import Any
 
 import psycopg2
 import pydash
@@ -94,13 +94,13 @@ class PostgresAdapter(BaseAdapter):
 
         return result
 
-    def create_database(self, database: str, replace: Optional[bool] = False) -> None:
+    def create_database(self, database: str, replace: bool | None = False) -> None:
         raise NotImplementedError()
 
     def drop_database(self, database: str) -> None:
         raise NotImplementedError()
 
-    def has_schema(self, schema: str, database: Optional[str] = None):
+    def has_schema(self, schema: str, database: str | None = None):
         if database is None:
             database = self.settings.database
 
@@ -120,17 +120,15 @@ class PostgresAdapter(BaseAdapter):
     def create_schema(
         self,
         schema: str,
-        database: Optional[str] = None,
-        replace: Optional[bool] = False,
+        database: str | None = None,
+        replace: bool | None = False,
     ) -> None:
         raise NotImplementedError()
 
-    def drop_schema(self, schema: str, database: Optional[str] = None) -> None:
+    def drop_schema(self, schema: str, database: str | None = None) -> None:
         raise NotImplementedError()
 
-    def has_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
-    ) -> bool:
+    def has_table(self, table: str, database: str | None = None, schema: str | None = None) -> bool:
         if database is None:
             database = self.settings.database
 
@@ -154,9 +152,9 @@ class PostgresAdapter(BaseAdapter):
         self,
         table: str,
         statement: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
-        replace: Optional[bool] = False,
+        database: str | None = None,
+        schema: str | None = None,
+        replace: bool | None = False,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -176,9 +174,9 @@ class PostgresAdapter(BaseAdapter):
     def get_create_table_statement(
         self,
         table: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
-        options: Optional[CreateTableStatementOptions] = None,
+        database: str | None = None,
+        schema: str | None = None,
+        options: CreateTableStatementOptions | None = None,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -232,7 +230,7 @@ class PostgresAdapter(BaseAdapter):
         return statement
 
     def drop_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -252,7 +250,7 @@ class PostgresAdapter(BaseAdapter):
             cur.execute(statement)
 
     def truncate_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -272,7 +270,7 @@ class PostgresAdapter(BaseAdapter):
             cur.execute(statement)
 
     def get_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> Table:
         if database is None:
             database = self.settings.database
@@ -303,8 +301,8 @@ class PostgresAdapter(BaseAdapter):
     def get_table_replica_identity(
         self,
         table: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
+        database: str | None = None,
+        schema: str | None = None,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -341,8 +339,8 @@ class PostgresAdapter(BaseAdapter):
         self,
         table: str,
         replica_identity: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
+        database: str | None = None,
+        schema: str | None = None,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -361,7 +359,7 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement)
 
-    def drop_tables(self, database: Optional[str] = None, schema: Optional[str] = None) -> None:
+    def drop_tables(self, database: str | None = None, schema: str | None = None) -> None:
         if database is None:
             database = self.settings.database
 
@@ -371,9 +369,7 @@ class PostgresAdapter(BaseAdapter):
         for table in self.list_tables(database=database, schema=schema):
             self.drop_table(table.name, database=database, schema=schema)
 
-    def list_tables(
-        self, database: Optional[str] = None, schema: Optional[str] = None
-    ) -> List[Table]:
+    def list_tables(self, database: str | None = None, schema: str | None = None) -> list[Table]:
         if database is None:
             database = self.settings.database
 
@@ -410,8 +406,8 @@ class PostgresAdapter(BaseAdapter):
         self,
         username: str,
         password: str,
-        options: Optional[dict] = None,
-        replace: Optional[bool] = False,
+        options: dict | None = None,
+        replace: bool | None = False,
     ) -> None:
         if self.has_user(username):
             if replace:
@@ -480,7 +476,7 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement)
 
-    def list_user_privileges(self, username: str) -> List[tuple] | None:
+    def list_user_privileges(self, username: str) -> list[tuple] | None:
         if not self.has_user(username):
             return
 
@@ -510,7 +506,7 @@ class PostgresAdapter(BaseAdapter):
 
         return result
 
-    def create_publication(self, publication: str, tables: List[str], replace=False) -> None:
+    def create_publication(self, publication: str, tables: list[str], replace=False) -> None:
         if self.has_publication(publication):
             if replace:
                 self.drop_publication(publication)
@@ -534,7 +530,7 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement)
 
-    def list_publications(self) -> List[str]:
+    def list_publications(self) -> list[str]:
         statement = """
         select pubname as publication
         from pg_catalog.pg_publication;

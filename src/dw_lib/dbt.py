@@ -5,7 +5,7 @@ from .utils.filesystem import get_file_extension
 from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from prefect_shell.commands import ShellOperation
-from typing import Any, List, Optional
+from typing import Any
 
 import json
 import os
@@ -34,24 +34,24 @@ def resolve_resource_path(project_dir: str, resource: dict) -> str | None:
 
 
 class Dbt:
-    def __init__(self, project_dir: str, target: Optional[str] = None) -> None:
+    def __init__(self, project_dir: str, target: str | None = None) -> None:
         self.project_dir = project_dir
         self.target = target
 
     def list_command(
         self,
-        debug: Optional[bool] = False,
-        exclude: Optional[str] = None,
-        fail_fast: Optional[bool] = True,
-        models: Optional[str] = None,
-        output: Optional[str] = None,
-        quiet: Optional[bool] = False,
-        resource_types: Optional[List[DbtResourceType]] = None,
-        select: Optional[str] = None,
-        selector: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
-        vars: Optional[dict[str, Any]] = None,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        models: str | None = None,
+        output: str | None = None,
+        quiet: bool | None = False,
+        resource_types: list[DbtResourceType] | None = None,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
     ) -> list[str]:
         if target is None:
             target = self.target
@@ -115,18 +115,18 @@ class Dbt:
 
     def list_sync(
         self,
-        debug: Optional[bool] = False,
-        exclude: Optional[str] = None,
-        fail_fast: Optional[bool] = True,
-        models: Optional[str] = None,
-        output: Optional[str] = None,
-        quiet: Optional[bool] = False,
-        resource_types: Optional[List[DbtResourceType]] = None,
-        select: Optional[str] = None,
-        selector: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
-        vars: Optional[dict[str, Any]] = None,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        models: str | None = None,
+        output: str | None = None,
+        quiet: bool | None = False,
+        resource_types: list[DbtResourceType] | None = None,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
     ) -> dbtRunnerResult:
         cmd = self.list_command(
             debug=debug,
@@ -155,9 +155,9 @@ class Dbt:
 
     def list_resources(
         self,
-        resource_types: Optional[List[DbtResourceType]] = None,
-        select: Optional[str] = None,
-    ) -> List[DbtModel | DbtSeed | DbtSource]:
+        resource_types: list[DbtResourceType] | None = None,
+        select: str | None = None,
+    ) -> list[DbtModel | DbtSeed | DbtSource]:
         valid_resource_types = RESOURCE_TYPE_TO_CLASS.keys()
 
         if resource_types is None:
@@ -207,17 +207,17 @@ class Dbt:
 
     def run_command(
         self,
-        debug: Optional[bool] = False,
-        exclude: Optional[str] = None,
-        fail_fast: Optional[bool] = True,
-        full_refresh: Optional[bool] = False,
-        models: Optional[str] = None,
-        quiet: Optional[bool] = False,
-        select: Optional[str] = None,
-        selector: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
-        vars: Optional[dict[str, Any]] = None,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        full_refresh: bool | None = False,
+        models: str | None = None,
+        quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
     ) -> list[str]:
         if target is None:
             target = self.target
@@ -276,17 +276,17 @@ class Dbt:
 
     async def run_async(
         self,
-        debug: Optional[bool] = False,
-        exclude: Optional[str] = None,
-        fail_fast: Optional[bool] = True,
-        full_refresh: Optional[bool] = False,
-        models: Optional[str] = None,
-        quiet: Optional[bool] = False,
-        select: Optional[str] = None,
-        selector: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
-        vars: Optional[dict[str, Any]] = None,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        full_refresh: bool | None = False,
+        models: str | None = None,
+        quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
     ) -> str:
         cmd = self.run_command(
             debug=debug,
@@ -311,17 +311,17 @@ class Dbt:
 
     def run_sync(
         self,
-        debug: Optional[bool] = False,
-        exclude: Optional[str] = None,
-        fail_fast: Optional[bool] = True,
-        full_refresh: Optional[bool] = False,
-        models: Optional[str] = None,
-        quiet: Optional[bool] = False,
-        select: Optional[str] = None,
-        selector: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
-        vars: Optional[dict[str, Any]] = None,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        full_refresh: bool | None = False,
+        models: str | None = None,
+        quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
     ) -> dbtRunnerResult:
         cmd = self.run_command(
             debug=debug,
@@ -341,12 +341,12 @@ class Dbt:
 
     def seed_command(
         self,
-        debug: Optional[bool] = False,
-        fail_fast: Optional[bool] = True,
-        quiet: Optional[bool] = False,
-        select: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        select: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
     ) -> list[str]:
         if target is None:
             target = self.target
@@ -390,12 +390,12 @@ class Dbt:
 
     def seed_sync(
         self,
-        debug: Optional[bool] = False,
-        fail_fast: Optional[bool] = True,
-        quiet: Optional[bool] = False,
-        select: Optional[str] = None,
-        target: Optional[str] = None,
-        use_colors: Optional[bool] = False,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        select: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
     ) -> dbtRunnerResult:
         cmd = self.seed_command(
             debug=debug,

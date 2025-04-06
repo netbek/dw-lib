@@ -1,3 +1,4 @@
+from collections.abc import Generator, Iterator
 from dw_lib import (
     ClickHouseAdapter,
     ClickHouseSettings,
@@ -8,7 +9,7 @@ from dw_lib import (
     PostgresSettings,
 )
 from pytest_docker.plugin import get_docker_services, Services
-from typing import Any, Generator, Iterator, List, Union
+from typing import Any
 
 import httpx
 import os
@@ -19,7 +20,7 @@ import yaml
 
 class DatabaseTest:
     @pytest.fixture(scope="session")
-    def docker_compose_file(self, pytestconfig) -> Union[List[str], str]:
+    def docker_compose_file(self, pytestconfig) -> list[str] | str:
         return os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.database.yml")
 
     @pytest.fixture(scope="session")
@@ -91,7 +92,7 @@ class DatabaseTest:
 
 class PeerDBTest:
     @pytest.fixture(scope="session")
-    def docker_compose_file(self, pytestconfig) -> Union[List[str], str]:
+    def docker_compose_file(self, pytestconfig) -> list[str] | str:
         return os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.peerdb.yml")
 
     @pytest.fixture(scope="session")
@@ -106,7 +107,7 @@ class PeerDBTest:
     def docker_services(
         self,
         docker_compose_command: str,
-        docker_compose_file: Union[List[str], str],
+        docker_compose_file: list[str] | str,
         docker_compose_project_name: str,
         docker_setup: str,
         docker_cleanup: str,

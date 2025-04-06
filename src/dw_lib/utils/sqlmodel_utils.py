@@ -1,7 +1,6 @@
 from ..database import ClickHouseAdapter
 from ..types import ClickHouseSettings, DbtSource
 from ..utils.python_utils import is_python_keyword
-from typing import Dict, List, Optional
 
 import datetime
 import os
@@ -243,9 +242,9 @@ def create_model_code(
     db_settings: ClickHouseSettings,
     database: str,
     dbt_resource: DbtSource,
-    extend_primary_key: Optional[bool] = False,
+    extend_primary_key: bool | None = False,
     random_seed: int = 0,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Create the code of a SQLModel class from a table statement."""
     # 1. Create model
     clickhouse_adapter = ClickHouseAdapter(db_settings)
@@ -383,9 +382,9 @@ def create_model_file(
     database: str,
     dbt_resource: DbtSource,
     directory: str,
-    extend_primary_key: Optional[bool] = False,
-    replace_model: Optional[bool] = False,
-    replace_factory: Optional[bool] = False,
+    extend_primary_key: bool | None = False,
+    replace_model: bool | None = False,
+    replace_factory: bool | None = False,
 ) -> None:
     model_name = dbt_resource.original_config.meta.python_class
     model_filename = create_class_filename(model_name)
@@ -403,15 +402,15 @@ def create_model_file(
         )
 
         if create_model:
-            with open(model_path, "wt") as fp:
+            with open(model_path, "w") as fp:
                 fp.write(result["model_code"])
 
         if create_factory:
-            with open(factory_path, "wt") as fp:
+            with open(factory_path, "w") as fp:
                 fp.write(result["factory_code"])
 
 
-def create_init_file(dbt_resources: List[DbtSource], directory: str) -> None:
+def create_init_file(dbt_resources: list[DbtSource], directory: str) -> None:
     file_path = os.path.join(directory, "__init__.py")
     all = []
     imports = []
@@ -431,5 +430,5 @@ def create_init_file(dbt_resources: List[DbtSource], directory: str) -> None:
     lines = [f"__all__ = {all}", "", "\n".join(imports), ""]
     code = "\n".join(lines)
 
-    with open(file_path, "wt") as fp:
+    with open(file_path, "w") as fp:
         fp.write(code)

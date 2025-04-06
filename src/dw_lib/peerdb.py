@@ -13,7 +13,7 @@ from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import Dict, List, Literal, Optional, Union
+from typing import Literal
 
 import httpx
 import pydash
@@ -32,11 +32,11 @@ class DynamicSetting(BaseModel):
     target_for_setting: Literal["ALL", "QUEUES", "CLICKHOUSE", "SNOWFLAKE", "BIGQUERY"] = Field(
         alias="targetForSetting"
     )
-    value: Optional[str] = None
+    value: str | None = None
 
 
 class GetDynamicSettingsResponse(BaseModel):
-    settings: List[DynamicSetting]
+    settings: list[DynamicSetting]
 
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/peers.proto#L111
@@ -76,7 +76,7 @@ class PostgresPeer(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L197
 class PeerInfoResponse(BaseModel):
-    peer: Union[ClickHousePeer, PostgresPeer]
+    peer: ClickHousePeer | PostgresPeer
     version: str
 
 
@@ -93,9 +93,9 @@ class PeerListItem(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L211
 class ListPeersResponse(BaseModel):
-    destination_items: List[PeerListItem] = Field(alias="destinationItems")
-    items: List[PeerListItem]
-    source_items: List[PeerListItem] = Field(alias="sourceItems")
+    destination_items: list[PeerListItem] = Field(alias="destinationItems")
+    items: list[PeerListItem]
+    source_items: list[PeerListItem] = Field(alias="sourceItems")
 
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L106
@@ -126,7 +126,7 @@ class ListMirrorsItem(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L357
 class ListMirrorsResponse(BaseModel):
-    mirrors: List[ListMirrorsItem]
+    mirrors: list[ListMirrorsItem]
 
 
 class ConfigSetting(BaseModel):
@@ -192,24 +192,24 @@ class ConfigMirror(BaseModel):
     flow_job_name: str
     source_name: str
     destination_name: str
-    table_mappings: List[ConfigMirrorTableMapping]
-    do_initial_snapshot: Optional[bool] = False
-    idle_timeout_seconds: Optional[int] = 60
-    initial_snapshot_only: Optional[bool] = False
-    max_batch_size: Optional[int] = 1000000
-    resync: Optional[bool] = False
-    snapshot_max_parallel_workers: Optional[int] = 4
-    snapshot_num_rows_per_partition: Optional[int] = 1000000
-    snapshot_num_tables_in_parallel: Optional[int] = 1
-    soft_delete_col_name: Optional[str] = "_peerdb_is_deleted"
-    synced_at_col_name: Optional[str] = "_peerdb_synced_at"
+    table_mappings: list[ConfigMirrorTableMapping]
+    do_initial_snapshot: bool | None = False
+    idle_timeout_seconds: int | None = 60
+    initial_snapshot_only: bool | None = False
+    max_batch_size: int | None = 1000000
+    resync: bool | None = False
+    snapshot_max_parallel_workers: int | None = 4
+    snapshot_num_rows_per_partition: int | None = 1000000
+    snapshot_num_tables_in_parallel: int | None = 1
+    soft_delete_col_name: str | None = "_peerdb_is_deleted"
+    synced_at_col_name: str | None = "_peerdb_synced_at"
 
 
 class Config(BaseModel):
     api_url: str
-    settings: Optional[List[ConfigSetting]] = None
-    peers: List[ConfigPeerClickHouse | ConfigPeerPostgres]
-    mirrors: List[ConfigMirror]
+    settings: list[ConfigSetting] | None = None
+    peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
+    mirrors: list[ConfigMirror]
     # publications: List
     # users: List
     # publication_schemas: List[str]
@@ -348,7 +348,7 @@ class PeerDB:
 
         return GetDynamicSettingsResponse(**response.json())
 
-    def update_settings(self, settings: Dict[str, str]) -> None:
+    def update_settings(self, settings: dict[str, str]) -> None:
         url = f"{self.config.api_url}/v1/dynamic_settings"
 
         for key, value in settings.items():
@@ -410,8 +410,8 @@ class PeerDB:
     def drop_peer(
         self,
         peer_name: str,
-        drop_mirrors: Optional[bool] = True,
-        drop_destination_tables: Optional[bool] = False,
+        drop_mirrors: bool | None = True,
+        drop_destination_tables: bool | None = False,
     ) -> None:
         if drop_mirrors:
             self.drop_mirrors_of_peer(peer_name, drop_destination_tables=drop_destination_tables)
@@ -505,9 +505,7 @@ class PeerDB:
 
         return self.create_mirror(mirror)
 
-    def drop_mirror(
-        self, flow_job_name: str, drop_destination_tables: Optional[bool] = False
-    ) -> None:
+    def drop_mirror(self, flow_job_name: str, drop_destination_tables: bool | None = False) -> None:
         url = f"{self.config.api_url}/v1/mirrors/state_change"
         data = {"flowJobName": flow_job_name, "requestedFlowState": "STATUS_TERMINATED"}
         response = httpx.post(url, json=data, headers=self._headers, timeout=None)
@@ -537,7 +535,7 @@ class PeerDB:
                 database_adapter.drop_table(**table_identifier.model_dump())
 
     def drop_mirrors_of_peer(
-        self, peer_name: str, drop_destination_tables: Optional[bool] = False
+        self, peer_name: str, drop_destination_tables: bool | None = False
     ) -> None:
         for mirror in self.list_mirrors().mirrors:
             if mirror.source_name == peer_name or mirror.destination_name == peer_name:

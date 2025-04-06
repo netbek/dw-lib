@@ -1,8 +1,9 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
+from collections.abc import Generator
 from dw_lib import ClickHouseAdapter, ClickHouseTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 
@@ -113,7 +114,7 @@ class TestClickHouseAdapter(DatabaseTest):
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
         table = clickhouse_adapter.get_table(clickhouse_table.name)
-        assert set(["id", "updated_at"]) == set([column.name for column in table.columns])
+        assert {"id", "updated_at"} == {column.name for column in table.columns}
 
     def test_create_and_drop_table(self, clickhouse_adapter: ClickHouseAdapter):
         table = "test_table"
@@ -162,9 +163,7 @@ class TestClickHouseAdapter(DatabaseTest):
     def test_list_tables_populated_database(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
-        assert set([clickhouse_table.name]) == set(
-            [table.name for table in clickhouse_adapter.list_tables()]
-        )
+        assert {clickhouse_table.name} == {table.name for table in clickhouse_adapter.list_tables()}
 
     def test_has_user_non_existent_user(self, clickhouse_adapter: ClickHouseAdapter):
         assert clickhouse_adapter.has_user("non_existent_user") is False

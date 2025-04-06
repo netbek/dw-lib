@@ -1,8 +1,9 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
+from collections.abc import Generator
 from dw_lib import PostgresAdapter, PostgresTableIdentifier, TableNotFoundException
 from sqlmodel import Table, text
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 
@@ -110,7 +111,7 @@ class TestPostgresAdapter(DatabaseTest):
 
     def test_get_table_existent(self, postgres_adapter: PostgresAdapter, postgres_table: Table):
         table = postgres_adapter.get_table(postgres_table.name)
-        assert set(["id", "updated_at"]) == set([column.name for column in table.columns])
+        assert {"id", "updated_at"} == {column.name for column in table.columns}
 
     def test_create_and_drop_table(self, postgres_adapter: PostgresAdapter):
         table = "test_table"
@@ -163,9 +164,7 @@ class TestPostgresAdapter(DatabaseTest):
     def test_list_tables_populated_database(
         self, postgres_adapter: PostgresAdapter, postgres_table: Table
     ):
-        assert set([postgres_table.name]) == set(
-            [table.name for table in postgres_adapter.list_tables()]
-        )
+        assert {postgres_table.name} == {table.name for table in postgres_adapter.list_tables()}
 
     def test_get_table_replica_identity_non_existent(
         self, postgres_adapter: PostgresAdapter, postgres_table: Table

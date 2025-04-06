@@ -1,7 +1,6 @@
 from jinja2 import Environment, FileSystemLoader, Undefined
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, Type
 
 
 class EnvVars(BaseSettings):
@@ -12,12 +11,12 @@ class EnvVars(BaseSettings):
     )
 
 
-def env_var(var: str, default: Optional[str] = None) -> str:
+def env_var(var: str, default: str | None = None) -> str:
     return getattr(EnvVars(), var, default)
 
 
 def render_template(
-    file_path: str, context: Optional[dict] = None, undefined: Type[Undefined] = Undefined
+    file_path: str, context: dict | None = None, undefined: type[Undefined] = Undefined
 ) -> str:
     env = Environment(
         loader=FileSystemLoader("/"),

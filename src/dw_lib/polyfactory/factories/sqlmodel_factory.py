@@ -1,7 +1,7 @@
 from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.persistence import SyncPersistenceProtocol
 from sqlmodel import Session, SQLModel
-from typing import Any, List, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -18,7 +18,7 @@ class SyncPersistenceHandler(SyncPersistenceProtocol[SQLModel]):
 
         return data
 
-    def save_many(self, session: Session, data: List[SQLModel]) -> List[SQLModel]:
+    def save_many(self, session: Session, data: list[SQLModel]) -> list[SQLModel]:
         session.add_all(data)
 
         try:

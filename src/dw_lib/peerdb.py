@@ -1,6 +1,13 @@
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
-from .exceptions import EmptyConfigException, MirrorNotFoundException, TableNotFoundException
+from .exceptions import (
+    EmptyConfigException,
+    MirrorExistsException,
+    MirrorNotFoundException,
+    PeerExistsException,
+    PeerNotFoundException,
+    TableNotFoundException,
+)
 from .types import (
     ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
     AdapterType,
@@ -107,7 +114,9 @@ class CreatePeerResponse(BaseModel):
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L280
 class MirrorStatusResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
-    current_flow_state: Literal["STATUS_SETUP", "STATUS_UNKNOWN"] = Field(alias="currentFlowState")
+    current_flow_state: Literal[
+        "STATUS_SETUP", "STATUS_PAUSED", "STATUS_RUNNING", "STATUS_TERMINATED", "STATUS_UNKNOWN"
+    ] = Field(alias="currentFlowState")
     flow_job_name: str = Field(alias="flowJobName")
 
 
@@ -388,7 +397,13 @@ class PeerDB:
 
         return PeerTypeResponse(**response.json())
 
-    def create_peer(self, peer: dict) -> CreatePeerResponse:
+    def create_peer(self, peer: dict, replace: bool | None = False) -> CreatePeerResponse:
+        if self.has_peer(peer["name"]):
+            if replace:
+                self.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
+            else:
+                raise PeerExistsException(f"Peer '{peer['name']}' exists")
+
         url = f"{self.config.api_url}/v1/peers/create"
         data = {"peer": peer}
         response = httpx.post(url, json=data, headers=self._headers)
@@ -425,6 +440,13 @@ class PeerDB:
                 f"Failed to drop peer '{peer_name}' (error {response.status_code}: {response.text})"
             )
 
+    def drop_mirrors_of_peer(
+        self, peer_name: str, drop_destination_tables: bool | None = False
+    ) -> None:
+        for mirror in self.list_mirrors().mirrors:
+            if mirror.source_name == peer_name or mirror.destination_name == peer_name:
+                self.drop_mirror(mirror.name, drop_destination_tables=drop_destination_tables)
+
     def list_peers(self) -> ListPeersResponse:
         url = f"{self.config.api_url}/v1/peers/list"
         response = httpx.get(url, headers=self._headers)
@@ -459,9 +481,13 @@ class PeerDB:
             )
 
     def create_mirror(self, mirror: dict, replace: bool | None = False) -> None:
-        if replace and self.has_mirror(mirror["flow_job_name"]):
-            self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
+        if self.has_mirror(mirror["flow_job_name"]):
+            if replace:
+                self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
+            else:
+                raise MirrorExistsException(f"Mirror '{mirror['flow_job_name']}' exists")
 
+        # Step 1: Check whether the source tables exist
         source_peer = pydash.find(self.config.peers, lambda x: x.name == mirror["source_name"])
 
         if source_peer is None:
@@ -492,6 +518,10 @@ class PeerDB:
                     f"Source table '{table_mapping['source_table_identifier']}' not found in database of peer '{source_peer.name}'"
                 )
 
+        # Step 2: Drop the destination tables
+        self.drop_destination_tables_of_mirror(mirror["flow_job_name"])
+
+        # Step 3: Create the mirror
         url = f"{self.config.api_url}/v1/flows/cdc/create"
         data = {"connection_configs": mirror}
         response = httpx.post(url, json=data, headers=self._headers)
@@ -513,30 +543,34 @@ class PeerDB:
             )
 
         if drop_destination_tables:
-            mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)
-            peer = pydash.find(self.config.peers, lambda x: x.name == mirror.destination_name)
+            self.drop_destination_tables_of_mirror(flow_job_name)
 
-            if peer.adapter.type == AdapterType.CLICKHOUSE:
-                clickhouse_settings = ClickHouseSettings(**peer.adapter.settings.model_dump())
-                database_adapter = ClickHouseAdapter(clickhouse_settings)
-                table_identifiers = [
-                    ClickHouseTableIdentifier.from_string(
-                        table_mapping.destination_table_identifier
-                    )
-                    for table_mapping in mirror.table_mappings
-                ]
-            else:
-                raise Exception(f"Adapter type '{peer.adapter.type}' is not supported")
+    def drop_destination_tables_of_mirror(self, flow_job_name):
+        mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)
 
-            for table_identifier in table_identifiers:
-                database_adapter.drop_table(**table_identifier.model_dump())
+        if mirror is None:
+            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-    def drop_mirrors_of_peer(
-        self, peer_name: str, drop_destination_tables: bool | None = False
-    ) -> None:
-        for mirror in self.list_mirrors().mirrors:
-            if mirror.source_name == peer_name or mirror.destination_name == peer_name:
-                self.drop_mirror(mirror.name, drop_destination_tables=drop_destination_tables)
+        destination_peer = pydash.find(
+            self.config.peers, lambda x: x.name == mirror.destination_name
+        )
+
+        if destination_peer is None:
+            raise PeerNotFoundException(f"Peer '{mirror.destination_name}' not found")
+
+        if destination_peer.adapter.type != AdapterType.CLICKHOUSE:
+            raise Exception(f"Adapter type '{destination_peer.adapter.type}' is not supported")
+
+        destination_adapter = ClickHouseAdapter(
+            ClickHouseSettings(**destination_peer.adapter.settings.model_dump())
+        )
+        destination_table_identifiers = [
+            ClickHouseTableIdentifier.from_string(table_mapping.destination_table_identifier)
+            for table_mapping in mirror.table_mappings
+        ]
+
+        for table_identifier in destination_table_identifiers:
+            destination_adapter.drop_table(**table_identifier.model_dump())
 
     def list_mirrors(self) -> ListMirrorsResponse:
         url = f"{self.config.api_url}/v1/mirrors/list"

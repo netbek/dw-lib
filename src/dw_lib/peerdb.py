@@ -431,24 +431,23 @@ class PeerDB:
         return PeerTypeResponse(**response.json())
 
     def create_peer(self, peer: dict) -> CreatePeerResponse:
-        if not self.has_peer(peer):
-            url = f"{self.config.api_url}/v1/peers/create"
-            data = {"peer": peer}
-            response = httpx.post(url, json=data, headers=self._headers)
+        url = f"{self.config.api_url}/v1/peers/create"
+        data = {"peer": peer}
+        response = httpx.post(url, json=data, headers=self._headers)
 
-            if response.status_code != 200:
-                raise Exception(
-                    f"Failed to create peer '{peer['name']}' (error {response.status_code}: {response.text})"
-                )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to create peer '{peer['name']}' (error {response.status_code}: {response.text})"
+            )
 
-            deserialized = CreatePeerResponse(**response.json())
+        deserialized = CreatePeerResponse(**response.json())
 
-            if deserialized.status != "CREATED":
-                raise Exception(
-                    f"Failed to create peer '{peer['name']}' (status {deserialized.status})"
-                )
+        if deserialized.status != "CREATED":
+            raise Exception(
+                f"Failed to create peer '{peer['name']}' (status {deserialized.status})"
+            )
 
-            return deserialized
+        return deserialized
 
     def drop_peer(
         self,
@@ -459,15 +458,14 @@ class PeerDB:
         if drop_mirrors:
             self.drop_mirrors_of_peer(peer_name, drop_destination_tables=drop_destination_tables)
 
-        if self.has_peer(peer_name):
-            url = f"{self.config.api_url}/v1/peers/drop"
-            data = {"peerName": peer_name}
-            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+        url = f"{self.config.api_url}/v1/peers/drop"
+        data = {"peerName": peer_name}
+        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-            if response.status_code != 200:
-                raise Exception(
-                    f"Failed to drop peer '{peer_name}' (error {response.status_code}: {response.text})"
-                )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to drop peer '{peer_name}' (error {response.status_code}: {response.text})"
+            )
 
     def list_peers(self) -> ListPeersResponse:
         url = f"{self.config.api_url}/v1/peers/list"
@@ -503,29 +501,33 @@ class PeerDB:
             )
 
     def create_mirror(self, mirror: dict) -> None:
-        if not self.has_mirror(mirror["flow_job_name"]):
-            url = f"{self.config.api_url}/v1/flows/cdc/create"
-            data = {"connection_configs": mirror}
-            response = httpx.post(url, json=data, headers=self._headers)
-            workflow_id = response.json().get("workflowId")
+        url = f"{self.config.api_url}/v1/flows/cdc/create"
+        data = {"connection_configs": mirror}
+        response = httpx.post(url, json=data, headers=self._headers)
+        workflow_id = response.json().get("workflowId")
 
-            if not (response.status_code == 200 and workflow_id):
-                raise Exception(
-                    f"Failed to create mirror '{mirror['flow_job_name']}' (error {response.status_code}: {response.text})"
-                )
+        if not (response.status_code == 200 and workflow_id):
+            raise Exception(
+                f"Failed to create mirror '{mirror['flow_job_name']}' (error {response.status_code}: {response.text})"
+            )
+
+    def create_or_replace_mirror(self, mirror: dict) -> None:
+        if self.has_mirror(mirror["flow_job_name"]):
+            self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
+
+        return self.create_mirror(mirror)
 
     def drop_mirror(
         self, flow_job_name: str, drop_destination_tables: Optional[bool] = False
     ) -> None:
-        if self.has_mirror(flow_job_name):
-            url = f"{self.config.api_url}/v1/mirrors/state_change"
-            data = {"flowJobName": flow_job_name, "requestedFlowState": "STATUS_TERMINATED"}
-            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        data = {"flowJobName": flow_job_name, "requestedFlowState": "STATUS_TERMINATED"}
+        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-            if response.status_code != 200:
-                raise Exception(
-                    f"Failed to drop mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
-                )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to drop mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
+            )
 
         if drop_destination_tables:
             mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)

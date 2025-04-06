@@ -458,7 +458,10 @@ class PeerDB:
                 f"Failed to get status of mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-    def create_mirror(self, mirror: dict) -> None:
+    def create_mirror(self, mirror: dict, replace: bool | None = False) -> None:
+        if replace and self.has_mirror(mirror["flow_job_name"]):
+            self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
+
         source_peer = pydash.find(self.config.peers, lambda x: x.name == mirror["source_name"])
 
         if source_peer is None:
@@ -498,12 +501,6 @@ class PeerDB:
             raise Exception(
                 f"Failed to create mirror '{mirror['flow_job_name']}' (error {response.status_code}: {response.text})"
             )
-
-    def create_or_replace_mirror(self, mirror: dict) -> None:
-        if self.has_mirror(mirror["flow_job_name"]):
-            self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
-
-        return self.create_mirror(mirror)
 
     def drop_mirror(self, flow_job_name: str, drop_destination_tables: bool | None = False) -> None:
         url = f"{self.config.api_url}/v1/mirrors/state_change"

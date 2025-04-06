@@ -145,10 +145,6 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
     user: str
     password: str
     database: str
-    # access_key_id: str = Field(alias="accessKeyId")
-    # secret_access_key: str = Field(alias="secretAccessKey")
-    # region: str
-    # s3_path: str = Field(alias="s3Path")
     disable_tls: bool
 
 

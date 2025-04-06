@@ -339,7 +339,15 @@ class PeerDB:
 
             return deserialized
 
-    def drop_peer(self, peer_name: str, drop_destination_tables: Optional[bool] = False) -> None:
+    def drop_peer(
+        self,
+        peer_name: str,
+        drop_mirrors: Optional[bool] = True,
+        drop_destination_tables: Optional[bool] = False,
+    ) -> None:
+        if drop_mirrors:
+            self.drop_mirrors_of_peer(peer_name, drop_destination_tables=drop_destination_tables)
+
         if self.has_peer(peer_name):
             url = f"{self.config['api_url']}/v1/peers/drop"
             data = {"peerName": peer_name}
@@ -349,8 +357,6 @@ class PeerDB:
                 raise Exception(
                     f"Failed to drop peer '{peer_name}' (error {response.status_code}: {response.text})"
                 )
-
-            # TODO Drop mirrors
 
     def list_peers(self) -> ListPeersResponse:
         url = f"{self.config['api_url']}/v1/peers/list"
@@ -416,14 +422,28 @@ class PeerDB:
             )
             destination_name = mirror["destination_name"]
             peer_config = self.config["peers"][destination_name]
-            clickhouse_settings = ClickHouseSettings(**peer_config["adapter"]["settings"])
-            clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
 
-            for table_mapping in mirror["table_mappings"]:
-                table_identifier = ClickHouseTableIdentifier.from_string(
-                    table_mapping["destination_table_identifier"]
-                )
-                clickhouse_adapter.drop_table(**table_identifier.model_dump())
+            if peer_config["adapter"]["type"] == AdapterType.CLICKHOUSE:
+                clickhouse_settings = ClickHouseSettings(**peer_config["adapter"]["settings"])
+                database_adapter = ClickHouseAdapter(clickhouse_settings)
+                table_identifiers = [
+                    ClickHouseTableIdentifier.from_string(
+                        table_mapping["destination_table_identifier"]
+                    )
+                    for table_mapping in mirror["table_mappings"]
+                ]
+            else:
+                raise Exception(f"Adapter type '{peer_config['adapter']['type']}' is not supported")
+
+            for table_identifier in table_identifiers:
+                database_adapter.drop_table(**table_identifier.model_dump())
+
+    def drop_mirrors_of_peer(
+        self, peer_name: str, drop_destination_tables: Optional[bool] = False
+    ) -> None:
+        for mirror in self.list_mirrors().mirrors:
+            if mirror.source_name == peer_name or mirror.destination_name == peer_name:
+                self.drop_mirror(mirror.name, drop_destination_tables=drop_destination_tables)
 
     def list_mirrors(self) -> ListMirrorsResponse:
         url = f"{self.config['api_url']}/v1/mirrors/list"

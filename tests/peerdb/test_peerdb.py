@@ -1,7 +1,6 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBTest
 from dw_lib import PeerDB, PostgresAdapter
-from dw_lib.types import PostgresSettings
 from sqlmodel import Table
 from typing import Any, Generator, List
 
@@ -209,63 +208,6 @@ class TestLoadConfig(PeerDBTest):
         assert PeerDB(config_path).config == expected
 
 
-# class TestInspect:
-#     @pytest.fixture(scope="function")
-#     def postgres_adapter(self) -> Generator[PostgresAdapter, Any, None]:
-#         postgres_settings = PostgresSettings(
-#             host="localhost",
-#             port=25432,
-#             username="postgres",
-#             password="postgres",
-#             database="test",
-#         )
-#         postgres_adapter = PostgresAdapter(postgres_settings)
-
-#         yield postgres_adapter
-
-#     @pytest.fixture(scope="function")
-#     def postgres_tables(
-#         self, postgres_adapter: PostgresAdapter
-#     ) -> Generator[List[Table], Any, None]:
-#         for table_def in table_defs:
-#             postgres_adapter.create_table(*table_def)
-
-#         # Create all tables
-#         table_names = [table_def[0] for table_def in table_defs]
-#         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-#         yield tables
-
-#         for table_name in table_names:
-#             postgres_adapter.drop_table(table_name)
-
-#     def test_inspect(self, pytestconfig, postgres_tables):
-#         config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
-
-#         peerdb = PeerDB(config_path)
-
-#         peerdb._config["peers"]["source"]["peerdb"]["postgres_config"]["host"] = (
-#             "host.docker.internal"
-#         )
-#         peerdb._config["peers"]["destination"]["peerdb"]["clickhouse_config"]["host"] = (
-#             "host.docker.internal"
-#         )
-
-#         for peer in peerdb.config["peers"].values():
-#             peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
-
-#         for mirror in peerdb.config["mirrors"].values():
-#             peerdb.create_mirror(mirror)
-
-#         # print(peerdb.list_mirrors())
-
-#         for mirror in peerdb.config["mirrors"].values():
-#             peerdb.drop_mirror(mirror["flow_job_name"])
-
-#         for peer in peerdb.config["peers"].values():
-#             peerdb.drop_peer(peer["name"])
-
-
 class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
     def postgres_tables(
@@ -284,6 +226,16 @@ class TestIntegration(PeerDBTest):
             postgres_adapter.drop_table(table_name)
 
     @pytest.fixture(scope="function")
+    def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
+        for peer in peerdb.config["peers"].values():
+            peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
+
+        yield None
+
+        for peer in peerdb.config["peers"].values():
+            peerdb.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
+
+    @pytest.fixture(scope="function")
     def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
         for peer in peerdb.config["peers"].values():
             peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
@@ -293,11 +245,8 @@ class TestIntegration(PeerDBTest):
 
         yield None
 
-        for mirror in peerdb.config["mirrors"].values():
-            peerdb.drop_mirror(mirror["flow_job_name"])
-
         for peer in peerdb.config["peers"].values():
-            peerdb.drop_peer(peer["name"])
+            peerdb.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
 
     def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
         settings = peerdb.get_settings().settings
@@ -311,17 +260,17 @@ class TestIntegration(PeerDBTest):
         settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
 
-    # def test_create_and_drop_peer(self, postgres_tables: List[Table], peerdb: PeerDB):
-    #     peer = copy.deepcopy(peerdb.config["peers"]["source"])
-    #     peer = {"name": peer["name"], **peer["peerdb"]}
+    def test_create_and_drop_peer(self, postgres_tables: List[Table], peerdb: PeerDB):
+        peer = copy.deepcopy(peerdb.config["peers"]["source"])
+        peer = {"name": peer["name"], **peer["peerdb"]}
 
-    #     assert peerdb.has_peer(peer) is False
+        assert peerdb.has_peer(peer["name"]) is False
 
-    #     peerdb.create_peer(peer)
-    #     assert peerdb.has_peer(peer) is True
+        peerdb.create_peer(peer)
+        assert peerdb.has_peer(peer["name"]) is True
 
-    #     peerdb.drop_peer(peer['name'])
-    #     assert peerdb.has_peer(peer) is False
+        peerdb.drop_peer(peer["name"])
+        assert peerdb.has_peer(peer["name"]) is False
 
     def test_list_peers(
         self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
@@ -333,18 +282,18 @@ class TestIntegration(PeerDBTest):
         ]
         assert_count_equal(actual, expected)
 
-    # def test_create_and_drop_mirror(
-    #     self, postgres_tables: List[Table], peerdb: PeerDB, peers: List[PeerDBPeer]
-    # ):
-    #     mirror = peerdb.config["mirrors"]["cdc_one"]
+    def test_create_and_drop_mirror(
+        self, postgres_tables: List[Table], peerdb: PeerDB, peers: None
+    ):
+        mirror = peerdb.config["mirrors"]["cdc_one"]
 
-    #     assert peerdb.has_mirror(mirror) is False
+        assert peerdb.has_mirror(mirror["flow_job_name"]) is False
 
-    #     peerdb.create_mirror(mirror)
-    #     assert peerdb.has_mirror(mirror) is True
+        peerdb.create_mirror(mirror)
+        assert peerdb.has_mirror(mirror["flow_job_name"]) is True
 
-    #     peerdb.drop_mirror(mirror["flow_job_name"])
-    #     assert peerdb.has_mirror(mirror) is False
+        peerdb.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
+        assert peerdb.has_mirror(mirror["flow_job_name"]) is False
 
     def test_list_mirrors(
         self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None

@@ -1,4 +1,3 @@
-from .constants import PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import EmptyConfigException, MirrorNotFoundException, TableNotFoundException
@@ -317,44 +316,7 @@ class PeerDB:
             for key in config["mirrors"].keys():
                 config["mirrors"][key]["flow_job_name"] = key
 
-            if config["mirrors"]:
-                source_peer = pydash.find(peers, lambda x: x["name"] == PEERDB_SOURCE_PEER)
-
-                if not source_peer:
-                    raise Exception(f"Peer '{PEERDB_SOURCE_PEER}' not found in PeerDB config")
-
-                # Validate the adapter type
-                if source_peer["adapter"]["type"] != AdapterType.POSTGRES:
-                    raise Exception(
-                        f"Adapter type '{source_peer['adapter']['type']}' is not supported"
-                    )
-
-                source_adapter = PostgresAdapter(
-                    PostgresSettings(**source_peer["adapter"]["settings"])
-                )
-                source_tables = source_adapter.list_tables()
-
-                for mirror in config["mirrors"].values():
-                    # Validate the table mappings
-                    for table_mapping in mirror["table_mappings"]:
-                        # Find the source table in the source database
-                        source_table_identifier = PostgresTableIdentifier.from_string(
-                            table_mapping["source_table_identifier"]
-                        )
-                        source_table = pydash.find(
-                            source_tables,
-                            lambda x: (
-                                x.schema == source_table_identifier.schema_
-                                and x.name == source_table_identifier.table
-                            ),
-                        )
-
-                        if source_table is None:
-                            raise TableNotFoundException(
-                                f"Source table '{table_mapping['source_table_identifier']}' not found in database of peer '{PEERDB_SOURCE_PEER}'"
-                            )
-
-                    mirrors.append(mirror)
+            mirrors = list(config["mirrors"].values())
 
         # publication_schemas = []
 
@@ -501,6 +463,36 @@ class PeerDB:
             )
 
     def create_mirror(self, mirror: dict) -> None:
+        source_peer = pydash.find(self.config.peers, lambda x: x.name == mirror["source_name"])
+
+        if source_peer is None:
+            raise Exception(f"Peer '{mirror['source_name']}' not found in PeerDB config")
+
+        if source_peer.adapter.type != AdapterType.POSTGRES:
+            raise Exception(f"Adapter type '{source_peer.adapter.type}' is not supported")
+
+        source_adapter = PostgresAdapter(
+            PostgresSettings(**source_peer.adapter.settings.model_dump())
+        )
+        source_tables = source_adapter.list_tables()
+
+        for table_mapping in mirror["table_mappings"]:
+            source_table_identifier = PostgresTableIdentifier.from_string(
+                table_mapping["source_table_identifier"]
+            )
+            source_table = pydash.find(
+                source_tables,
+                lambda x: (
+                    x.schema == source_table_identifier.schema_
+                    and x.name == source_table_identifier.table
+                ),
+            )
+
+            if source_table is None:
+                raise TableNotFoundException(
+                    f"Source table '{table_mapping['source_table_identifier']}' not found in database of peer '{source_peer.name}'"
+                )
+
         url = f"{self.config.api_url}/v1/flows/cdc/create"
         data = {"connection_configs": mirror}
         response = httpx.post(url, json=data, headers=self._headers)

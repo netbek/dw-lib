@@ -1,5 +1,5 @@
 from ..asserts import assert_count_equal
-from ..conftest import PeerDBTest
+from ..conftest import DatabaseTest, PeerDBTest
 from dw_lib import PeerDB, PostgresAdapter
 from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
 from sqlmodel import Table
@@ -47,23 +47,7 @@ table_defs = [
 ]
 
 
-class TestLoadConfig(PeerDBTest):
-    @pytest.fixture(scope="function")
-    def some_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[List[Table], Any, None]:
-        for table_def in table_defs[:1]:
-            postgres_adapter.create_table(*table_def)
-
-        # Create some tables
-        table_names = [table_def[0] for table_def in table_defs[:1]]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
+class TestLoadConfig(DatabaseTest):
     @pytest.fixture(scope="function")
     def all_postgres_tables(
         self, postgres_adapter: PostgresAdapter
@@ -86,17 +70,7 @@ class TestLoadConfig(PeerDBTest):
         with pytest.raises(EmptyConfigException):
             PeerDB(None)
 
-    def test_source_peer_missing_table(self, pytestconfig, some_postgres_tables: List[Table]):
-        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
-
-        with pytest.raises(TableNotFoundException) as exc:
-            PeerDB(config_path)
-
-        assert (
-            str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
-        )
-
-    def test_complete_config_and_source(self, pytestconfig, all_postgres_tables: List[Table]):
+    def test_valid_config(self, pytestconfig, all_postgres_tables: List[Table]):
         expected = {
             "api_url": "http://localhost:3000/api",
             "settings": [
@@ -226,7 +200,23 @@ class TestLoadConfig(PeerDBTest):
 
 class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
-    def postgres_tables(
+    def some_postgres_tables(
+        self, postgres_adapter: PostgresAdapter
+    ) -> Generator[List[Table], Any, None]:
+        for table_def in table_defs[:1]:
+            postgres_adapter.create_table(*table_def)
+
+        # Create some tables
+        table_names = [table_def[0] for table_def in table_defs[:1]]
+        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
+
+        yield tables
+
+        for table_name in table_names:
+            postgres_adapter.drop_table(table_name)
+
+    @pytest.fixture(scope="function")
+    def all_postgres_tables(
         self, postgres_adapter: PostgresAdapter
     ) -> Generator[List[Table], Any, None]:
         for table_def in table_defs:
@@ -266,7 +256,7 @@ class TestIntegration(PeerDBTest):
         for peer in peerdb.config.peers:
             peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
-    def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
+    def test_get_and_update_settings(self, all_postgres_tables: List[Table], peerdb: PeerDB):
         settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None
 
@@ -278,7 +268,7 @@ class TestIntegration(PeerDBTest):
         settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
 
-    def test_create_and_drop_peer(self, postgres_tables: List[Table], peerdb: PeerDB):
+    def test_create_and_drop_peer(self, all_postgres_tables: List[Table], peerdb: PeerDB):
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         assert peerdb.has_peer(peer.name) is False
@@ -291,7 +281,7 @@ class TestIntegration(PeerDBTest):
         assert peerdb.has_peer(peer.name) is False
 
     def test_list_peers(
-        self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
+        self, all_postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
     ):
         actual = [peer.model_dump() for peer in peerdb.list_peers().items]
         expected = [
@@ -301,7 +291,7 @@ class TestIntegration(PeerDBTest):
         assert_count_equal(actual, expected)
 
     def test_create_and_drop_mirror(
-        self, postgres_tables: List[Table], peerdb: PeerDB, peers: None
+        self, all_postgres_tables: List[Table], peerdb: PeerDB, peers: None
     ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
@@ -313,8 +303,23 @@ class TestIntegration(PeerDBTest):
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
+    def test_create_mirror_missing_table(
+        self, some_postgres_tables: List[Table], peerdb: PeerDB, peers: None
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
+
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+        with pytest.raises(TableNotFoundException) as exc:
+            peerdb.create_mirror(mirror.model_dump())
+
+        assert (
+            str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
+        )
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
     def test_list_mirrors(
-        self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
+        self, all_postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
     ):
         actual = [
             mirror.model_dump(

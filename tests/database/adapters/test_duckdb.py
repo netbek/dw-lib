@@ -1,17 +1,10 @@
+from ...conftest import DatabaseTest
+from dw_lib import DuckDBAdapter
+
 # from sqlalchemy import text
-from dw_lib import DuckDBAdapter, DuckDBSettings
-from typing import Any, Generator
-
-import pytest
 
 
-class TestDuckDBAdapter:
-    @pytest.fixture(scope="class")
-    def duckdb_adapter(
-        self, duckdb_settings: DuckDBSettings
-    ) -> Generator[DuckDBAdapter, Any, None]:
-        yield DuckDBAdapter(duckdb_settings)
-
+class TestDuckDBAdapter(DatabaseTest):
     def test_create_url(self, duckdb_adapter: DuckDBAdapter):
         url = duckdb_adapter.create_url(database=":memory:")
         assert str(url) == "duckdb:///:memory:"

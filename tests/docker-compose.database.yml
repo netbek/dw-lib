@@ -1,5 +1,3 @@
-name: dw-lib
-
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:25.3.2.39-alpine
@@ -11,11 +9,13 @@ services:
       - TZ=UTC
     ports:
       - 18123:8123
+      - 19000:9000
     healthcheck:
       test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
       interval: 1s
       timeout: 1s
       retries: 10
+    stop_grace_period: 0s
     deploy:
       restart_policy:
         condition: on-failure
@@ -34,27 +34,7 @@ services:
       interval: 1s
       timeout: 1s
       retries: 10
+    stop_grace_period: 0s
     deploy:
       restart_policy:
         condition: on-failure
-
-  app:
-    image: dw-lib-app:latest
-    build: .
-    environment:
-      - TZ=UTC
-    working_dir: /app
-    volumes:
-      - ./pyproject.toml:/app/pyproject.toml:ro
-      - ./README.md:/app/README.md:ro
-      - ./uv.lock:/app/uv.lock:ro
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./vendor/wait-for-it/wait-for-it.sh:/wait-for-it.sh:ro
-    depends_on:
-      - clickhouse
-      - postgres
-    stop_grace_period: 0s
-    command: /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- /bin/bash
-    stdin_open: true
-    tty: true

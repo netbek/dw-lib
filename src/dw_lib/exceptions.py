@@ -1,3 +1,6 @@
+class EmptyConfigException(Exception): ...
+
+
 class MirrorNotFoundException(Exception): ...
 
 

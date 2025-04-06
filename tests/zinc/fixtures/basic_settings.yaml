@@ -1,15 +1,15 @@
 peers:
   postgres:
     type: postgres
-    host: postgres
-    port: 5432
+    host: localhost
+    port: 15432
     username: postgres
     password: postgres
     database: test
 
   duckdb:
     type: duckdb
-    database: /app/temp/test.duckdb
+    database: tests/temp/test.duckdb
     extensions:
       - postgres
 

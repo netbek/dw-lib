@@ -7,8 +7,8 @@ peers:
   source:
     type: postgres
     settings:
-      host: postgres
-      port: 5432
+      host: localhost
+      port: 25432
       username: postgres
       password: postgres
       database: test
@@ -16,9 +16,9 @@ peers:
   destination:
     type: clickhouse
     settings:
-      host: clickhouse
-      http_port: 8123
-      tcp_port: 9000
+      host: localhost
+      http_port: 28123
+      tcp_port: 29000
       username: default
       password: default
       database: default
@@ -28,7 +28,7 @@ mirrors:
   +do_initial_snapshot: false
   +resync: false
 
-  cdc_small:
+  cdc_one:
     source_name: source
     destination_name: destination
     table_mappings:
@@ -36,7 +36,7 @@ mirrors:
       destination_table_identifier: table_1
     resync: true
 
-  cdc_large:
+  cdc_many:
     source_name: source
     destination_name: destination
     table_mappings:

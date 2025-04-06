@@ -3,10 +3,6 @@
 scripts_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root_dir="${scripts_dir}/.."
 
-build() {
-    docker compose build
-}
-
 clean() {
     sudo chown -R $(id -u):$(id -g) .
 
@@ -35,33 +31,8 @@ clean() {
     done
 }
 
-destroy() {
-    docker compose down -v --remove-orphans --rmi local
-    docker builder prune -f
-}
-
-up() {
-    docker compose up -d
-}
-
-down() {
-    docker compose down
-}
-
-shell() {
-    docker compose up -d
-    docker compose exec app bash
-}
-
-vscode() {
-    docker compose up -d
-    p=$(printf "%s" "$PWD" | xxd -p) && code --remote "dev-container+${p//[[:space:]]/}" "/app"
-}
-
 test() {
-    docker compose up -d
-    docker compose exec app /wait-for-it.sh clickhouse:8123 -- /wait-for-it.sh postgres:5432 -- pytest
-    docker compose down
+    uv run --frozen pytest
 }
 
 cd "${root_dir}"

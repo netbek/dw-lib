@@ -1,4 +1,10 @@
 repos:
+  # - repo: https://github.com/asottile/pyupgrade
+  #   rev: v3.19.1
+  #   hooks:
+  #     - id: pyupgrade
+  #       args: [--py312-plus]
+  #       stages: [pre-commit]
   - repo: https://github.com/pycqa/autoflake
     rev: v2.3.1
     hooks:

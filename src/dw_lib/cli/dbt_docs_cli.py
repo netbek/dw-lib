@@ -81,13 +81,13 @@ def bundle_docs(dbt_dir: str):
     catalog_path = os.path.join(dbt_dir, "target", "catalog.json")
     dest_path = os.path.join(dbt_dir, "docs", "index.html")
 
-    with open(html_path, "rt") as fp:
+    with open(html_path) as fp:
         html = fp.read()
 
-    with open(manifest_path, "rt") as fp:
+    with open(manifest_path) as fp:
         manifest = json.load(fp)
 
-    with open(catalog_path, "rt") as fp:
+    with open(catalog_path) as fp:
         catalog = json.load(fp)
 
     search_str = 'n=[o("manifest","manifest.json"+t),o("catalog","catalog.json"+t)]'
@@ -100,5 +100,5 @@ def bundle_docs(dbt_dir: str):
     )
     html = html.replace(search_str, replace_str)
 
-    with open(dest_path, "wt") as fp:
+    with open(dest_path, "w") as fp:
         fp.write(html)

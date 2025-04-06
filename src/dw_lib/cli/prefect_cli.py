@@ -8,7 +8,6 @@ from prefect import get_client
 from prefect.client.orchestration import PrefectClient
 from prefect.client.schemas.actions import WorkPoolCreate, WorkPoolUpdate
 from starlette import status
-from typing import Optional
 from uuid import UUID
 
 import httpx
@@ -52,7 +51,7 @@ def version():
 @prefect_app.command()
 @typer_async
 async def provision(
-    profile_name: Optional[str] = typer.Argument(
+    profile_name: str | None = typer.Argument(
         None, help="Profile name. Default is the active profile."
     ),
 ):
@@ -109,13 +108,13 @@ async def provision(
 @prefect_app.command()
 @typer_async
 async def deploy(
-    project_names: Optional[list[str]] = typer.Option(
+    project_names: list[str] | None = typer.Option(
         None, "-p", "--project-name", help="1 or more project names"
     ),
-    deployment_names: Optional[list[str]] = typer.Option(
+    deployment_names: list[str] | None = typer.Option(
         None, "-d", "--deployment-name", help="1 or more deployment names"
     ),
-    pause: Optional[bool] = typer.Option(
+    pause: bool | None = typer.Option(
         False,
         "--pause",
         help="Whether to create a paused deployment. By default, new deployments are active.",
@@ -193,10 +192,10 @@ async def deploy(
 @typer_async
 async def deployment(
     action: DeploymentAction,
-    project_names: Optional[list[str]] = typer.Option(
+    project_names: list[str] | None = typer.Option(
         None, "-p", "--project-name", help="1 or more project names"
     ),
-    deployment_names: Optional[list[str]] = typer.Option(
+    deployment_names: list[str] | None = typer.Option(
         None, "-d", "--deployment-name", help="1 or more deployment names"
     ),
 ):
@@ -287,8 +286,8 @@ async def delete_flow(client: PrefectClient, flow_id: UUID):
 
 
 def _load_deploy_configs(
-    project_names: Optional[list[str]] = None,
-    deployment_names: Optional[list[str]] = None,
+    project_names: list[str] | None = None,
+    deployment_names: list[str] | None = None,
 ):
     deploy_configs = []
     all_projects = Project.list_projects()
@@ -319,7 +318,7 @@ def _load_deploy_configs(
 def _build_deployment_actions(
     action: DeployAction | DeploymentAction,
     selected_names: list[str],
-    existing_names: Optional[list[str]] = None,
+    existing_names: list[str] | None = None,
 ):
     result = []
 

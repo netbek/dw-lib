@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from sqlalchemy import URL
 from sqlmodel import Table
-from typing import Any, List, Optional
+from typing import Any
 
 import duckdb
 
@@ -65,66 +65,64 @@ class DuckDBAdapter(BaseAdapter):
     def has_database(self, database: str) -> bool:
         raise NotImplementedError()
 
-    def create_database(self, database: str, replace: Optional[bool] = False) -> None:
+    def create_database(self, database: str, replace: bool | None = False) -> None:
         raise NotImplementedError()
 
     def drop_database(self, database: str) -> None:
         raise NotImplementedError()
 
-    def has_schema(self, schema: str, database: Optional[str] = None):
+    def has_schema(self, schema: str, database: str | None = None):
         raise NotImplementedError()
 
     def create_schema(
         self,
         schema: str,
-        database: Optional[str] = None,
-        replace: Optional[bool] = False,
+        database: str | None = None,
+        replace: bool | None = False,
     ) -> None:
         raise NotImplementedError()
 
-    def drop_schema(self, schema: str, database: Optional[str] = None) -> None:
+    def drop_schema(self, schema: str, database: str | None = None) -> None:
         raise NotImplementedError()
 
-    def has_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
-    ) -> bool:
+    def has_table(self, table: str, database: str | None = None, schema: str | None = None) -> bool:
         raise NotImplementedError()
 
     def create_table(
         self,
         table: str,
         statement: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
-        replace: Optional[bool] = False,
+        database: str | None = None,
+        schema: str | None = None,
+        replace: bool | None = False,
     ) -> None:
         raise NotImplementedError()
 
     def get_create_table_statement(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> None:
         raise NotImplementedError()
 
     def drop_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> None:
         raise NotImplementedError()
 
     def truncate_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> None:
         raise NotImplementedError()
 
     def get_table(
-        self, table: str, database: Optional[str] = None, schema: Optional[str] = None
+        self, table: str, database: str | None = None, schema: str | None = None
     ) -> Table:
         raise NotImplementedError()
 
     def get_table_replica_identity(
         self,
         table: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
+        database: str | None = None,
+        schema: str | None = None,
     ) -> None:
         raise NotImplementedError()
 
@@ -132,17 +130,15 @@ class DuckDBAdapter(BaseAdapter):
         self,
         table: str,
         replica_identity: str,
-        database: Optional[str] = None,
-        schema: Optional[str] = None,
+        database: str | None = None,
+        schema: str | None = None,
     ) -> None:
         raise NotImplementedError()
 
-    def drop_tables(self, database: Optional[str] = None, schema: Optional[str] = None) -> None:
+    def drop_tables(self, database: str | None = None, schema: str | None = None) -> None:
         raise NotImplementedError()
 
-    def list_tables(
-        self, database: Optional[str] = None, schema: Optional[str] = None
-    ) -> List[Table]:
+    def list_tables(self, database: str | None = None, schema: str | None = None) -> list[Table]:
         raise NotImplementedError()
 
     def has_user(self, username: str) -> bool:
@@ -152,8 +148,8 @@ class DuckDBAdapter(BaseAdapter):
         self,
         username: str,
         password: str,
-        options: Optional[dict] = None,
-        replace: Optional[bool] = False,
+        options: dict | None = None,
+        replace: bool | None = False,
     ) -> None:
         raise NotImplementedError()
 
@@ -166,17 +162,17 @@ class DuckDBAdapter(BaseAdapter):
     def revoke_user_privileges(self, username: str, schema: str) -> None:
         raise NotImplementedError()
 
-    def list_user_privileges(self, username: str) -> List[tuple] | None:
+    def list_user_privileges(self, username: str) -> list[tuple] | None:
         raise NotImplementedError()
 
     def has_publication(self, publication: str) -> bool:
         raise NotImplementedError()
 
-    def create_publication(self, publication: str, tables: List[str], replace=False) -> None:
+    def create_publication(self, publication: str, tables: list[str], replace=False) -> None:
         raise NotImplementedError()
 
     def drop_publication(self, publication: str) -> None:
         raise NotImplementedError()
 
-    def list_publications(self) -> List[str]:
+    def list_publications(self) -> list[str]:
         raise NotImplementedError()

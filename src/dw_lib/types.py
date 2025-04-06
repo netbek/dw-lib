@@ -2,7 +2,7 @@ from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, TypedDict
 
 import math
 import psutil
@@ -19,13 +19,13 @@ class TableIndexType(StrEnum):
 
 
 class CreateTableStatementOptions(TypedDict):
-    schema: Optional[str] = None
-    if_not_exists: Optional[bool] = False
-    include_autoincrement: Optional[bool] = False
-    include_index: Optional[bool] = False
-    include_primary_key_constraint: Optional[bool] = False
-    include_foreign_key_constraint: Optional[bool] = False
-    include_unique_constraint: Optional[bool] = False
+    schema: str | None = None
+    if_not_exists: bool | None = False
+    include_autoincrement: bool | None = False
+    include_index: bool | None = False
+    include_primary_key_constraint: bool | None = False
+    include_foreign_key_constraint: bool | None = False
+    include_unique_constraint: bool | None = False
 
 
 class ClickHouseIdentifier:
@@ -39,7 +39,7 @@ class ClickHouseIdentifier:
 
 
 class ClickHouseTableIdentifier(ClickHouseIdentifier, BaseModel):
-    database: Optional[str] = Field(default=None, serialization_alias="database")
+    database: str | None = Field(default=None, serialization_alias="database")
     table: str = Field(serialization_alias="table")
 
     @classmethod
@@ -71,8 +71,8 @@ class PostgresIdentifier:
 
 
 class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
-    database: Optional[str] = Field(default=None, serialization_alias="database")
-    schema_: Optional[str] = Field(default=None, serialization_alias="schema")
+    database: str | None = Field(default=None, serialization_alias="database")
+    schema_: str | None = Field(default=None, serialization_alias="schema")
     table: str = Field(serialization_alias="table")
 
     @classmethod
@@ -136,8 +136,8 @@ def calculate_threads(percent) -> int:
 class DuckDBSystemSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    memory_limit: Optional[str] = calculate_memory_limit(80)
-    threads: Optional[int | str] = calculate_threads(100)
+    memory_limit: str | None = calculate_memory_limit(80)
+    threads: int | str | None = calculate_threads(100)
 
     @field_validator("memory_limit", mode="before")
     @classmethod
@@ -169,15 +169,15 @@ class ClickHouseSettings(BaseSettings):
     username: str
     password: str
     database: str
-    secure: Optional[bool] = Field(default=False)
-    driver: Optional[str] = Field(default=None)
+    secure: bool | None = Field(default=False)
+    driver: str | None = Field(default=None)
 
 
 class DuckDBSettings(BaseSettings):
     database: Path | str
     schema_: str = Field(default="main", serialization_alias="schema")
-    extensions: Optional[List[str]] = None
-    settings: Optional[DuckDBSystemSettings] = None
+    extensions: list[str] | None = None
+    settings: DuckDBSystemSettings | None = None
 
 
 class PostgresSettings(BaseSettings):
@@ -218,7 +218,7 @@ class DbtColumnMeta(BaseModel):
 
 class DbtColumn(BaseModel):
     data_type: str
-    meta: Optional[DbtColumnMeta] = None
+    meta: DbtColumnMeta | None = None
     name: str
 
 
@@ -228,17 +228,17 @@ class DbtContract(BaseModel):
 
 
 class DbtDependsOn(BaseModel):
-    macros: Optional[List[str]] = None
-    nodes: Optional[List[str]] = None
+    macros: list[str] | None = None
+    nodes: list[str] | None = None
 
 
 class DbtDocs(BaseModel):
-    node_color: Optional[str] = None
+    node_color: str | None = None
     show: bool
 
 
 class DbtPersistDocs(BaseModel):
-    columns: Optional[bool] = None
+    columns: bool | None = None
 
 
 class DbtTableMeta(BaseModel):
@@ -246,9 +246,9 @@ class DbtTableMeta(BaseModel):
 
 
 class DbtTable(BaseModel):
-    columns: Optional[List[DbtColumn]] = None
-    loaded_at_field: Optional[str] = None
-    meta: Optional[DbtTableMeta] = None
+    columns: list[DbtColumn] | None = None
+    loaded_at_field: str | None = None
+    meta: DbtTableMeta | None = None
     name: str
 
 
@@ -257,40 +257,40 @@ class DbtBaseResource(BaseModel):
     original_file_path: str
     package_name: str
     resource_type: DbtResourceType
-    tags: List[str]
+    tags: list[str]
     unique_id: str
 
 
 class DbtModelConfig(BaseModel):
     access: str
-    alias: Optional[str] = None
-    batch_filter: Optional[str] = None
-    batch_size: Optional[int] = None
-    column_types: Dict[str, str]
+    alias: str | None = None
+    batch_filter: str | None = None
+    batch_size: int | None = None
+    column_types: dict[str, str]
     contract: DbtContract
-    database: Optional[str] = None
+    database: str | None = None
     docs: DbtDocs
     enabled: bool
-    engine: Optional[str] = None
-    full_refresh: Optional[bool] = False
-    grants: Dict[str, List[str]]
-    group: Optional[str] = None
-    incremental_strategy: Optional[str] = None
+    engine: str | None = None
+    full_refresh: bool | None = False
+    grants: dict[str, list[str]]
+    group: str | None = None
+    incremental_strategy: str | None = None
     materialized: str
-    meta: Dict[str, str | int | float | bool | None]
+    meta: dict[str, str | int | float | bool | None]
     on_configuration_change: str
     on_schema_change: str
-    order_by: Optional[str] = None
-    packages: List[str]
+    order_by: str | None = None
+    packages: list[str]
     persist_docs: DbtPersistDocs
-    post_hook: Optional[List[str]] = None
-    pre_hook: Optional[List[str]] = None
-    quoting: Dict[str, bool]
-    range_max: Optional[str] = None
-    range_min: Optional[str] = None
-    schema_: Optional[str] = Field(default=None, serialization_alias="schema")
-    tags: List[str]
-    unique_key: Optional[str] = None
+    post_hook: list[str] | None = None
+    pre_hook: list[str] | None = None
+    quoting: dict[str, bool]
+    range_max: str | None = None
+    range_min: str | None = None
+    schema_: str | None = Field(default=None, serialization_alias="schema")
+    tags: list[str]
+    unique_key: str | None = None
 
 
 class DbtModel(DbtBaseResource):
@@ -300,30 +300,30 @@ class DbtModel(DbtBaseResource):
 
 
 class DbtSeedConfig(BaseModel):
-    alias: Optional[str] = None
-    column_types: Dict[str, str]
+    alias: str | None = None
+    column_types: dict[str, str]
     contract: DbtContract
-    database: Optional[str] = None
+    database: str | None = None
     delimiter: str
     docs: DbtDocs
     enabled: bool
-    full_refresh: Optional[bool] = False
-    grants: Dict[str, List[str]]
-    group: Optional[str] = None
-    incremental_strategy: Optional[str] = None
+    full_refresh: bool | None = False
+    grants: dict[str, list[str]]
+    group: str | None = None
+    incremental_strategy: str | None = None
     materialized: str
-    meta: Dict[str, str | int | float | bool | None]
+    meta: dict[str, str | int | float | bool | None]
     on_configuration_change: str
     on_schema_change: str
-    packages: List[str]
+    packages: list[str]
     persist_docs: DbtPersistDocs
-    post_hook: Optional[List[str]] = None
-    pre_hook: Optional[List[str]] = None
-    quote_columns: Optional[bool] = None
-    quoting: Dict[str, bool]
-    schema_: Optional[str] = Field(default=None, serialization_alias="schema")
-    tags: List[str]
-    unique_key: Optional[str] = None
+    post_hook: list[str] | None = None
+    pre_hook: list[str] | None = None
+    quote_columns: bool | None = None
+    quoting: dict[str, bool]
+    schema_: str | None = Field(default=None, serialization_alias="schema")
+    tags: list[str]
+    unique_key: str | None = None
 
 
 class DbtSeed(DbtBaseResource):
@@ -338,7 +338,7 @@ class DbtSourceConfig(BaseModel):
 
 class DbtSource(DbtBaseResource):
     config: DbtSourceConfig
-    original_config: Optional[DbtTable] = None
+    original_config: DbtTable | None = None
     source_name: str
 
 
@@ -360,12 +360,12 @@ class ZincMirrorPeersSettings(BaseModel):
 
 
 class ZincMirrorTableIndexSettings(BaseModel):
-    name: Optional[str] = None
-    columns: List[str] = Field(min_length=1)
+    name: str | None = None
+    columns: list[str] = Field(min_length=1)
     type: TableIndexType = TableIndexType.BTREE
 
     @classmethod
-    def generate_index_name(cls, adapter_type: AdapterType, table: str, columns: List[str]) -> str:
+    def generate_index_name(cls, adapter_type: AdapterType, table: str, columns: list[str]) -> str:
         table_identifier = table_identifier_from_string(adapter_type, table)
         return f"ix_{table_identifier.table}_{'_'.join(columns)}"
 
@@ -373,8 +373,8 @@ class ZincMirrorTableIndexSettings(BaseModel):
 class ZincMirrorTableSettings(BaseModel):
     source: str
     destination: str
-    query: Optional[str] = None
-    indexes: Optional[List[ZincMirrorTableIndexSettings]] = []
+    query: str | None = None
+    indexes: list[ZincMirrorTableIndexSettings] | None = []
 
     @classmethod
     def generate_query(cls, source: str) -> str:
@@ -387,11 +387,11 @@ class ZincMirrorTableSettings(BaseModel):
 
 class ZincMirrorSettings(BaseModel):
     peers: ZincMirrorPeersSettings
-    tables: List[ZincMirrorTableSettings] = Field(min_length=1)
+    tables: list[ZincMirrorTableSettings] = Field(min_length=1)
 
 
-ZincPeersSettings = Dict[str, ZincDuckDBPeerSettings | ZincPostgresPeerSettings]
-ZincMirrorsSettings = Dict[str, ZincMirrorSettings]
+ZincPeersSettings = dict[str, ZincDuckDBPeerSettings | ZincPostgresPeerSettings]
+ZincMirrorsSettings = dict[str, ZincMirrorSettings]
 
 
 class ZincSettings(BaseModel):

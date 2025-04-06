@@ -8,12 +8,11 @@ from .types import (
     ZincMirrorSettings,
     ZincSettings,
 )
-from typing import Dict
 
 
 class Zinc:
     settings: ZincSettings = None
-    peers: Dict[str, DuckDBAdapter | PostgresAdapter] = {}
+    peers: dict[str, DuckDBAdapter | PostgresAdapter] = {}
 
     def __init__(self, settings: dict | ZincSettings) -> None:
         if isinstance(settings, ZincSettings):

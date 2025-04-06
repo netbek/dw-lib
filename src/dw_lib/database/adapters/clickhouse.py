@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlmodel import MetaData, Session, Table
-from typing import Any, List, Optional
+from typing import Any
 
 import clickhouse_connect
 import pydash
@@ -33,8 +33,8 @@ class ClickHouseAdapter(BaseAdapter):
         username: str,
         password: str,
         database: str,
-        driver: Optional[str] = None,
-        secure: Optional[bool] = None,
+        driver: str | None = None,
+        secure: bool | None = None,
     ) -> URL:
         if driver:
             scheme = f"clickhouse+{driver}"
@@ -111,7 +111,7 @@ class ClickHouseAdapter(BaseAdapter):
 
         return result
 
-    def create_database(self, database: str, replace: Optional[bool] = False) -> None:
+    def create_database(self, database: str, replace: bool | None = False) -> None:
         if self.has_database(database):
             if replace:
                 self.drop_database(database)
@@ -132,21 +132,21 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement, parameters={"database": database})
 
-    def has_schema(self, schema: str, database: Optional[str] = None) -> bool:
+    def has_schema(self, schema: str, database: str | None = None) -> bool:
         raise NotImplementedError()
 
     def create_schema(
         self,
         schema: str,
-        database: Optional[str] = None,
-        replace: Optional[bool] = False,
+        database: str | None = None,
+        replace: bool | None = False,
     ) -> None:
         raise NotImplementedError()
 
-    def drop_schema(self, schema: str, database: Optional[str] = None) -> None:
+    def drop_schema(self, schema: str, database: str | None = None) -> None:
         raise NotImplementedError()
 
-    def has_table(self, table: str, database: Optional[str] = None) -> bool:
+    def has_table(self, table: str, database: str | None = None) -> bool:
         if database is None:
             database = self.settings.database
 
@@ -165,8 +165,8 @@ class ClickHouseAdapter(BaseAdapter):
         self,
         table: str,
         statement: str,
-        database: Optional[str] = None,
-        replace: Optional[bool] = False,
+        database: str | None = None,
+        replace: bool | None = False,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -180,7 +180,7 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement)
 
-    def get_create_table_statement(self, table: str, database: Optional[str] = None) -> None:
+    def get_create_table_statement(self, table: str, database: str | None = None) -> None:
         if database is None:
             database = self.settings.database
 
@@ -200,7 +200,7 @@ class ClickHouseAdapter(BaseAdapter):
 
         return statement
 
-    def drop_table(self, table: str, database: Optional[str] = None) -> None:
+    def drop_table(self, table: str, database: str | None = None) -> None:
         if database is None:
             database = self.settings.database
 
@@ -213,7 +213,7 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement)
 
-    def truncate_table(self, table: str, database: Optional[str] = None) -> None:
+    def truncate_table(self, table: str, database: str | None = None) -> None:
         if database is None:
             database = self.settings.database
 
@@ -226,7 +226,7 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement)
 
-    def get_table(self, table: str, database: Optional[str] = None) -> Table:
+    def get_table(self, table: str, database: str | None = None) -> Table:
         if database is None:
             database = self.settings.database
 
@@ -246,22 +246,22 @@ class ClickHouseAdapter(BaseAdapter):
 
         return table_metadata
 
-    def get_table_replica_identity(self, table: str, database: Optional[str] = None) -> None:
+    def get_table_replica_identity(self, table: str, database: str | None = None) -> None:
         raise NotImplementedError()
 
     def set_table_replica_identity(
-        self, table: str, replica_identity: str, database: Optional[str] = None
+        self, table: str, replica_identity: str, database: str | None = None
     ) -> None:
         raise NotImplementedError()
 
-    def drop_tables(self, database: Optional[str] = None) -> None:
+    def drop_tables(self, database: str | None = None) -> None:
         if database is None:
             database = self.settings.database
 
         for table in self.list_tables(database=database):
             self.drop_table(table.name, database=database)
 
-    def list_tables(self, database: Optional[str] = None) -> List[Table]:
+    def list_tables(self, database: str | None = None) -> list[Table]:
         if database is None:
             database = self.settings.database
 
@@ -282,7 +282,7 @@ class ClickHouseAdapter(BaseAdapter):
 
         return result
 
-    def create_user(self, username: str, password: str, replace: Optional[bool] = False) -> None:
+    def create_user(self, username: str, password: str, replace: bool | None = False) -> None:
         if self.has_user(username):
             if replace:
                 self.drop_user(username)
@@ -311,17 +311,17 @@ class ClickHouseAdapter(BaseAdapter):
     def revoke_user_privileges(self, username: str, database: str) -> None:
         raise NotImplementedError()
 
-    def list_user_privileges(self, username: str) -> List[tuple]:
+    def list_user_privileges(self, username: str) -> list[tuple]:
         raise NotImplementedError()
 
     def has_publication(self, publication: str) -> bool:
         raise NotImplementedError()
 
-    def create_publication(self, publication: str, tables: List[str]) -> None:
+    def create_publication(self, publication: str, tables: list[str]) -> None:
         raise NotImplementedError()
 
     def drop_publication(self, publication: str) -> None:
         raise NotImplementedError()
 
-    def list_publications(self) -> List[str]:
+    def list_publications(self) -> list[str]:
         raise NotImplementedError()

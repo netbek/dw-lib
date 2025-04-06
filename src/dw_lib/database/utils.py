@@ -1,5 +1,5 @@
 from jinja2 import Environment, StrictUndefined
-from typing import Any, Optional
+from typing import Any
 
 import re
 import sqlparse
@@ -12,7 +12,7 @@ jinja_env = Environment(
 
 
 def render_statement(
-    statement: str, context: Optional[dict[str, Any]] = None, pretty: bool = False
+    statement: str, context: dict[str, Any] | None = None, pretty: bool = False
 ) -> str:
     if RE_HAS_JINJA.search(statement):
         statement = jinja_env.from_string(statement, context).render()

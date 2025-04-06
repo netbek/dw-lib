@@ -7,7 +7,7 @@ from pathlib import Path
 from prefect import get_client
 from prefect.client.schemas.filters import DeploymentFilter, DeploymentFilterTags
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 
 import importlib
 import os
@@ -54,7 +54,7 @@ class Project:
         return bool([project for project in cls.list_projects() if project.name == name])
 
     @classmethod
-    def list_projects(cls) -> List["Project"]:
+    def list_projects(cls) -> list["Project"]:
         return [cls(name) for name in list(os.listdir(PROJECTS_DIR))]
 
     @classmethod

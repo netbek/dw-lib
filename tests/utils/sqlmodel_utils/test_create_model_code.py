@@ -1,9 +1,10 @@
 from ...conftest import DatabaseTest
+from collections.abc import Generator
 from dw_lib.database import ClickHouseAdapter
 from dw_lib.types import ClickHouseTableIdentifier, DbtSource
 from dw_lib.utils.sqlmodel_utils import create_model_code
 from sqlmodel import Table
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 

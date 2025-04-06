@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -13,8 +12,8 @@ class PrettySafeDumper(yaml.SafeDumper):
             super().write_line_break()
 
 
-def safe_load_file(path: Path | str) -> Optional[dict]:
-    with open(path, "rt") as fp:
+def safe_load_file(path: Path | str) -> dict | None:
+    with open(path) as fp:
         data = yaml.safe_load(fp)
 
     return data

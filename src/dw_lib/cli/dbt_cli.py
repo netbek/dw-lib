@@ -116,6 +116,6 @@ def model_yaml(models: list[str]):
         schema["models"] = sorted(schema["models"], key=lambda x: x["name"])
 
         # Write schema file
-        with open(schema_path, "wt") as fp:
+        with open(schema_path, "w") as fp:
             data = yaml.safe_dump(schema, sort_keys=False)
             fp.write(data)

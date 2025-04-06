@@ -1,7 +1,8 @@
 from ..asserts import assert_count_equal
 from ..conftest import DatabaseTest
+from collections.abc import Generator
 from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
-from typing import Any, Generator
+from typing import Any
 
 import os
 import psycopg2
@@ -15,7 +16,6 @@ class TestDuckDBSystemSettings:
     def settings_dict(self, pytestconfig) -> Generator[dict, Any, None]:
         with open(
             os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/basic_settings.yaml"),
-            "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
         yield settings
@@ -56,7 +56,6 @@ class TestCanConnect(DatabaseTest):
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
             os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/basic_settings.yaml"),
-            "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
@@ -132,7 +131,6 @@ class TestMirrorBasicSettings(DatabaseTest):
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
             os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/basic_settings.yaml"),
-            "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)
@@ -249,7 +247,6 @@ class TestMirrorAdvancedSettings(DatabaseTest):
     def settings(self, pytestconfig) -> Generator[ZincSettings, Any, None]:
         with open(
             os.path.join(pytestconfig.rootpath, "tests/zinc/fixtures/advanced_settings.yaml"),
-            "rt",
         ) as fp:
             settings = yaml.safe_load(fp)
         yield ZincSettings(**settings)

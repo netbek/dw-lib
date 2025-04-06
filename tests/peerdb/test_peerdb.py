@@ -235,8 +235,7 @@ class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
     def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
         for peer in peerdb.config.peers:
-            data = {"name": peer.name, **peer.peerdb.model_dump()}
-            peerdb.create_peer(data)
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
 
         yield None
 
@@ -246,8 +245,7 @@ class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
     def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
         for peer in peerdb.config.peers:
-            data = {"name": peer.name, **peer.peerdb.model_dump()}
-            peerdb.create_peer(data)
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
 
         for mirror in peerdb.config.mirrors:
             peerdb.create_mirror(mirror.model_dump())
@@ -274,8 +272,7 @@ class TestIntegration(PeerDBTest):
 
         assert peerdb.has_peer(peer.name) is False
 
-        data = {"name": peer.name, **peer.peerdb.model_dump()}
-        peerdb.create_peer(data)
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
         assert peerdb.has_peer(peer.name) is True
 
         peerdb.drop_peer(peer.name)

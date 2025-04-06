@@ -1,10 +1,10 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBTest
 from dw_lib import PeerDB, PostgresAdapter
+from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
 from sqlmodel import Table
 from typing import Any, Generator, List
 
-import copy
 import os
 import pydash
 import pytest
@@ -82,19 +82,14 @@ class TestLoadConfig(PeerDBTest):
 
     def test_empty_config(self, monkeypatch):
         monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
-        expected = {
-            "mirrors": {},
-            "peers": {},
-            "publication_schemas": [],
-            "publications": {},
-            "users": {},
-        }
 
-        assert PeerDB(None).config == expected
+        with pytest.raises(EmptyConfigException):
+            PeerDB(None)
 
     def test_source_peer_missing_table(self, pytestconfig, some_postgres_tables: List[Table]):
         config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
-        with pytest.raises(Exception) as exc:
+
+        with pytest.raises(TableNotFoundException) as exc:
             PeerDB(config_path)
 
         assert (
@@ -104,11 +99,14 @@ class TestLoadConfig(PeerDBTest):
     def test_complete_config_and_source(self, pytestconfig, all_postgres_tables: List[Table]):
         expected = {
             "api_url": "http://localhost:3000/api",
-            "settings": {
-                "PEERDB_NULLABLE": "true",
-            },
-            "peers": {
-                "source": {
+            "settings": [
+                {
+                    "name": "PEERDB_NULLABLE",
+                    "value": "true",
+                }
+            ],
+            "peers": [
+                {
                     "name": "source",
                     "adapter": {
                         "type": "postgres",
@@ -118,6 +116,7 @@ class TestLoadConfig(PeerDBTest):
                             "username": "postgres",
                             "password": "postgres",
                             "database": "test",
+                            "schema": "public",
                         },
                     },
                     "peerdb": {
@@ -131,7 +130,7 @@ class TestLoadConfig(PeerDBTest):
                         },
                     },
                 },
-                "destination": {
+                {
                     "name": "destination",
                     "adapter": {
                         "type": "clickhouse",
@@ -143,6 +142,7 @@ class TestLoadConfig(PeerDBTest):
                             "password": "default",
                             "database": "default",
                             "secure": False,
+                            "driver": None,
                         },
                     },
                     "peerdb": {
@@ -157,55 +157,71 @@ class TestLoadConfig(PeerDBTest):
                         },
                     },
                 },
-            },
-            "mirrors": {
-                "cdc_one": {
-                    "source_name": "source",
+            ],
+            "mirrors": [
+                {
                     "destination_name": "destination",
-                    "table_mappings": [
-                        {
-                            "source_table_identifier": "public.table_1",
-                            "destination_table_identifier": "table_1",
-                        }
-                    ],
-                    "resync": True,
                     "do_initial_snapshot": False,
                     "flow_job_name": "cdc_one",
-                },
-                "cdc_many": {
+                    "idle_timeout_seconds": 60,
+                    "initial_snapshot_only": False,
+                    "max_batch_size": 1000000,
+                    "resync": True,
+                    "snapshot_max_parallel_workers": 4,
+                    "snapshot_num_rows_per_partition": 1000000,
+                    "snapshot_num_tables_in_parallel": 1,
+                    "soft_delete_col_name": "_peerdb_is_deleted",
                     "source_name": "source",
-                    "destination_name": "destination",
+                    "synced_at_col_name": "_peerdb_synced_at",
                     "table_mappings": [
                         {
-                            "source_table_identifier": "public.table_2",
-                            "destination_table_identifier": "table_2",
-                        },
-                        {
-                            "source_table_identifier": "public.table_3",
-                            "destination_table_identifier": "table_3",
+                            "destination_table_identifier": "table_1",
+                            "source_table_identifier": "public.table_1",
                         },
                     ],
+                },
+                {
+                    "destination_name": "destination",
                     "do_initial_snapshot": False,
-                    "resync": False,
                     "flow_job_name": "cdc_many",
+                    "idle_timeout_seconds": 60,
+                    "initial_snapshot_only": False,
+                    "max_batch_size": 1000000,
+                    "resync": False,
+                    "snapshot_max_parallel_workers": 4,
+                    "snapshot_num_rows_per_partition": 1000000,
+                    "snapshot_num_tables_in_parallel": 1,
+                    "soft_delete_col_name": "_peerdb_is_deleted",
+                    "source_name": "source",
+                    "synced_at_col_name": "_peerdb_synced_at",
+                    "table_mappings": [
+                        {
+                            "destination_table_identifier": "table_2",
+                            "source_table_identifier": "public.table_2",
+                        },
+                        {
+                            "destination_table_identifier": "table_3",
+                            "source_table_identifier": "public.table_3",
+                        },
+                    ],
                 },
-            },
-            "publications": {
-                "publication_1": {
-                    "name": "publication_1",
-                    "table_identifiers": ["private.table_1", "private.table_2"],
-                },
-                "publication_2": {
-                    "name": "publication_2",
-                    "table_identifiers": ["private.table_3"],
-                },
-            },
-            "users": {},
-            "publication_schemas": ["private", "public"],
+            ],
+            # "publications": [
+            #     {
+            #         "name": "publication_1",
+            #         "table_identifiers": ["private.table_1", "private.table_2"],
+            #     },
+            #     {
+            #         "name": "publication_2",
+            #         "table_identifiers": ["private.table_3"],
+            #     },
+            # ],
+            # "users": {},
+            # "publication_schemas": ["private", "public"],
         }
 
         config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
-        assert PeerDB(config_path).config == expected
+        assert PeerDB(config_path).config.model_dump(by_alias=True) == expected
 
 
 class TestIntegration(PeerDBTest):
@@ -227,26 +243,28 @@ class TestIntegration(PeerDBTest):
 
     @pytest.fixture(scope="function")
     def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
-        for peer in peerdb.config["peers"].values():
-            peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
+        for peer in peerdb.config.peers:
+            data = {"name": peer.name, **peer.peerdb.model_dump()}
+            peerdb.create_peer(data)
 
         yield None
 
-        for peer in peerdb.config["peers"].values():
-            peerdb.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
+        for peer in peerdb.config.peers:
+            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
     @pytest.fixture(scope="function")
     def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
-        for peer in peerdb.config["peers"].values():
-            peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
+        for peer in peerdb.config.peers:
+            data = {"name": peer.name, **peer.peerdb.model_dump()}
+            peerdb.create_peer(data)
 
-        for mirror in peerdb.config["mirrors"].values():
-            peerdb.create_mirror(mirror)
+        for mirror in peerdb.config.mirrors:
+            peerdb.create_mirror(mirror.model_dump())
 
         yield None
 
-        for peer in peerdb.config["peers"].values():
-            peerdb.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
+        for peer in peerdb.config.peers:
+            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
     def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
         settings = peerdb.get_settings().settings
@@ -261,16 +279,16 @@ class TestIntegration(PeerDBTest):
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
 
     def test_create_and_drop_peer(self, postgres_tables: List[Table], peerdb: PeerDB):
-        peer = copy.deepcopy(peerdb.config["peers"]["source"])
-        peer = {"name": peer["name"], **peer["peerdb"]}
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
-        assert peerdb.has_peer(peer["name"]) is False
+        assert peerdb.has_peer(peer.name) is False
 
-        peerdb.create_peer(peer)
-        assert peerdb.has_peer(peer["name"]) is True
+        data = {"name": peer.name, **peer.peerdb.model_dump()}
+        peerdb.create_peer(data)
+        assert peerdb.has_peer(peer.name) is True
 
-        peerdb.drop_peer(peer["name"])
-        assert peerdb.has_peer(peer["name"]) is False
+        peerdb.drop_peer(peer.name)
+        assert peerdb.has_peer(peer.name) is False
 
     def test_list_peers(
         self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
@@ -285,15 +303,15 @@ class TestIntegration(PeerDBTest):
     def test_create_and_drop_mirror(
         self, postgres_tables: List[Table], peerdb: PeerDB, peers: None
     ):
-        mirror = peerdb.config["mirrors"]["cdc_one"]
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        assert peerdb.has_mirror(mirror["flow_job_name"]) is False
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
-        peerdb.create_mirror(mirror)
-        assert peerdb.has_mirror(mirror["flow_job_name"]) is True
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
 
-        peerdb.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
-        assert peerdb.has_mirror(mirror["flow_job_name"]) is False
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
     def test_list_mirrors(
         self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None

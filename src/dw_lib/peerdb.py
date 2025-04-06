@@ -1,7 +1,7 @@
 from .constants import PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
-from .exceptions import MirrorNotFoundException
+from .exceptions import EmptyConfigException, MirrorNotFoundException, TableNotFoundException
 from .types import (
     ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
     AdapterType,
@@ -77,7 +77,7 @@ class PostgresPeer(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L197
 class PeerInfoResponse(BaseModel):
-    peer: Union[PostgresPeer, ClickHousePeer]
+    peer: Union[ClickHousePeer, PostgresPeer]
     version: str
 
 
@@ -130,6 +130,96 @@ class ListMirrorsResponse(BaseModel):
     mirrors: List[ListMirrorsItem]
 
 
+class ConfigSetting(BaseModel):
+    name: str
+    value: str
+
+
+class ConfigPeerAdapterClickHouse(BaseModel):
+    type: str
+    settings: ClickHouseSettings
+
+
+class ConfigPeerPeerDBClickHouseConfig(BaseModel):
+    host: str
+    port: int
+    user: str
+    password: str
+    database: str
+    # access_key_id: str = Field(alias="accessKeyId")
+    # secret_access_key: str = Field(alias="secretAccessKey")
+    # region: str
+    # s3_path: str = Field(alias="s3Path")
+    disable_tls: bool
+
+
+class ConfigPeerPeerDBClickHouse(BaseModel):
+    type: Literal[8]
+    clickhouse_config: ConfigPeerPeerDBClickHouseConfig
+
+
+class ConfigPeerClickHouse(BaseModel):
+    name: str
+    adapter: ConfigPeerAdapterClickHouse
+    peerdb: ConfigPeerPeerDBClickHouse
+
+
+class ConfigPeerAdapterPostgres(BaseModel):
+    type: str
+    settings: PostgresSettings
+
+
+class ConfigPeerPeerDBPostgresConfig(BaseModel):
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+
+
+class ConfigPeerPeerDBPostgres(BaseModel):
+    type: Literal[3]
+    postgres_config: ConfigPeerPeerDBPostgresConfig
+
+
+class ConfigPeerPostgres(BaseModel):
+    name: str
+    adapter: ConfigPeerAdapterPostgres
+    peerdb: ConfigPeerPeerDBPostgres
+
+
+class ConfigMirrorTableMapping(BaseModel):
+    source_table_identifier: str
+    destination_table_identifier: str
+
+
+class ConfigMirror(BaseModel):
+    flow_job_name: str
+    source_name: str
+    destination_name: str
+    table_mappings: List[ConfigMirrorTableMapping]
+    do_initial_snapshot: Optional[bool] = False
+    idle_timeout_seconds: Optional[int] = 60
+    initial_snapshot_only: Optional[bool] = False
+    max_batch_size: Optional[int] = 1000000
+    resync: Optional[bool] = False
+    snapshot_max_parallel_workers: Optional[int] = 4
+    snapshot_num_rows_per_partition: Optional[int] = 1000000
+    snapshot_num_tables_in_parallel: Optional[int] = 1
+    soft_delete_col_name: Optional[str] = "_peerdb_is_deleted"
+    synced_at_col_name: Optional[str] = "_peerdb_synced_at"
+
+
+class Config(BaseModel):
+    api_url: str
+    settings: Optional[List[ConfigSetting]] = None
+    peers: List[ConfigPeerClickHouse | ConfigPeerPostgres]
+    mirrors: List[ConfigMirror]
+    # publications: List
+    # users: List
+    # publication_schemas: List[str]
+
+
 class PeerDB:
     def __init__(self, config_path: Path | str) -> None:
         self._config_path = config_path
@@ -137,7 +227,7 @@ class PeerDB:
         self._headers = {"Content-Type": "application/json"}
 
     @property
-    def config(self) -> dict:
+    def config(self) -> Config:
         return self._config
 
     def _load_config_data(self) -> dict:
@@ -145,7 +235,7 @@ class PeerDB:
         data = yaml.safe_load(data)
         return data
 
-    def _load_config(self) -> dict:
+    def _load_config(self) -> Config:
         def process_node(node: dict) -> dict:
             default_keys = [key for key in node.keys() if key.startswith("+")]
             defaults = {key.lstrip("+").strip(): node[key] for key in default_keys}
@@ -161,17 +251,27 @@ class PeerDB:
 
         config = self._load_config_data()
 
-        if "users" not in config:
-            config["users"] = {}
+        if not config:
+            raise EmptyConfigException()
 
-        if "publications" in config:
-            for key, value in config["publications"].items():
-                config["publications"][key] = {
-                    "name": key,
-                    "table_identifiers": value,
-                }
-        else:
-            config["publications"] = {}
+        settings = []
+        peers = []
+        mirrors = []
+
+        # if "users" not in config:
+        #     config["users"] = {}
+
+        # if "publications" in config:
+        #     for key, value in config["publications"].items():
+        #         config["publications"][key] = {
+        #             "name": key,
+        #             "table_identifiers": value,
+        #         }
+        # else:
+        #     config["publications"] = {}
+
+        if "settings" in config:
+            settings = [{"name": key, "value": value} for key, value in config["settings"].items()]
 
         if "peers" in config:
             config["peers"] = process_node(config["peers"])
@@ -203,33 +303,39 @@ class PeerDB:
                 else:
                     raise Exception(f"Adapter type '{value['type']}' is not supported")
 
-                config["peers"][key] = {
-                    "name": key,
-                    "adapter": value,
-                    "peerdb": peerdb_config,
-                }
-        else:
-            config["peers"] = {}
+                peers.append(
+                    {
+                        "name": key,
+                        "adapter": value,
+                        "peerdb": peerdb_config,
+                    }
+                )
 
         if "mirrors" in config:
             config["mirrors"] = process_node(config["mirrors"])
 
-            for key, value in config["mirrors"].items():
+            for key in config["mirrors"].keys():
                 config["mirrors"][key]["flow_job_name"] = key
 
             if config["mirrors"]:
-                source_peer = config["peers"].get(PEERDB_SOURCE_PEER)
+                source_peer = pydash.find(peers, lambda x: x["name"] == PEERDB_SOURCE_PEER)
 
                 if not source_peer:
                     raise Exception(f"Peer '{PEERDB_SOURCE_PEER}' not found in PeerDB config")
+
+                # Validate the adapter type
+                if source_peer["adapter"]["type"] != AdapterType.POSTGRES:
+                    raise Exception(
+                        f"Adapter type '{source_peer['adapter']['type']}' is not supported"
+                    )
 
                 source_adapter = PostgresAdapter(
                     PostgresSettings(**source_peer["adapter"]["settings"])
                 )
                 source_tables = source_adapter.list_tables()
 
-                # Validate the table mappings
                 for mirror in config["mirrors"].values():
+                    # Validate the table mappings
                     for table_mapping in mirror["table_mappings"]:
                         # Find the source table in the source database
                         source_table_identifier = PostgresTableIdentifier.from_string(
@@ -237,39 +343,44 @@ class PeerDB:
                         )
                         source_table = pydash.find(
                             source_tables,
-                            lambda table: (
-                                table.schema == source_table_identifier.schema_
-                                and table.name == source_table_identifier.table
+                            lambda x: (
+                                x.schema == source_table_identifier.schema_
+                                and x.name == source_table_identifier.table
                             ),
                         )
 
                         if source_table is None:
-                            raise Exception(
+                            raise TableNotFoundException(
                                 f"Source table '{table_mapping['source_table_identifier']}' not found in database of peer '{PEERDB_SOURCE_PEER}'"
                             )
-        else:
-            config["mirrors"] = {}
 
-        publication_schemas = []
+                    mirrors.append(mirror)
 
-        for value in config["publications"].values():
-            for identifier in value["table_identifiers"]:
-                source_table_identifier = PostgresTableIdentifier.from_string(identifier)
-                publication_schemas.append(source_table_identifier.schema_)
+        # publication_schemas = []
 
-        for value in config["mirrors"].values():
-            for table_mapping in value["table_mappings"]:
-                source_table_identifier = PostgresTableIdentifier.from_string(
-                    table_mapping["source_table_identifier"]
-                )
-                publication_schemas.append(source_table_identifier.schema_)
+        # for value in config["publications"].values():
+        #     for identifier in value["table_identifiers"]:
+        #         source_table_identifier = PostgresTableIdentifier.from_string(identifier)
+        #         publication_schemas.append(source_table_identifier.schema_)
 
-        config["publication_schemas"] = sorted(pydash.uniq(publication_schemas))
+        # for value in config["mirrors"].values():
+        #     for table_mapping in value["table_mappings"]:
+        #         source_table_identifier = PostgresTableIdentifier.from_string(
+        #             table_mapping["source_table_identifier"]
+        #         )
+        #         publication_schemas.append(source_table_identifier.schema_)
 
-        return config
+        # config["publication_schemas"] = sorted(pydash.uniq(publication_schemas))
+
+        return Config(
+            api_url=config.get("api_url"),
+            settings=settings,
+            peers=peers,
+            mirrors=mirrors,
+        )
 
     def get_settings(self) -> GetDynamicSettingsResponse:
-        url = f"{self.config['api_url']}/v1/dynamic_settings"
+        url = f"{self.config.api_url}/v1/dynamic_settings"
         response = httpx.get(url, headers=self._headers)
 
         if response.status_code != 200:
@@ -280,7 +391,7 @@ class PeerDB:
         return GetDynamicSettingsResponse(**response.json())
 
     def update_settings(self, settings: Dict[str, str]) -> None:
-        url = f"{self.config['api_url']}/v1/dynamic_settings"
+        url = f"{self.config.api_url}/v1/dynamic_settings"
 
         for key, value in settings.items():
             data = {"name": key, "value": value}
@@ -298,7 +409,7 @@ class PeerDB:
         return bool(matched)
 
     def get_peer_info(self, peer_name: str) -> PeerInfoResponse:
-        url = f"{self.config['api_url']}/v1/peers/info/{peer_name}"
+        url = f"{self.config.api_url}/v1/peers/info/{peer_name}"
         response = httpx.get(url, headers=self._headers)
 
         if response.status_code != 200:
@@ -309,7 +420,7 @@ class PeerDB:
         return PeerInfoResponse(**response.json())
 
     def get_peer_type(self, peer_name: str) -> PeerTypeResponse:
-        url = f"{self.config['api_url']}/v1/peers/type/{peer_name}"
+        url = f"{self.config.api_url}/v1/peers/type/{peer_name}"
         response = httpx.get(url, headers=self._headers)
 
         if response.status_code != 200:
@@ -321,7 +432,7 @@ class PeerDB:
 
     def create_peer(self, peer: dict) -> CreatePeerResponse:
         if not self.has_peer(peer):
-            url = f"{self.config['api_url']}/v1/peers/create"
+            url = f"{self.config.api_url}/v1/peers/create"
             data = {"peer": peer}
             response = httpx.post(url, json=data, headers=self._headers)
 
@@ -349,7 +460,7 @@ class PeerDB:
             self.drop_mirrors_of_peer(peer_name, drop_destination_tables=drop_destination_tables)
 
         if self.has_peer(peer_name):
-            url = f"{self.config['api_url']}/v1/peers/drop"
+            url = f"{self.config.api_url}/v1/peers/drop"
             data = {"peerName": peer_name}
             response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
@@ -359,7 +470,7 @@ class PeerDB:
                 )
 
     def list_peers(self) -> ListPeersResponse:
-        url = f"{self.config['api_url']}/v1/peers/list"
+        url = f"{self.config.api_url}/v1/peers/list"
         response = httpx.get(url, headers=self._headers)
 
         if response.status_code != 200:
@@ -374,7 +485,7 @@ class PeerDB:
             return False
 
     def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
-        url = f"{self.config['api_url']}/v1/mirrors/status"
+        url = f"{self.config.api_url}/v1/mirrors/status"
         data = {"flowJobName": flow_job_name}
         response = httpx.post(url, json=data, headers=self._headers)
         message = response.json().get("message", "")
@@ -393,7 +504,7 @@ class PeerDB:
 
     def create_mirror(self, mirror: dict) -> None:
         if not self.has_mirror(mirror["flow_job_name"]):
-            url = f"{self.config['api_url']}/v1/flows/cdc/create"
+            url = f"{self.config.api_url}/v1/flows/cdc/create"
             data = {"connection_configs": mirror}
             response = httpx.post(url, json=data, headers=self._headers)
             workflow_id = response.json().get("workflowId")
@@ -407,7 +518,7 @@ class PeerDB:
         self, flow_job_name: str, drop_destination_tables: Optional[bool] = False
     ) -> None:
         if self.has_mirror(flow_job_name):
-            url = f"{self.config['api_url']}/v1/mirrors/state_change"
+            url = f"{self.config.api_url}/v1/mirrors/state_change"
             data = {"flowJobName": flow_job_name, "requestedFlowState": "STATUS_TERMINATED"}
             response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
@@ -417,23 +528,20 @@ class PeerDB:
                 )
 
         if drop_destination_tables:
-            mirror = pydash.find(
-                self.config["mirrors"].values(), lambda x: x["flow_job_name"] == flow_job_name
-            )
-            destination_name = mirror["destination_name"]
-            peer_config = self.config["peers"][destination_name]
+            mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)
+            peer = pydash.find(self.config.peers, lambda x: x.name == mirror.destination_name)
 
-            if peer_config["adapter"]["type"] == AdapterType.CLICKHOUSE:
-                clickhouse_settings = ClickHouseSettings(**peer_config["adapter"]["settings"])
+            if peer.adapter.type == AdapterType.CLICKHOUSE:
+                clickhouse_settings = ClickHouseSettings(**peer.adapter.settings.model_dump())
                 database_adapter = ClickHouseAdapter(clickhouse_settings)
                 table_identifiers = [
                     ClickHouseTableIdentifier.from_string(
-                        table_mapping["destination_table_identifier"]
+                        table_mapping.destination_table_identifier
                     )
-                    for table_mapping in mirror["table_mappings"]
+                    for table_mapping in mirror.table_mappings
                 ]
             else:
-                raise Exception(f"Adapter type '{peer_config['adapter']['type']}' is not supported")
+                raise Exception(f"Adapter type '{peer.adapter.type}' is not supported")
 
             for table_identifier in table_identifiers:
                 database_adapter.drop_table(**table_identifier.model_dump())
@@ -446,7 +554,7 @@ class PeerDB:
                 self.drop_mirror(mirror.name, drop_destination_tables=drop_destination_tables)
 
     def list_mirrors(self) -> ListMirrorsResponse:
-        url = f"{self.config['api_url']}/v1/mirrors/list"
+        url = f"{self.config.api_url}/v1/mirrors/list"
         response = httpx.get(url, headers=self._headers)
 
         if response.status_code != 200:

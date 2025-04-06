@@ -12,6 +12,7 @@ from typing import Any, Generator, Iterator, List, Union
 
 import httpx
 import os
+import pydash
 import pytest
 import yaml
 
@@ -168,11 +169,9 @@ class PeerDBTest:
         # Override the config because it's used in different contexts:
         # 1. In PeerDB._load_config(), it must be localhost
         # 2. In the peerdb-ui service (API), it must be host.docker.internal
-        peerdb._config["peers"]["source"]["peerdb"]["postgres_config"]["host"] = (
-            "host.docker.internal"
-        )
-        peerdb._config["peers"]["destination"]["peerdb"]["clickhouse_config"]["host"] = (
-            "host.docker.internal"
-        )
+        source_peer = pydash.find(peerdb._config.peers, lambda x: x.name == "source")
+        source_peer.peerdb.postgres_config.host = "host.docker.internal"
+        destination_peer = pydash.find(peerdb._config.peers, lambda x: x.name == "destination")
+        destination_peer.peerdb.clickhouse_config.host = "host.docker.internal"
 
         yield peerdb

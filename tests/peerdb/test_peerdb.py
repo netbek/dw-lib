@@ -1,7 +1,7 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBTest
 from dw_lib import PeerDB, PostgresAdapter
-from dw_lib.types import PeerDBPeer, PeerDBSetting
+from dw_lib.types import PostgresSettings
 from sqlmodel import Table
 from typing import Any, Generator, List
 
@@ -209,7 +209,64 @@ class TestLoadConfig(PeerDBTest):
         assert PeerDB(config_path).config == expected
 
 
-class TestSettings(PeerDBTest):
+# class TestInspect:
+#     @pytest.fixture(scope="function")
+#     def postgres_adapter(self) -> Generator[PostgresAdapter, Any, None]:
+#         postgres_settings = PostgresSettings(
+#             host="localhost",
+#             port=25432,
+#             username="postgres",
+#             password="postgres",
+#             database="test",
+#         )
+#         postgres_adapter = PostgresAdapter(postgres_settings)
+
+#         yield postgres_adapter
+
+#     @pytest.fixture(scope="function")
+#     def postgres_tables(
+#         self, postgres_adapter: PostgresAdapter
+#     ) -> Generator[List[Table], Any, None]:
+#         for table_def in table_defs:
+#             postgres_adapter.create_table(*table_def)
+
+#         # Create all tables
+#         table_names = [table_def[0] for table_def in table_defs]
+#         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
+
+#         yield tables
+
+#         for table_name in table_names:
+#             postgres_adapter.drop_table(table_name)
+
+#     def test_inspect(self, pytestconfig, postgres_tables):
+#         config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
+
+#         peerdb = PeerDB(config_path)
+
+#         peerdb._config["peers"]["source"]["peerdb"]["postgres_config"]["host"] = (
+#             "host.docker.internal"
+#         )
+#         peerdb._config["peers"]["destination"]["peerdb"]["clickhouse_config"]["host"] = (
+#             "host.docker.internal"
+#         )
+
+#         for peer in peerdb.config["peers"].values():
+#             peerdb.create_peer({"name": peer["name"], **peer["peerdb"]})
+
+#         for mirror in peerdb.config["mirrors"].values():
+#             peerdb.create_mirror(mirror)
+
+#         # print(peerdb.list_mirrors())
+
+#         for mirror in peerdb.config["mirrors"].values():
+#             peerdb.drop_mirror(mirror["flow_job_name"])
+
+#         for peer in peerdb.config["peers"].values():
+#             peerdb.drop_peer(peer["name"])
+
+
+class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
     def postgres_tables(
         self, postgres_adapter: PostgresAdapter
@@ -237,21 +294,21 @@ class TestSettings(PeerDBTest):
         yield None
 
         for mirror in peerdb.config["mirrors"].values():
-            peerdb.drop_mirror(mirror)
+            peerdb.drop_mirror(mirror["flow_job_name"])
 
         for peer in peerdb.config["peers"].values():
-            peerdb.drop_peer({"name": peer["name"], **peer["peerdb"]})
+            peerdb.drop_peer(peer["name"])
 
     def test_get_and_update_settings(self, postgres_tables: List[Table], peerdb: PeerDB):
-        settings = peerdb.list_settings()
+        settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None
 
         peerdb.update_settings({"PEERDB_NULLABLE": "false"})
-        settings = peerdb.list_settings()
+        settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "false"
 
         peerdb.update_settings({"PEERDB_NULLABLE": "true"})
-        settings = peerdb.list_settings()
+        settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
 
     # def test_create_and_drop_peer(self, postgres_tables: List[Table], peerdb: PeerDB):
@@ -263,13 +320,13 @@ class TestSettings(PeerDBTest):
     #     peerdb.create_peer(peer)
     #     assert peerdb.has_peer(peer) is True
 
-    #     peerdb.drop_peer(peer)
+    #     peerdb.drop_peer(peer['name'])
     #     assert peerdb.has_peer(peer) is False
 
     def test_list_peers(
         self, postgres_tables: List[Table], peerdb: PeerDB, peers_and_mirrors: None
     ):
-        actual = [peer.model_dump() for peer in peerdb.list_peers()]
+        actual = [peer.model_dump() for peer in peerdb.list_peers().items]
         expected = [
             {"name": "source", "type": "POSTGRES"},
             {"name": "destination", "type": "CLICKHOUSE"},
@@ -286,7 +343,7 @@ class TestSettings(PeerDBTest):
     #     peerdb.create_mirror(mirror)
     #     assert peerdb.has_mirror(mirror) is True
 
-    #     peerdb.drop_mirror(mirror)
+    #     peerdb.drop_mirror(mirror["flow_job_name"])
     #     assert peerdb.has_mirror(mirror) is False
 
     def test_list_mirrors(
@@ -294,24 +351,30 @@ class TestSettings(PeerDBTest):
     ):
         actual = [
             mirror.model_dump(
-                include=["name", "sourceName", "sourceType", "destinationName", "destinationType"]
+                include=[
+                    "name",
+                    "source_name",
+                    "source_type",
+                    "destination_name",
+                    "destination_type",
+                ]
             )
-            for mirror in peerdb.list_mirrors()
+            for mirror in peerdb.list_mirrors().mirrors
         ]
         expected = [
             {
                 "name": "cdc_one",
-                "sourceName": "source",
-                "sourceType": "POSTGRES",
-                "destinationName": "destination",
-                "destinationType": "CLICKHOUSE",
+                "source_name": "source",
+                "source_type": "POSTGRES",
+                "destination_name": "destination",
+                "destination_type": "CLICKHOUSE",
             },
             {
                 "name": "cdc_many",
-                "sourceName": "source",
-                "sourceType": "POSTGRES",
-                "destinationName": "destination",
-                "destinationType": "CLICKHOUSE",
+                "source_name": "source",
+                "source_type": "POSTGRES",
+                "destination_name": "destination",
+                "destination_type": "CLICKHOUSE",
             },
         ]
         assert_count_equal(actual, expected)

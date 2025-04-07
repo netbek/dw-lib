@@ -1,7 +1,13 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib import ClickHouseAdapter, ClickHouseTableIdentifier, TableNotFoundException
+from dw_lib import (
+    ClickHouseAdapter,
+    ClickHouseTableIdentifier,
+    DatabaseNotFoundException,
+    TableNotFoundException,
+    UserNotFoundException,
+)
 from sqlmodel import Table, text
 from typing import Any
 
@@ -98,6 +104,11 @@ class TestClickHouseAdapter(DatabaseTest):
         clickhouse_adapter.drop_database(database)
         assert clickhouse_adapter.has_database(database) is False
 
+        with pytest.raises(DatabaseNotFoundException):
+            clickhouse_adapter.drop_database(database)
+
+        assert clickhouse_adapter.drop_database(database, if_exists=True) is None
+
     def test_has_table_non_existent(self, clickhouse_adapter: ClickHouseAdapter):
         assert clickhouse_adapter.has_table("non_existent") is False
 
@@ -136,6 +147,11 @@ class TestClickHouseAdapter(DatabaseTest):
 
         clickhouse_adapter.drop_table(table)
         assert clickhouse_adapter.has_table(table) is False
+
+        with pytest.raises(TableNotFoundException):
+            clickhouse_adapter.drop_table(table)
+
+        assert clickhouse_adapter.drop_table(table, if_exists=True) is None
 
     def test_get_create_table_statement(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
@@ -182,3 +198,8 @@ class TestClickHouseAdapter(DatabaseTest):
 
         clickhouse_adapter.drop_user(username)
         assert clickhouse_adapter.has_user(username) is False
+
+        with pytest.raises(UserNotFoundException):
+            clickhouse_adapter.drop_user(username)
+
+        assert clickhouse_adapter.drop_user(username, if_exists=True) is None

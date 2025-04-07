@@ -1,7 +1,18 @@
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.duckdb import DuckDBAdapter
 from .database.adapters.postgres import PostgresAdapter
-from .exceptions import TableNotFoundException
+from .exceptions import (
+    DatabaseExistsException,
+    DatabaseNotFoundException,
+    PublicationExistsException,
+    PublicationNotFoundException,
+    SchemaExistsException,
+    SchemaNotFoundException,
+    TableExistsException,
+    TableNotFoundException,
+    UserExistsException,
+    UserNotFoundException,
+)
 from .peerdb import PeerDB
 from .types import (
     AdapterType,
@@ -24,6 +35,8 @@ __all__ = (
     "ClickHouseIdentifier",
     "ClickHouseSettings",
     "ClickHouseTableIdentifier",
+    "DatabaseExistsException",
+    "DatabaseNotFoundException",
     "DuckDBAdapter",
     "DuckDBSettings",
     "DuckDBTableIdentifier",
@@ -32,7 +45,14 @@ __all__ = (
     "PostgresIdentifier",
     "PostgresSettings",
     "PostgresTableIdentifier",
+    "PublicationExistsException",
+    "PublicationNotFoundException",
+    "SchemaExistsException",
+    "SchemaNotFoundException",
+    "TableExistsException",
     "TableNotFoundException",
+    "UserExistsException",
+    "UserNotFoundException",
     "Zinc",
     "ZincMirrorSettings",
     "ZincSettings",

@@ -397,9 +397,11 @@ class PeerDB:
 
         return PeerTypeResponse(**response.json())
 
-    def create_peer(self, peer: dict, replace: bool | None = False) -> CreatePeerResponse:
+    def create_peer(
+        self, peer: dict, if_exists: Literal["fail", "replace"] = "fail"
+    ) -> CreatePeerResponse:
         if self.has_peer(peer["name"]):
-            if replace:
+            if if_exists == "replace":
                 self.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
             else:
                 raise PeerExistsException(f"Peer '{peer['name']}' exists")
@@ -427,12 +429,16 @@ class PeerDB:
         peer_name: str,
         drop_mirrors: bool | None = True,
         drop_destination_tables: bool | None = False,
+        if_exists: bool | None = False,
     ) -> None:
         if drop_mirrors:
             self.drop_mirrors_of_peer(peer_name, drop_destination_tables=drop_destination_tables)
 
         if not self.has_peer(peer_name):
-            raise PeerNotFoundException(f"Peer '{peer_name}' not found")
+            if if_exists:
+                return
+            else:
+                raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
         url = f"{self.config.api_url}/v1/peers/drop"
         data = {"peerName": peer_name}
@@ -483,9 +489,9 @@ class PeerDB:
                 f"Failed to get status of mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-    def create_mirror(self, mirror: dict, replace: bool | None = False) -> None:
+    def create_mirror(self, mirror: dict, if_exists: Literal["fail", "replace"] = "fail") -> None:
         if self.has_mirror(mirror["flow_job_name"]):
-            if replace:
+            if if_exists == "replace":
                 self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
             else:
                 raise MirrorExistsException(f"Mirror '{mirror['flow_job_name']}' exists")
@@ -535,9 +541,17 @@ class PeerDB:
                 f"Failed to create mirror '{mirror['flow_job_name']}' (error {response.status_code}: {response.text})"
             )
 
-    def drop_mirror(self, flow_job_name: str, drop_destination_tables: bool | None = False) -> None:
+    def drop_mirror(
+        self,
+        flow_job_name: str,
+        drop_destination_tables: bool | None = False,
+        if_exists: bool | None = False,
+    ) -> None:
         if not self.has_mirror(flow_job_name):
-            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+            if if_exists:
+                return
+            else:
+                raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
         url = f"{self.config.api_url}/v1/mirrors/state_change"
         data = {"flowJobName": flow_job_name, "requestedFlowState": "STATUS_TERMINATED"}

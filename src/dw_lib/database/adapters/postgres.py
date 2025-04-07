@@ -1,4 +1,9 @@
-from ...exceptions import TableNotFoundException
+from ...exceptions import (
+    PublicationExistsException,
+    TableExistsException,
+    TableNotFoundException,
+    UserExistsException,
+)
 from ...types import (
     AdapterType,
     CreateTableStatementOptions,
@@ -13,7 +18,7 @@ from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.schema import CreateTable
 from sqlmodel import Column, MetaData, Session, Table
-from typing import Any
+from typing import Any, Literal
 
 import psycopg2
 import pydash
@@ -94,7 +99,9 @@ class PostgresAdapter(BaseAdapter):
 
         return result
 
-    def create_database(self, database: str, replace: bool | None = False) -> None:
+    def create_database(
+        self, database: str, if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None:
         raise NotImplementedError()
 
     def drop_database(self, database: str) -> None:
@@ -121,7 +128,7 @@ class PostgresAdapter(BaseAdapter):
         self,
         schema: str,
         database: str | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None:
         raise NotImplementedError()
 
@@ -154,7 +161,7 @@ class PostgresAdapter(BaseAdapter):
         statement: str,
         database: str | None = None,
         schema: str | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -163,10 +170,10 @@ class PostgresAdapter(BaseAdapter):
             schema = self.settings.schema_
 
         if self.has_table(table=table, database=database, schema=schema):
-            if replace:
+            if if_exists == "replace":
                 self.drop_table(table=table, database=database, schema=schema)
             else:
-                return
+                raise TableExistsException(f"Table '{table}' exists")
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -407,13 +414,13 @@ class PostgresAdapter(BaseAdapter):
         username: str,
         password: str,
         options: dict | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None:
         if self.has_user(username):
-            if replace:
+            if if_exists == "replace":
                 self.drop_user(username)
             else:
-                return
+                raise UserExistsException(f"User '{username}' exists")
 
         quoted_username = PostgresIdentifier.quote(username)
 
@@ -506,12 +513,14 @@ class PostgresAdapter(BaseAdapter):
 
         return result
 
-    def create_publication(self, publication: str, tables: list[str], replace=False) -> None:
+    def create_publication(
+        self, publication: str, tables: list[str], if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None:
         if self.has_publication(publication):
-            if replace:
+            if if_exists == "replace":
                 self.drop_publication(publication)
             else:
-                raise Exception()
+                raise PublicationExistsException(f"Publication '{publication}' exists")
 
         quoted_publication = PostgresIdentifier.quote(publication)
         quoted_tables = [PostgresTableIdentifier.from_string(table).to_string() for table in tables]

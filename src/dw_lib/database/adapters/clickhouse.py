@@ -1,4 +1,9 @@
-from ...exceptions import TableNotFoundException
+from ...exceptions import (
+    DatabaseExistsException,
+    TableExistsException,
+    TableNotFoundException,
+    UserExistsException,
+)
 from ...types import (
     AdapterType,
     ClickHouseIdentifier,
@@ -13,7 +18,7 @@ from contextlib import contextmanager
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlmodel import MetaData, Session, Table
-from typing import Any
+from typing import Any, Literal
 
 import clickhouse_connect
 import pydash
@@ -111,12 +116,14 @@ class ClickHouseAdapter(BaseAdapter):
 
         return result
 
-    def create_database(self, database: str, replace: bool | None = False) -> None:
+    def create_database(
+        self, database: str, if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None:
         if self.has_database(database):
-            if replace:
+            if if_exists == "replace":
                 self.drop_database(database)
             else:
-                return
+                raise DatabaseExistsException(f"Database '{database}' exists")
 
         statement = "create database {database:Identifier};"
 
@@ -139,7 +146,7 @@ class ClickHouseAdapter(BaseAdapter):
         self,
         schema: str,
         database: str | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None:
         raise NotImplementedError()
 
@@ -166,16 +173,16 @@ class ClickHouseAdapter(BaseAdapter):
         table: str,
         statement: str,
         database: str | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None:
         if database is None:
             database = self.settings.database
 
         if self.has_table(table=table, database=database):
-            if replace:
+            if if_exists == "replace":
                 self.drop_table(table=table, database=database)
             else:
-                return
+                raise TableExistsException(f"Table '{table}' exists")
 
         with self.create_client() as client:
             client.command(statement)
@@ -282,12 +289,14 @@ class ClickHouseAdapter(BaseAdapter):
 
         return result
 
-    def create_user(self, username: str, password: str, replace: bool | None = False) -> None:
+    def create_user(
+        self, username: str, password: str, if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None:
         if self.has_user(username):
-            if replace:
+            if if_exists == "replace":
                 self.drop_user(username)
             else:
-                return
+                raise UserExistsException(f"User '{username}' exists")
 
         quoted_username = ClickHouseIdentifier.quote(username)
         statement = f"create user {quoted_username} identified by %(password)s;"
@@ -317,7 +326,9 @@ class ClickHouseAdapter(BaseAdapter):
     def has_publication(self, publication: str) -> bool:
         raise NotImplementedError()
 
-    def create_publication(self, publication: str, tables: list[str]) -> None:
+    def create_publication(
+        self, publication: str, tables: list[str], if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None:
         raise NotImplementedError()
 
     def drop_publication(self, publication: str) -> None:

@@ -1,5 +1,5 @@
 from ...conftest import DatabaseTest
-from dw_lib import DuckDBAdapter
+from dw_lib.database import DuckDBAdapter
 
 # from sqlalchemy import text
 

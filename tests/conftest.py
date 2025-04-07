@@ -1,13 +1,7 @@
 from collections.abc import Generator, Iterator
-from dw_lib import (
-    ClickHouseAdapter,
-    ClickHouseSettings,
-    DuckDBAdapter,
-    DuckDBSettings,
-    PeerDB,
-    PostgresAdapter,
-    PostgresSettings,
-)
+from dw_lib.database import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
+from dw_lib.peerdb import PeerDB
+from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings
 from pytest_docker.plugin import get_docker_services, Services
 from typing import Any
 

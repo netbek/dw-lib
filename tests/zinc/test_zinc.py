@@ -1,7 +1,9 @@
 from ..asserts import assert_count_equal
 from ..conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib import DuckDBAdapter, PostgresAdapter, Zinc, ZincSettings
+from dw_lib.database import DuckDBAdapter, PostgresAdapter
+from dw_lib.types import ZincSettings
+from dw_lib.zinc import Zinc
 from typing import Any
 
 import os

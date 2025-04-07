@@ -1,8 +1,9 @@
 from ..asserts import assert_count_equal
 from ..conftest import DatabaseTest, PeerDBTest
 from collections.abc import Generator
-from dw_lib import PeerDB, PostgresAdapter
+from dw_lib.database import PostgresAdapter
 from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
+from dw_lib.peerdb import PeerDB
 from sqlmodel import Table
 from typing import Any
 

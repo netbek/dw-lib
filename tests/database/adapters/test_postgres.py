@@ -1,13 +1,13 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib import (
-    PostgresAdapter,
-    PostgresTableIdentifier,
+from dw_lib.database import PostgresAdapter
+from dw_lib.exceptions import (
     PublicationNotFoundException,
     TableNotFoundException,
     UserNotFoundException,
 )
+from dw_lib.types import PostgresTableIdentifier
 from sqlmodel import Table, text
 from typing import Any
 

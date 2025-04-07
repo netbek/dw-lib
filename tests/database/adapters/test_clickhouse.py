@@ -1,13 +1,13 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib import (
-    ClickHouseAdapter,
-    ClickHouseTableIdentifier,
+from dw_lib.database import ClickHouseAdapter
+from dw_lib.exceptions import (
     DatabaseNotFoundException,
     TableNotFoundException,
     UserNotFoundException,
 )
+from dw_lib.types import ClickHouseTableIdentifier
 from sqlmodel import Table, text
 from typing import Any
 

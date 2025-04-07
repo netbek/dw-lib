@@ -590,7 +590,7 @@ class PeerDB:
         ]
 
         for table_identifier in destination_table_identifiers:
-            destination_adapter.drop_table(**table_identifier.model_dump())
+            destination_adapter.drop_table(**table_identifier.model_dump(), if_exists=True)
 
     def list_mirrors(self) -> ListMirrorsResponse:
         url = f"{self.config.api_url}/v1/mirrors/list"

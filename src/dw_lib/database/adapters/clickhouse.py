@@ -1,8 +1,10 @@
 from ...exceptions import (
     DatabaseExistsException,
+    DatabaseNotFoundException,
     TableExistsException,
     TableNotFoundException,
     UserExistsException,
+    UserNotFoundException,
 )
 from ...types import (
     AdapterType,
@@ -130,9 +132,12 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement, parameters={"database": database})
 
-    def drop_database(self, database: str) -> None:
+    def drop_database(self, database: str, if_exists: bool | None = False) -> None:
         if not self.has_database(database):
-            return
+            if if_exists:
+                return
+            else:
+                raise DatabaseNotFoundException(f"Database '{database}' not found")
 
         statement = "drop database {database:Identifier};"
 
@@ -150,7 +155,9 @@ class ClickHouseAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_schema(self, schema: str, database: str | None = None) -> None:
+    def drop_schema(
+        self, schema: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None:
         raise NotImplementedError()
 
     def has_table(self, table: str, database: str | None = None) -> bool:
@@ -207,12 +214,17 @@ class ClickHouseAdapter(BaseAdapter):
 
         return statement
 
-    def drop_table(self, table: str, database: str | None = None) -> None:
+    def drop_table(
+        self, table: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None:
         if database is None:
             database = self.settings.database
 
         if not self.has_table(table=table, database=database):
-            return
+            if if_exists:
+                return
+            else:
+                raise TableNotFoundException(f"Table '{table}' not found")
 
         quoted_table = ClickHouseTableIdentifier(database=database, table=table).to_string()
         statement = f"drop table {quoted_table};"
@@ -304,9 +316,12 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement, parameters={"password": password})
 
-    def drop_user(self, username: str) -> None:
+    def drop_user(self, username: str, if_exists: bool | None = False) -> None:
         if not self.has_user(username):
-            return
+            if if_exists:
+                return
+            else:
+                raise UserNotFoundException(f"User '{username}' not found")
 
         quoted_username = ClickHouseIdentifier.quote(username)
         statement = f"drop user {quoted_username};"
@@ -331,7 +346,7 @@ class ClickHouseAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_publication(self, publication: str) -> None:
+    def drop_publication(self, publication: str, if_exists: bool | None = False) -> None:
         raise NotImplementedError()
 
     def list_publications(self) -> list[str]:

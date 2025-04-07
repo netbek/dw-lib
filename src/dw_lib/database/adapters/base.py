@@ -69,7 +69,7 @@ class BaseAdapter(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def drop_database(self, database: str) -> None: ...
+    def drop_database(self, database: str, if_exists: bool | None = False) -> None: ...
 
     @abstractmethod
     def has_schema(self, schema: str, database: str | None = None) -> bool: ...
@@ -83,7 +83,9 @@ class BaseAdapter(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def drop_schema(self, schema: str, database: str | None = None) -> None: ...
+    def drop_schema(
+        self, schema: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None: ...
 
     @overload
     @abstractmethod
@@ -141,12 +143,18 @@ class BaseAdapter(ABC):
 
     @overload
     @abstractmethod
-    def drop_table(self, table: str, database: str | None = None) -> None: ...
+    def drop_table(
+        self, table: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None: ...
 
     @overload
     @abstractmethod
     def drop_table(
-        self, table: str, database: str | None = None, schema: str | None = None
+        self,
+        table: str,
+        database: str | None = None,
+        schema: str | None = None,
+        if_exists: bool | None = False,
     ) -> None: ...
 
     @abstractmethod
@@ -260,7 +268,7 @@ class BaseAdapter(ABC):
     def create_user(self, *args, **kwargs) -> None: ...
 
     @abstractmethod
-    def drop_user(self, username: str) -> None: ...
+    def drop_user(self, username: str, if_exists: bool | None = False) -> None: ...
 
     @overload
     @abstractmethod
@@ -296,7 +304,7 @@ class BaseAdapter(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def drop_publication(self, publication: str) -> None: ...
+    def drop_publication(self, publication: str, if_exists: bool | None = False) -> None: ...
 
     @abstractmethod
     def list_publications(self) -> list[str]: ...

@@ -70,7 +70,7 @@ class DuckDBAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_database(self, database: str) -> None:
+    def drop_database(self, database: str, if_exists: bool | None = False) -> None:
         raise NotImplementedError()
 
     def has_schema(self, schema: str, database: str | None = None):
@@ -84,7 +84,9 @@ class DuckDBAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_schema(self, schema: str, database: str | None = None) -> None:
+    def drop_schema(
+        self, schema: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None:
         raise NotImplementedError()
 
     def has_table(self, table: str, database: str | None = None, schema: str | None = None) -> bool:
@@ -106,7 +108,11 @@ class DuckDBAdapter(BaseAdapter):
         raise NotImplementedError()
 
     def drop_table(
-        self, table: str, database: str | None = None, schema: str | None = None
+        self,
+        table: str,
+        database: str | None = None,
+        schema: str | None = None,
+        if_exists: bool | None = False,
     ) -> None:
         raise NotImplementedError()
 
@@ -155,7 +161,7 @@ class DuckDBAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_user(self, username: str) -> None:
+    def drop_user(self, username: str, if_exists: bool | None = False) -> None:
         raise NotImplementedError()
 
     def grant_user_privileges(self, username: str, schema: str) -> None:
@@ -175,7 +181,7 @@ class DuckDBAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_publication(self, publication: str) -> None:
+    def drop_publication(self, publication: str, if_exists: bool | None = False) -> None:
         raise NotImplementedError()
 
     def list_publications(self) -> list[str]:

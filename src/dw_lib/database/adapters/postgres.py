@@ -1,8 +1,10 @@
 from ...exceptions import (
     PublicationExistsException,
+    PublicationNotFoundException,
     TableExistsException,
     TableNotFoundException,
     UserExistsException,
+    UserNotFoundException,
 )
 from ...types import (
     AdapterType,
@@ -104,7 +106,7 @@ class PostgresAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_database(self, database: str) -> None:
+    def drop_database(self, database: str, if_exists: bool | None = False) -> None:
         raise NotImplementedError()
 
     def has_schema(self, schema: str, database: str | None = None):
@@ -132,7 +134,9 @@ class PostgresAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_schema(self, schema: str, database: str | None = None) -> None:
+    def drop_schema(
+        self, schema: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None:
         raise NotImplementedError()
 
     def has_table(self, table: str, database: str | None = None, schema: str | None = None) -> bool:
@@ -237,7 +241,11 @@ class PostgresAdapter(BaseAdapter):
         return statement
 
     def drop_table(
-        self, table: str, database: str | None = None, schema: str | None = None
+        self,
+        table: str,
+        database: str | None = None,
+        schema: str | None = None,
+        if_exists: bool | None = False,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -246,7 +254,10 @@ class PostgresAdapter(BaseAdapter):
             schema = self.settings.schema_
 
         if not self.has_table(table=table, database=database, schema=schema):
-            return
+            if if_exists:
+                return
+            else:
+                raise TableNotFoundException(f"Table '{table}' not found")
 
         quoted_table = PostgresTableIdentifier(
             database=database, schema_=schema, table=table
@@ -439,9 +450,12 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement, {"password": password})
 
-    def drop_user(self, username: str) -> None:
+    def drop_user(self, username: str, if_exists: bool | None = False) -> None:
         if not self.has_user(username):
-            return
+            if if_exists:
+                return
+            else:
+                raise UserNotFoundException(f"User '{username}' not found")
 
         quoted_username = PostgresIdentifier.quote(username)
         statement = f"""
@@ -529,9 +543,12 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement)
 
-    def drop_publication(self, publication: str) -> None:
+    def drop_publication(self, publication: str, if_exists: bool | None = False) -> None:
         if not self.has_publication(publication):
-            return
+            if if_exists:
+                return
+            else:
+                raise PublicationNotFoundException(f"Publication '{publication}' not found")
 
         quoted_publication = PostgresIdentifier.quote(publication)
         statement = f"drop publication {quoted_publication};"

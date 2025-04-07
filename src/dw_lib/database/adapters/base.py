@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
 from sqlmodel import Table
-from typing import Any, overload
+from typing import Any, Literal, overload
 
 
 class BaseAdapter(ABC):
@@ -64,21 +64,28 @@ class BaseAdapter(ABC):
     def has_database(self, database: str) -> bool: ...
 
     @abstractmethod
-    def create_database(self, database: str, replace: bool | None = False) -> None: ...
+    def create_database(
+        self, database: str, if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None: ...
 
     @abstractmethod
-    def drop_database(self, database: str) -> None: ...
+    def drop_database(self, database: str, if_exists: bool | None = False) -> None: ...
 
     @abstractmethod
     def has_schema(self, schema: str, database: str | None = None) -> bool: ...
 
     @abstractmethod
     def create_schema(
-        self, schema: str, database: str | None = None, replace: bool | None = False
+        self,
+        schema: str,
+        database: str | None = None,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None: ...
 
     @abstractmethod
-    def drop_schema(self, schema: str, database: str | None = None) -> None: ...
+    def drop_schema(
+        self, schema: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None: ...
 
     @overload
     @abstractmethod
@@ -100,7 +107,7 @@ class BaseAdapter(ABC):
         table: str,
         statement: str,
         database: str | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None: ...
 
     @overload
@@ -111,7 +118,7 @@ class BaseAdapter(ABC):
         statement: str,
         database: str | None = None,
         schema: str | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None: ...
 
     @abstractmethod
@@ -136,12 +143,18 @@ class BaseAdapter(ABC):
 
     @overload
     @abstractmethod
-    def drop_table(self, table: str, database: str | None = None) -> None: ...
+    def drop_table(
+        self, table: str, database: str | None = None, if_exists: bool | None = False
+    ) -> None: ...
 
     @overload
     @abstractmethod
     def drop_table(
-        self, table: str, database: str | None = None, schema: str | None = None
+        self,
+        table: str,
+        database: str | None = None,
+        schema: str | None = None,
+        if_exists: bool | None = False,
     ) -> None: ...
 
     @abstractmethod
@@ -237,7 +250,9 @@ class BaseAdapter(ABC):
 
     @overload
     @abstractmethod
-    def create_user(self, username: str, password: str, replace: bool | None = False) -> None: ...
+    def create_user(
+        self, username: str, password: str, if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None: ...
 
     @overload
     @abstractmethod
@@ -246,14 +261,14 @@ class BaseAdapter(ABC):
         username: str,
         password: str,
         options: dict | None = None,
-        replace: bool | None = False,
+        if_exists: Literal["fail", "replace"] = "fail",
     ) -> None: ...
 
     @abstractmethod
     def create_user(self, *args, **kwargs) -> None: ...
 
     @abstractmethod
-    def drop_user(self, username: str) -> None: ...
+    def drop_user(self, username: str, if_exists: bool | None = False) -> None: ...
 
     @overload
     @abstractmethod
@@ -284,10 +299,12 @@ class BaseAdapter(ABC):
     def has_publication(self, publication: str) -> bool: ...
 
     @abstractmethod
-    def create_publication(self, publication: str, tables: list[str]) -> None: ...
+    def create_publication(
+        self, publication: str, tables: list[str], if_exists: Literal["fail", "replace"] = "fail"
+    ) -> None: ...
 
     @abstractmethod
-    def drop_publication(self, publication: str) -> None: ...
+    def drop_publication(self, publication: str, if_exists: bool | None = False) -> None: ...
 
     @abstractmethod
     def list_publications(self) -> list[str]: ...

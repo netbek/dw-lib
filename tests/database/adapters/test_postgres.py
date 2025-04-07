@@ -1,7 +1,13 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib import PostgresAdapter, PostgresTableIdentifier, TableNotFoundException
+from dw_lib import (
+    PostgresAdapter,
+    PostgresTableIdentifier,
+    PublicationNotFoundException,
+    TableNotFoundException,
+    UserNotFoundException,
+)
 from sqlmodel import Table, text
 from typing import Any
 
@@ -131,6 +137,11 @@ class TestPostgresAdapter(DatabaseTest):
         postgres_adapter.drop_table(table)
         assert postgres_adapter.has_table(table) is False
 
+        with pytest.raises(TableNotFoundException):
+            postgres_adapter.drop_table(table)
+
+        assert postgres_adapter.drop_table(table, if_exists=True) is None
+
     def test_get_create_table_statement_non_existent(self, postgres_adapter: PostgresAdapter):
         with pytest.raises(TableNotFoundException):
             postgres_adapter.get_create_table_statement("non_existent")
@@ -206,6 +217,11 @@ class TestPostgresAdapter(DatabaseTest):
         postgres_adapter.drop_user(username)
         assert postgres_adapter.has_user(username) is False
 
+        with pytest.raises(UserNotFoundException):
+            postgres_adapter.drop_user(username)
+
+        assert postgres_adapter.drop_user(username, if_exists=True) is None
+
     def test_grant_and_revoke_user_privileges(
         self, postgres_adapter: PostgresAdapter, postgres_user: str, postgres_table: Table
     ):
@@ -234,6 +250,11 @@ class TestPostgresAdapter(DatabaseTest):
 
         postgres_adapter.drop_publication(publication)
         assert postgres_adapter.list_publications() == []
+
+        with pytest.raises(PublicationNotFoundException):
+            postgres_adapter.drop_publication(publication)
+
+        assert postgres_adapter.drop_publication(publication, if_exists=True) is None
 
     def test_list_publications(self, postgres_adapter: PostgresAdapter, postgres_publication: str):
         assert postgres_adapter.list_publications() == [postgres_publication]

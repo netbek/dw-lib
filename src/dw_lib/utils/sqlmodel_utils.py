@@ -92,39 +92,71 @@ def parse_create_table_statement(statement: str) -> dict:
     }
     parsed = sqlglot.parse_one(statement, dialect="clickhouse")
 
-    # Table engine
-    node = parsed.find(sqlglot.exp.EngineProperty)
+    properties = parsed.args.get("properties")
+    if properties:
+        for prop in properties.expressions:
+            # Table engine
+            if isinstance(prop, sqlglot.exp.EngineProperty):
+                engine_expr = prop.this
 
-    if node:
-        result["engine"] = node.this.name
-        params = [param.name for param in node.this.iter_expressions()]
+                if isinstance(engine_expr, sqlglot.exp.Var):
+                    result["engine"] = engine_expr.name
 
-        if len(params) == 2:
-            result["version"] = params[0]
-            result["is_deleted"] = params[1]
-        elif len(params) == 1:
-            result["version"] = params[0]
+                elif isinstance(engine_expr, sqlglot.exp.Anonymous):
+                    result["engine"] = engine_expr.name
 
-    # Primary key
-    node = parsed.find(sqlglot.exp.PrimaryKey)
+                    params = []
+                    for arg_expr in engine_expr.expressions:
+                        if isinstance(arg_expr, sqlglot.exp.Column) and isinstance(
+                            arg_expr.this, sqlglot.exp.Identifier
+                        ):
+                            params.append(arg_expr.this.name)
 
-    if node:
-        result["primary_key"] = [expression.name for expression in node.iter_expressions()]
+                    if len(params) == 2:
+                        result["version"] = params[0]
+                        result["is_deleted"] = params[1]
+                    elif len(params) == 1:
+                        result["version"] = params[0]
 
-    # Order by
-    node = parsed.find(sqlglot.exp.Ordered)
+            # Primary key
+            elif isinstance(prop, sqlglot.exp.PrimaryKey):
+                for primary_key_expr in prop.expressions:
+                    identifier = primary_key_expr.this.this
+                    if isinstance(identifier, sqlglot.exp.Identifier):
+                        result["primary_key"].append(identifier.name)
 
-    if node:
-        for expression in node.iter_expressions():
-            for inner_expression in expression.iter_expressions():
-                result["order_by"].append(inner_expression.name)
+            # Order by
+            elif isinstance(prop, sqlglot.exp.Order):
+                for order_expr in prop.expressions:
+                    inner = order_expr.this
 
-    # Settings
-    node = parsed.find(sqlglot.exp.SettingsProperty)
+                    # Single column
+                    if isinstance(inner, sqlglot.exp.Column) and isinstance(
+                        inner.this, sqlglot.exp.Identifier
+                    ):
+                        result["order_by"].append(inner.this.name)
 
-    if node:
-        for expression in node.iter_expressions():
-            result["settings"][expression.this.name] = str(expression.expression)
+                    # Multiple columns
+                    elif isinstance(inner, sqlglot.exp.Tuple):
+                        for column_expr in inner.expressions:
+                            if isinstance(column_expr, sqlglot.exp.Column) and isinstance(
+                                column_expr.this, sqlglot.exp.Identifier
+                            ):
+                                result["order_by"].append(column_expr.this.name)
+
+            # Settings
+            elif isinstance(prop, sqlglot.exp.SettingsProperty):
+                for setting in prop.expressions:
+                    key_expr = setting.this
+                    val_expr = setting.expression
+
+                    if isinstance(key_expr, sqlglot.exp.Column):
+                        key = key_expr.name
+                        if isinstance(val_expr, sqlglot.exp.Literal):
+                            value = val_expr.this
+                        else:
+                            value = str(val_expr)
+                        result["settings"][key] = value
 
     # Columns
     for node in parsed.find_all(sqlglot.exp.ColumnDef):

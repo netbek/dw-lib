@@ -9,10 +9,9 @@ from .exceptions import (
     TableNotFoundException,
 )
 from .types import (
-    ADAPTER_TYPE_TO_PEERDB_TYPE_MAP,
-    AdapterType,
     ClickHouseSettings,
     ClickHouseTableIdentifier,
+    DIALECT_TO_PEERDB_TYPE_MAP,
     PostgresSettings,
     PostgresTableIdentifier,
 )
@@ -20,6 +19,7 @@ from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
 from pydantic import BaseModel, Field
+from sqlglot.dialects.dialect import Dialects
 from typing import Literal
 
 import httpx
@@ -291,9 +291,9 @@ class PeerDB:
             config["peers"] = process_node(config["peers"])
 
             for key, value in config["peers"].items():
-                if value["type"] == AdapterType.CLICKHOUSE:
+                if value["type"] == Dialects.CLICKHOUSE:
                     peerdb_config = {
-                        "type": ADAPTER_TYPE_TO_PEERDB_TYPE_MAP[value["type"]],
+                        "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "clickhouse_config": {
                             "host": value["settings"]["host"],
                             "port": value["settings"]["tcp_port"],
@@ -303,9 +303,9 @@ class PeerDB:
                             "disable_tls": not value["settings"]["secure"],
                         },
                     }
-                elif value["type"] == AdapterType.POSTGRES:
+                elif value["type"] == Dialects.POSTGRES:
                     peerdb_config = {
-                        "type": ADAPTER_TYPE_TO_PEERDB_TYPE_MAP[value["type"]],
+                        "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "postgres_config": {
                             "host": value["settings"]["host"],
                             "port": value["settings"]["port"],
@@ -512,7 +512,7 @@ class PeerDB:
         if source_peer is None:
             raise Exception(f"Peer '{mirror['source_name']}' not found in PeerDB config")
 
-        if source_peer.adapter.type != AdapterType.POSTGRES:
+        if source_peer.adapter.type != Dialects.POSTGRES:
             raise Exception(f"Adapter type '{source_peer.adapter.type}' is not supported")
 
         source_adapter = PostgresAdapter(
@@ -588,7 +588,7 @@ class PeerDB:
         if destination_peer is None:
             raise PeerNotFoundException(f"Peer '{mirror.destination_name}' not found")
 
-        if destination_peer.adapter.type != AdapterType.CLICKHOUSE:
+        if destination_peer.adapter.type != Dialects.CLICKHOUSE:
             raise Exception(f"Adapter type '{destination_peer.adapter.type}' is not supported")
 
         destination_adapter = ClickHouseAdapter(

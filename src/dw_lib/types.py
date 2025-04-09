@@ -2,16 +2,11 @@ from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
+from sqlglot.dialects.dialect import Dialects
 from typing import Any, TypedDict
 
 import math
 import psutil
-
-
-class AdapterType(StrEnum):
-    CLICKHOUSE = "clickhouse"
-    DUCKDB = "duckdb"
-    POSTGRES = "postgres"
 
 
 class TableIndexType(StrEnum):
@@ -105,21 +100,21 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
 class DuckDBTableIdentifier(PostgresTableIdentifier): ...
 
 
-ADAPTER_TYPE_TO_PEERDB_TYPE_MAP = {
-    AdapterType.CLICKHOUSE: 8,
-    AdapterType.POSTGRES: 3,
+DIALECT_TO_PEERDB_TYPE_MAP = {
+    Dialects.CLICKHOUSE: 8,
+    Dialects.POSTGRES: 3,
 }
 
-ADAPTER_TYPE_TO_TABLE_IDENTIFIER_MAP = {
-    AdapterType.DUCKDB: DuckDBTableIdentifier,
-    AdapterType.POSTGRES: PostgresTableIdentifier,
+DIALECT_TO_TABLE_IDENTIFIER_MAP = {
+    Dialects.DUCKDB: DuckDBTableIdentifier,
+    Dialects.POSTGRES: PostgresTableIdentifier,
 }
 
 
 def table_identifier_from_string(
-    adapter_type: AdapterType, identifier: str
+    dialect: Dialects, identifier: str
 ) -> DuckDBTableIdentifier | PostgresTableIdentifier:
-    class_ = ADAPTER_TYPE_TO_TABLE_IDENTIFIER_MAP[adapter_type]
+    class_ = DIALECT_TO_TABLE_IDENTIFIER_MAP[dialect]
     return class_.from_string(identifier)
 
 
@@ -365,8 +360,8 @@ class ZincMirrorTableIndexSettings(BaseModel):
     type: TableIndexType = TableIndexType.BTREE
 
     @classmethod
-    def generate_index_name(cls, adapter_type: AdapterType, table: str, columns: list[str]) -> str:
-        table_identifier = table_identifier_from_string(adapter_type, table)
+    def generate_index_name(cls, dialect: Dialects, table: str, columns: list[str]) -> str:
+        table_identifier = table_identifier_from_string(dialect, table)
         return f"ix_{table_identifier.table}_{'_'.join(columns)}"
 
 
@@ -403,10 +398,8 @@ class ZincSettings(BaseModel):
     def validate_peers(cls, peers: ZincPeersSettings) -> ZincPeersSettings:
         types = {peer.type for peer in peers.values()}
 
-        if types != {AdapterType.DUCKDB, AdapterType.POSTGRES}:
-            raise ValueError(
-                f"Peer types must be '{AdapterType.DUCKDB}' and '{AdapterType.POSTGRES}'."
-            )
+        if types != {Dialects.DUCKDB, Dialects.POSTGRES}:
+            raise ValueError(f"Peer types must be '{Dialects.DUCKDB}' and '{Dialects.POSTGRES}'.")
 
         return peers
 
@@ -446,7 +439,7 @@ class ZincSettings(BaseModel):
                     )
 
                 # Check that table indexes are supported by adapter
-                if table.indexes and destination_peer.type != AdapterType.POSTGRES:
+                if table.indexes and destination_peer.type != Dialects.POSTGRES:
                     raise ValueError(
                         f"Table indexes are not supported by '{destination_peer.type}' adapter."
                     )

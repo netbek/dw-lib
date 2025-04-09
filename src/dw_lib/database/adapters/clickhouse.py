@@ -6,12 +6,7 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import (
-    AdapterType,
-    ClickHouseIdentifier,
-    ClickHouseSettings,
-    ClickHouseTableIdentifier,
-)
+from ...types import ClickHouseIdentifier, ClickHouseSettings, ClickHouseTableIdentifier
 from ..adapters.base import BaseAdapter
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
@@ -19,6 +14,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
+from sqlglot.dialects.dialect import Dialects
 from sqlmodel import MetaData, Session, Table
 from typing import Any, Literal
 
@@ -28,7 +24,7 @@ import pydash
 
 class ClickHouseAdapter(BaseAdapter):
     def __init__(self, settings: ClickHouseSettings) -> None:
-        self.type = AdapterType.CLICKHOUSE
+        self.dialect = Dialects.CLICKHOUSE
         super().__init__(settings)
 
     @classmethod

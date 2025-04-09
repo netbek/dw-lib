@@ -18,7 +18,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh docker
     ```
 
-3. Install [uv v0.6.12 or higher](https://docs.astral.sh/uv/getting-started/installation/). Follow the link for instructions or run this script:
+3. Install [uv v0.6.13 or higher](https://docs.astral.sh/uv/getting-started/installation/). Follow the link for instructions or run this script:
 
     ```shell
     ./scripts/install.sh uv

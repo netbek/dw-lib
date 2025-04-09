@@ -115,8 +115,18 @@ class CreatePeerResponse(BaseModel):
 class MirrorStatusResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
     current_flow_state: Literal[
-        "STATUS_SETUP", "STATUS_PAUSED", "STATUS_RUNNING", "STATUS_TERMINATED", "STATUS_UNKNOWN"
-    ] = Field(alias="currentFlowState")
+        "STATUS_UNKNOWN",
+        "STATUS_RUNNING",
+        "STATUS_PAUSED",
+        "STATUS_PAUSING",
+        "STATUS_SETUP",
+        "STATUS_SNAPSHOT",
+        "STATUS_TERMINATING",
+        "STATUS_TERMINATED",
+        "STATUS_COMPLETED",
+    ] = Field(
+        alias="currentFlowState"
+    )  # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/flow.proto#L377
     flow_job_name: str = Field(alias="flowJobName")
 
 

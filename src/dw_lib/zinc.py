@@ -1,13 +1,13 @@
 from .database.adapters.duckdb import DuckDBAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .types import (
-    AdapterType,
     DuckDBTableIdentifier,
     PostgresIdentifier,
     PostgresTableIdentifier,
     ZincMirrorSettings,
     ZincSettings,
 )
+from sqlglot.dialects.dialect import Dialects
 
 
 class Zinc:
@@ -21,9 +21,9 @@ class Zinc:
             self.settings = ZincSettings(**settings)
 
         for peer_name, peer_settings in self.settings.peers.items():
-            if peer_settings.type == AdapterType.DUCKDB:
+            if peer_settings.type == Dialects.DUCKDB:
                 peer_class = DuckDBAdapter
-            elif peer_settings.type == AdapterType.POSTGRES:
+            elif peer_settings.type == Dialects.POSTGRES:
                 peer_class = PostgresAdapter
             else:
                 raise ValueError(f"Peer type '{peer_settings.type}' is not suppported.")
@@ -120,15 +120,13 @@ class Zinc:
         mirror = self.settings.mirrors[mirror_name]
         source_peer = self.peers[mirror.peers.source]
         destination_peer = self.peers[mirror.peers.destination]
-        peer_types = (source_peer.type, destination_peer.type)
+        peer_types = (source_peer.dialect, destination_peer.dialect)
 
-        if peer_types == (AdapterType.DUCKDB, AdapterType.POSTGRES):
+        if peer_types == (Dialects.DUCKDB, Dialects.POSTGRES):
             mirror_method = "_mirror_duckdb_to_postgres"
-        elif peer_types == (AdapterType.POSTGRES, AdapterType.DUCKDB):
+        elif peer_types == (Dialects.POSTGRES, Dialects.DUCKDB):
             mirror_method = "_mirror_postgres_to_duckdb"
         else:
-            raise ValueError(
-                f"Peer types must be '{AdapterType.DUCKDB}' and '{AdapterType.POSTGRES}'."
-            )
+            raise ValueError(f"Peer types must be '{Dialects.DUCKDB}' and '{Dialects.POSTGRES}'.")
 
         return getattr(self, mirror_method)(mirror)

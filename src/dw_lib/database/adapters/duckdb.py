@@ -1,9 +1,10 @@
-from ...types import AdapterType, DuckDBSettings
+from ...types import DuckDBSettings
 from ..adapters.base import BaseAdapter
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from sqlalchemy import URL
+from sqlglot.dialects.dialect import Dialects
 from sqlmodel import Table
 from typing import Any, Literal
 
@@ -12,7 +13,7 @@ import duckdb
 
 class DuckDBAdapter(BaseAdapter):
     def __init__(self, settings: DuckDBSettings) -> None:
-        self.type = AdapterType.DUCKDB
+        self.dialect = Dialects.DUCKDB
         super().__init__(settings)
 
     @classmethod

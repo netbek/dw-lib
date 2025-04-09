@@ -7,7 +7,6 @@ from ...exceptions import (
     UserNotFoundException,
 )
 from ...types import (
-    AdapterType,
     CreateTableStatementOptions,
     PostgresIdentifier,
     PostgresSettings,
@@ -19,6 +18,7 @@ from contextlib import contextmanager
 from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.schema import CreateTable
+from sqlglot.dialects.dialect import Dialects
 from sqlmodel import Column, MetaData, Session, Table
 from typing import Any, Literal
 
@@ -28,7 +28,7 @@ import pydash
 
 class PostgresAdapter(BaseAdapter):
     def __init__(self, settings: PostgresSettings) -> None:
-        self.type = AdapterType.POSTGRES
+        self.dialect = Dialects.POSTGRES
         super().__init__(settings)
 
     @classmethod

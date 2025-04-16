@@ -108,7 +108,7 @@ class ListPeersResponse(BaseModel):
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L106
 class CreatePeerResponse(BaseModel):
     message: str
-    status: Literal["CREATED"]
+    status: Literal["VALIDATION_UNKNOWN", "CREATED", "FAILED"]
 
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L280

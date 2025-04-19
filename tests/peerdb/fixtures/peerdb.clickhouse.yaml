@@ -45,9 +45,9 @@ mirrors:
     - source_table_identifier: public.table_3
       destination_table_identifier: table_3
 
-publications:
-  publication_1:
-  - private.table_1
-  - private.table_2
-  publication_2:
-  - private.table_3
+# publications:
+#   publication_1:
+#   - private.table_1
+#   - private.table_2
+#   publication_2:
+#   - private.table_3

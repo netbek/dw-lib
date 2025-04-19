@@ -588,19 +588,29 @@ class PeerDB:
         if destination_peer is None:
             raise PeerNotFoundException(f"Peer '{mirror.destination_name}' not found")
 
-        if destination_peer.adapter.type != Dialects.CLICKHOUSE:
+        if destination_peer.adapter.type == Dialects.CLICKHOUSE:
+            adapter_class = ClickHouseAdapter
+            settings_class = ClickHouseSettings
+            table_identifier_class = ClickHouseTableIdentifier
+        elif destination_peer.adapter.type == Dialects.POSTGRES:
+            adapter_class = PostgresAdapter
+            settings_class = PostgresSettings
+            table_identifier_class = PostgresTableIdentifier
+        else:
             raise Exception(f"Adapter type '{destination_peer.adapter.type}' is not supported")
 
-        destination_adapter = ClickHouseAdapter(
-            ClickHouseSettings(**destination_peer.adapter.settings.model_dump())
+        destination_adapter = adapter_class(
+            settings_class(**destination_peer.adapter.settings.model_dump())
         )
         destination_table_identifiers = [
-            ClickHouseTableIdentifier.from_string(table_mapping.destination_table_identifier)
+            table_identifier_class.from_string(table_mapping.destination_table_identifier)
             for table_mapping in mirror.table_mappings
         ]
 
         for table_identifier in destination_table_identifiers:
-            destination_adapter.drop_table(**table_identifier.model_dump(), if_exists=True)
+            destination_adapter.drop_table(
+                **table_identifier.model_dump(by_alias=True), if_exists=True
+            )
 
     def list_mirrors(self) -> ListMirrorsResponse:
         url = f"{self.config.api_url}/v1/mirrors/list"
@@ -614,11 +624,13 @@ class PeerDB:
         return ListMirrorsResponse(**response.json())
 
 
+# TODO Deprecate
 class SourcePeer(PostgresAdapter):
     def create_user(self, username: str, password: str) -> None:
         return super().create_user(username, password, options={"login": True, "replication": True})
 
 
+# TODO Deprecate
 class DestinationPeer(ClickHouseAdapter):
     def __init__(self, db_settings: ClickHouseSettings, database: str) -> None:
         self._database = database

@@ -109,27 +109,24 @@ class TestLoadConfig(DatabaseTest):
                 {
                     "name": "destination",
                     "adapter": {
-                        "type": "clickhouse",
+                        "type": "postgres",
                         "settings": {
                             "host": "localhost",
-                            "http_port": 28123,
-                            "tcp_port": 29000,
-                            "username": "default",
-                            "password": "default",
-                            "database": "default",
-                            "secure": False,
-                            "driver": None,
+                            "port": 25432,
+                            "username": "postgres",
+                            "password": "postgres",
+                            "database": "test",
+                            "schema": "public",
                         },
                     },
                     "peerdb": {
-                        "type": 8,
-                        "clickhouse_config": {
+                        "type": 3,
+                        "postgres_config": {
                             "host": "localhost",
-                            "port": 29000,
-                            "user": "default",
-                            "database": "default",
-                            "password": "default",
-                            "disable_tls": True,
+                            "port": 25432,
+                            "user": "postgres",
+                            "password": "postgres",
+                            "database": "test",
                         },
                     },
                 },
@@ -151,8 +148,8 @@ class TestLoadConfig(DatabaseTest):
                     "synced_at_col_name": "_peerdb_synced_at",
                     "table_mappings": [
                         {
-                            "destination_table_identifier": "table_1",
                             "source_table_identifier": "public.table_1",
+                            "destination_table_identifier": "replica.table_1",
                         },
                     ],
                 },
@@ -172,12 +169,12 @@ class TestLoadConfig(DatabaseTest):
                     "synced_at_col_name": "_peerdb_synced_at",
                     "table_mappings": [
                         {
-                            "destination_table_identifier": "table_2",
                             "source_table_identifier": "public.table_2",
+                            "destination_table_identifier": "replica.table_2",
                         },
                         {
-                            "destination_table_identifier": "table_3",
                             "source_table_identifier": "public.table_3",
+                            "destination_table_identifier": "replica.table_3",
                         },
                     ],
                 },
@@ -196,11 +193,17 @@ class TestLoadConfig(DatabaseTest):
             # "publication_schemas": ["private", "public"],
         }
 
-        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
+        config_path = os.path.join(
+            pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.postgres.yaml"
+        )
         assert PeerDB(config_path).config.model_dump(by_alias=True) == expected
 
 
 class TestIntegration(PeerDBTest):
+    @pytest.fixture(scope="function")
+    def peerdb_config_path(self, pytestconfig) -> Generator[str, Any, None]:
+        yield os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.postgres.yaml")
+
     @pytest.fixture(scope="function")
     def some_postgres_tables(
         self, postgres_adapter: PostgresAdapter
@@ -285,7 +288,7 @@ class TestIntegration(PeerDBTest):
         actual = [peer.model_dump() for peer in peerdb.list_peers().items]
         expected = [
             {"name": "source", "type": "POSTGRES"},
-            {"name": "destination", "type": "CLICKHOUSE"},
+            {"name": "destination", "type": "POSTGRES"},
         ]
         assert_count_equal(actual, expected)
 
@@ -338,14 +341,14 @@ class TestIntegration(PeerDBTest):
                 "source_name": "source",
                 "source_type": "POSTGRES",
                 "destination_name": "destination",
-                "destination_type": "CLICKHOUSE",
+                "destination_type": "POSTGRES",
             },
             {
                 "name": "cdc_many",
                 "source_name": "source",
                 "source_type": "POSTGRES",
                 "destination_name": "destination",
-                "destination_type": "CLICKHOUSE",
+                "destination_type": "POSTGRES",
             },
         ]
         assert_count_equal(actual, expected)

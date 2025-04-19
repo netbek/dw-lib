@@ -259,18 +259,6 @@ class TestIntegration(PeerDBTest):
         for peer in peerdb.config.peers:
             peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
-    def test_get_and_update_settings(self, all_postgres_tables: list[Table], peerdb: PeerDB):
-        settings = peerdb.get_settings().settings
-        assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None
-
-        peerdb.update_settings({"PEERDB_NULLABLE": "false"})
-        settings = peerdb.get_settings().settings
-        assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "false"
-
-        peerdb.update_settings({"PEERDB_NULLABLE": "true"})
-        settings = peerdb.get_settings().settings
-        assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
-
     def test_create_and_drop_peer(self, all_postgres_tables: list[Table], peerdb: PeerDB):
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 

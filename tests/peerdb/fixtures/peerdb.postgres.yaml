@@ -1,0 +1,51 @@
+api_url: http://localhost:3000/api
+
+settings:
+  PEERDB_NULLABLE: "true"
+
+peers:
+  source:
+    type: postgres
+    settings:
+      host: localhost
+      port: 25432
+      username: postgres
+      password: postgres
+      database: test
+
+  destination:
+    type: postgres
+    settings:
+      host: localhost
+      port: 25432
+      username: postgres
+      password: postgres
+      database: test
+
+mirrors:
+  +do_initial_snapshot: false
+  +resync: false
+
+  cdc_one:
+    source_name: source
+    destination_name: destination
+    table_mappings:
+    - source_table_identifier: public.table_1
+      destination_table_identifier: replica.table_1
+    resync: true
+
+  cdc_many:
+    source_name: source
+    destination_name: destination
+    table_mappings:
+    - source_table_identifier: public.table_2
+      destination_table_identifier: replica.table_2
+    - source_table_identifier: public.table_3
+      destination_table_identifier: replica.table_3
+
+# publications:
+#   publication_1:
+#   - private.table_1
+#   - private.table_2
+#   publication_2:
+#   - private.table_3

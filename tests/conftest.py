@@ -3,6 +3,7 @@ from dw_lib.database import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
 from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings
 from pytest_docker.plugin import get_docker_services, Services
+from sqlglot.dialects.dialect import Dialects
 from typing import Any
 
 import httpx
@@ -139,10 +140,8 @@ class PeerDBTest:
         yield postgres_adapter
 
     @pytest.fixture(scope="function")
-    def peerdb(self, pytestconfig, docker_services) -> Generator[str, Any, None]:
-        config_path = os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.yaml")
-
-        with open(config_path) as fp:
+    def peerdb(self, peerdb_config_path: str, docker_services) -> Generator[str, Any, None]:
+        with open(peerdb_config_path) as fp:
             peerdb_config = yaml.safe_load(fp)
 
         url = os.path.join(peerdb_config["api_url"], "v1/instance/info")
@@ -159,7 +158,7 @@ class PeerDBTest:
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
 
-        peerdb = PeerDB(config_path)
+        peerdb = PeerDB(peerdb_config_path)
 
         # Override the config because it's used in different contexts:
         # 1. In PeerDB._load_config(), it must be localhost
@@ -167,6 +166,10 @@ class PeerDBTest:
         source_peer = pydash.find(peerdb._config.peers, lambda x: x.name == "source")
         source_peer.peerdb.postgres_config.host = "host.docker.internal"
         destination_peer = pydash.find(peerdb._config.peers, lambda x: x.name == "destination")
-        destination_peer.peerdb.clickhouse_config.host = "host.docker.internal"
+
+        if destination_peer.adapter.type == Dialects.CLICKHOUSE:
+            destination_peer.peerdb.clickhouse_config.host = "host.docker.internal"
+        elif destination_peer.adapter.type == Dialects.POSTGRES:
+            destination_peer.peerdb.postgres_config.host = "host.docker.internal"
 
         yield peerdb

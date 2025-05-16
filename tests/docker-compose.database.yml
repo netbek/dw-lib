@@ -1,6 +1,6 @@
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:25.3.3.42-alpine
+    image: clickhouse/clickhouse-server:25.4.4.25-alpine
     environment:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=default

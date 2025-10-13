@@ -1,5 +1,8 @@
+__pycache__
+.devenv*
+.direnv
 .pytest_cache
 .ruff_cache
 .venv
-__pycache__
-/dist
+devenv.local.nix
+venv

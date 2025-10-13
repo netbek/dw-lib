@@ -1,5 +1,4 @@
 from .constants import DBT_PROFILES_DIR
-from .project import Project
 from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
 from .utils.filesystem import get_file_extension
 from .utils.yaml_utils import safe_load_file
@@ -22,7 +21,7 @@ RESOURCE_TYPE_TO_CLASS = {
 
 
 def resolve_resource_path(project_dir: str, resource: dict) -> str | None:
-    project_name = Project.get_name_from_path(project_dir)
+    project_name = os.path.dirname(project_dir)
 
     if resource["package_name"] == project_name:
         path = os.path.join(project_dir, resource["original_file_path"])

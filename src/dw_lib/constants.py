@@ -1,23 +1,6 @@
-import os
-
-# Filesystem
-HOME_DIR = os.path.expanduser("~")
-PROJECTS_DIR = os.path.join(HOME_DIR, "projects")
-TEMPLATE_PROJECT_DIR = os.path.join(HOME_DIR, "templates", "project")
-
-# dbt
-DBT_PROFILES_DIR = os.environ.get("DBT_PROFILES_DIR", os.path.join(HOME_DIR, ".dbt"))
-DBT_PROFILES_FILE = os.path.join(DBT_PROFILES_DIR, "profiles.yml")
-DBT_LOADER_PEERDB = "peerdb"
-
 # PeerDB
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
-
-# Prefect
-PREFECT_HOME = os.environ.get("PREFECT_HOME", os.path.join(HOME_DIR, ".prefect"))
-PREFECT_PROFILES_PATH = os.path.join(PREFECT_HOME, "profiles.toml")
-PREFECT_PROVISION_PATH = os.path.join(PREFECT_HOME, "provision.yml")
 
 """
 Map from dbt-codegen to ClickHouse data types that are case-sensitive.

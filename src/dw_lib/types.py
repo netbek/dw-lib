@@ -97,64 +97,10 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
         return all([self.database, self.schema_, self.table])
 
 
-class DuckDBTableIdentifier(PostgresTableIdentifier): ...
-
-
 DIALECT_TO_PEERDB_TYPE_MAP = {
     Dialects.CLICKHOUSE: 8,
     Dialects.POSTGRES: 3,
 }
-
-DIALECT_TO_TABLE_IDENTIFIER_MAP = {
-    Dialects.DUCKDB: DuckDBTableIdentifier,
-    Dialects.POSTGRES: PostgresTableIdentifier,
-}
-
-
-def table_identifier_from_string(
-    dialect: Dialects, identifier: str
-) -> DuckDBTableIdentifier | PostgresTableIdentifier:
-    class_ = DIALECT_TO_TABLE_IDENTIFIER_MAP[dialect]
-    return class_.from_string(identifier)
-
-
-def calculate_memory_limit(percent) -> str:
-    amount = round(psutil.virtual_memory().total / (1024**3) * percent / 100, 1)
-    return f"{amount}GB"
-
-
-def calculate_threads(percent) -> int:
-    return max(1, int(math.floor(psutil.cpu_count(logical=True) * percent / 100)))
-
-
-# Default values from https://duckdb.org/docs/stable/configuration/overview.html#global-configuration-options
-class DuckDBSystemSettings(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    memory_limit: str | None = calculate_memory_limit(80)
-    threads: int | str | None = calculate_threads(100)
-
-    @field_validator("memory_limit", mode="before")
-    @classmethod
-    def convert_memory_limit(cls, value):
-        if isinstance(value, str) and value.endswith("%"):
-            try:
-                percent = float(value.strip("%"))
-                return calculate_memory_limit(percent)
-            except ValueError:
-                raise ValueError("Invalid percentage format for memory_limit.")
-        return value
-
-    @field_validator("threads", mode="before")
-    @classmethod
-    def convert_threads(cls, value):
-        if isinstance(value, str) and value.endswith("%"):
-            try:
-                percent = float(value.strip("%"))
-                return calculate_threads(percent)
-            except ValueError:
-                raise ValueError("Invalid percentage format for threads.")
-        return value
 
 
 class ClickHouseSettings(BaseSettings):
@@ -166,13 +112,6 @@ class ClickHouseSettings(BaseSettings):
     database: str
     secure: bool | None = Field(default=False)
     driver: str | None = Field(default=None)
-
-
-class DuckDBSettings(BaseSettings):
-    database: Path | str
-    schema_: str = Field(default="main", serialization_alias="schema")
-    extensions: list[str] | None = None
-    settings: DuckDBSystemSettings | None = None
 
 
 class PostgresSettings(BaseSettings):
@@ -191,10 +130,6 @@ class DbtSettings(BaseSettings):
 
 class PeerDBSettings(BaseSettings):
     config_path: Path | str
-
-
-class PrefectSettings(BaseSettings):
-    config: dict
 
 
 class NotebookSettings(BaseSettings):
@@ -335,124 +270,3 @@ class DbtSource(DbtBaseResource):
     config: DbtSourceConfig
     original_config: DbtTable | None = None
     source_name: str
-
-
-class ZincDuckDBPeerSettings(DuckDBSettings):
-    model_config = ConfigDict(use_enum_values=True)
-
-    type: str
-
-
-class ZincPostgresPeerSettings(PostgresSettings):
-    model_config = ConfigDict(use_enum_values=True)
-
-    type: str
-
-
-class ZincMirrorPeersSettings(BaseModel):
-    source: str
-    destination: str
-
-
-class ZincMirrorTableIndexSettings(BaseModel):
-    name: str | None = None
-    columns: list[str] = Field(min_length=1)
-    type: TableIndexType = TableIndexType.BTREE
-
-    @classmethod
-    def generate_index_name(cls, dialect: Dialects, table: str, columns: list[str]) -> str:
-        table_identifier = table_identifier_from_string(dialect, table)
-        return f"ix_{table_identifier.table}_{'_'.join(columns)}"
-
-
-class ZincMirrorTableSettings(BaseModel):
-    source: str
-    destination: str
-    query: str | None = None
-    indexes: list[ZincMirrorTableIndexSettings] | None = []
-
-    @classmethod
-    def generate_query(cls, source: str) -> str:
-        return f"select * from {source};"
-
-    def model_post_init(self, __context: Any) -> None:
-        if not self.query:
-            self.query = self.generate_query(self.source)
-
-
-class ZincMirrorSettings(BaseModel):
-    peers: ZincMirrorPeersSettings
-    tables: list[ZincMirrorTableSettings] = Field(min_length=1)
-
-
-ZincPeersSettings = dict[str, ZincDuckDBPeerSettings | ZincPostgresPeerSettings]
-ZincMirrorsSettings = dict[str, ZincMirrorSettings]
-
-
-class ZincSettings(BaseModel):
-    peers: ZincPeersSettings
-    mirrors: ZincMirrorsSettings
-
-    @field_validator("peers", mode="after")
-    @classmethod
-    def validate_peers(cls, peers: ZincPeersSettings) -> ZincPeersSettings:
-        types = {peer.type for peer in peers.values()}
-
-        if types != {Dialects.DUCKDB, Dialects.POSTGRES}:
-            raise ValueError(f"Peer types must be '{Dialects.DUCKDB}' and '{Dialects.POSTGRES}'.")
-
-        return peers
-
-    @model_validator(mode="after")
-    def validate_model(self) -> "ZincSettings":
-        for mirror_name, mirror_settings in self.mirrors.items():
-            # Check that source peer exists
-            if mirror_settings.peers.source not in self.peers:
-                raise ValueError(
-                    f"mirrors.{mirror_name}.peers.source references unknown peer '{mirror_settings.peers.source}'."
-                )
-
-            # Check that destination peer exists
-            if mirror_settings.peers.destination not in self.peers:
-                raise ValueError(
-                    f"mirrors.{mirror_name}.peers.destination references unknown peer '{mirror_settings.peers.destination}'."
-                )
-
-            source_peer = self.peers[mirror_settings.peers.source]
-            destination_peer = self.peers[mirror_settings.peers.destination]
-
-            for table in mirror_settings.tables:
-                source_table_identifier = table_identifier_from_string(
-                    source_peer.type, table.source
-                )
-                destination_table_identifier = table_identifier_from_string(
-                    destination_peer.type, table.destination
-                )
-
-                # Check that source and destination table identifiers are fully qualified
-                if (
-                    not source_table_identifier.is_fully_qualified()
-                    or not destination_table_identifier.is_fully_qualified()
-                ):
-                    raise ValueError(
-                        f"mirrors.{mirror_name}.tables source and destination table identifiers must be fully qualified."
-                    )
-
-                # Check that table indexes are supported by adapter
-                if table.indexes and destination_peer.type != Dialects.POSTGRES:
-                    raise ValueError(
-                        f"Table indexes are not supported by '{destination_peer.type}' adapter."
-                    )
-
-        return self
-
-    def model_post_init(self, __context: Any) -> None:
-        for mirror_settings in self.mirrors.values():
-            destination_peer = self.peers[mirror_settings.peers.destination]
-
-            for table in mirror_settings.tables:
-                for index in table.indexes:
-                    if not index.name:
-                        index.name = index.generate_index_name(
-                            destination_peer.type, table.destination, index.columns
-                        )

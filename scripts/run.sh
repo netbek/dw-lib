@@ -7,13 +7,13 @@ clean() {
     sudo chown -R $(id -u):$(id -g) .
 
     local dirs=(
+        __pycache__
         .cache
         .ipynb_checkpoints
         .local
         .pytest_cache
         .ruff_cache
         .ssh
-        __pycache__
     )
 
     local files=(

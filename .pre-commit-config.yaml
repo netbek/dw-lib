@@ -1,30 +1,46 @@
+default_language_version:
+  python: python3.13
+
+default_stages: [pre-commit]
+
+fail_fast: true
+
 repos:
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.1
+  - repo: local
     hooks:
-      - id: pyupgrade
-        args: [--py312-plus]
-        stages: [pre-commit]
-  - repo: https://github.com/pycqa/autoflake
+      - id: nixfmt
+        name: nixfmt
+        entry: nixfmt
+        language: system
+        files: \.nix$
+
+  - repo: https://github.com/PyCQA/autoflake
     rev: v2.3.1
     hooks:
       - id: autoflake
         args: [--remove-all-unused-imports, --in-place]
-        stages: [pre-commit]
+        stages: [manual]
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.21.0
+    hooks:
+      - id: pyupgrade
+        args: [--py313-plus]
+
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 7.0.0
     hooks:
       - id: isort
         args: [--settings-path, pyproject.toml]
-        stages: [pre-commit]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.4
+    rev: v0.14.0
     hooks:
       - id: ruff
         alias: ruff-lint
         args: [--config, pyproject.toml]
         stages: [manual]
+
       - id: ruff-format
         alias: ruff
         args: [--config, pyproject.toml]
-        stages: [pre-commit]

@@ -1,15 +1,13 @@
 # dw-lib
 
-Tools for working with Postgres, ClickHouse, and DuckDB.
+Tools for working with Postgres and ClickHouse.
 
-## Install
-
-## Development
+## Development: Installation
 
 1. Clone the repo and its submodules:
 
     ```shell
-    git clone --recurse-submodules git@github.com:netbek/dw-lib.git
+    git clone --recurse-submodules git@github.com:netbek/peerdb-lib.git
     ```
 
 2. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:
@@ -18,23 +16,36 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh docker
     ```
 
-3. Install [uv v0.7.4 or higher](https://docs.astral.sh/uv/getting-started/installation/). Follow the link for instructions or run this script:
+3. Install Nix:
 
     ```shell
-    ./scripts/install.sh uv
+    sh <(curl -L https://nixos.org/nix/install) --daemon
     ```
 
-4. Install pre-commit:
+4. Configure Nix. Edit `/etc/nix/nix.conf` (for a multi-user installation) or `~/.config/nix/nix.conf` (for a single-user installation) to include the following lines:
 
     ```shell
-    ./scripts/install.sh precommit
+    experimental-features = nix-command flakes
+    trusted-users = root <USER>
     ```
 
-5. Install pre-commit hook:
+    Replace `<USER>` with your username on your computer.
+
+5. Install direnv:
 
     ```shell
-    ./scripts/install.sh precommit_hook
+    sudo apt install direnv
     ```
+
+6. Enable direnv in your shell by adding a line to your shell configuration file.
+
+    For Bash, edit `~/.bashrc`:
+
+    ```shell
+    eval "$(direnv hook bash)"
+    ```
+
+## Development: Usage
 
 | Command                    | Description                                                         |
 |----------------------------|---------------------------------------------------------------------|

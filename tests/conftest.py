@@ -1,7 +1,7 @@
 from collections.abc import Generator, Iterator
-from dw_lib.database import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
+from dw_lib.database import ClickHouseAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
-from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings
+from dw_lib.types import ClickHouseSettings, PostgresSettings
 from pytest_docker.plugin import get_docker_services, Services
 from sqlglot.dialects.dialect import Dialects
 from typing import Any
@@ -51,15 +51,6 @@ class DatabaseTest:
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
 
         yield clickhouse_adapter
-
-    @pytest.fixture(scope="function")
-    def duckdb_adapter(self, pytestconfig) -> Generator[DuckDBAdapter, Any, None]:
-        duckdb_settings = DuckDBSettings(
-            database=os.path.join(pytestconfig.rootpath, "tests/temp/test.duckdb")
-        )
-        duckdb_adapter = DuckDBAdapter(duckdb_settings)
-
-        yield duckdb_adapter
 
     @pytest.fixture(scope="session")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:

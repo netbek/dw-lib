@@ -1,11 +1,11 @@
 from jinja2 import Environment, FileSystemLoader, Undefined
-from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+# from pathlib import Path
 
 
 class EnvVars(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=list(Path("/usr/local/share/dw").glob("*.env")),
+        # env_file=list(Path("/usr/local/share/dw").glob("*.env")),
         extra="allow",
         case_sensitive=True,
     )

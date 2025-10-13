@@ -1,6 +1,6 @@
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:25.4.4.25-alpine
+    image: clickhouse/clickhouse-server:25.8.10.7-alpine
     environment:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=default
@@ -16,12 +16,9 @@ services:
       timeout: 1s
       retries: 10
     stop_grace_period: 0s
-    deploy:
-      restart_policy:
-        condition: on-failure
 
   postgres:
-    image: postgres:17.4-alpine3.21
+    image: postgres:17.6-alpine3.22
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -36,9 +33,6 @@ services:
       timeout: 1s
       retries: 10
     stop_grace_period: 0s
-    deploy:
-      restart_policy:
-        condition: on-failure
 
   catalog:
     extends:

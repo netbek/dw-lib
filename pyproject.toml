@@ -1,84 +1,57 @@
 [project]
 name = "dw-lib"
-version = "0.0.8"
-description = "Tools for working with Postgres, ClickHouse, and DuckDB."
+version = "1.0.0"
+description = "Tools for working with Postgres and ClickHouse."
 readme = "README.md"
-authors = [
-    { name = "Hein Bekker", email = "hein@netbek.co.za" }
-]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "clickhouse-connect>=0.8.15",
     "clickhouse-sqlalchemy",
     "dbt-artifacts-parser==0.8.1",
     "dbt-clickhouse",
-    "dbt-core==1.8.9", # Pinned because of dbt-clickhouse and prefect-dbt
-    "duckdb>=1.2.1",
-    "duckdb-engine>=0.15.0",
+    "dbt-core==1.8.9", # Pinned because of dbt-clickhouse
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
-    "livereload>=2.7.1",
     "polyfactory>=2.20.0",
-    "prefect==3.0.10",
-    "prefect-dbt==0.6.4",
-    "prefect-jupyter==0.3.1",
-    "prefect-shell==0.3.1",
     "psutil>=7.0.0",
     "psycopg2-binary>=2.9.10",
-    "pydantic>=2.10.6,<2.11", # Pinned because of prefect
+    "pydantic>=2.12.0",
     "pydantic-settings>=2.8.1",
     "pydash>=8.0.5",
-    "python-dateutil>=2.9.0.post0",
     "pyyaml>=6.0.2",
     "rich>=13.9.4",
     "sqlalchemy>=2.0.38",
     "sqlglot>=26.12.1",
     "sqlmodel>=0.0.24",
     "sqlparse>=0.5.3",
-    "typer>=0.12.5,<0.13", # Pinned because of prefect
+    "typer>=0.19.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-docker>=3.2.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[dependency-groups]
-dev = [
-    "isort>=6.0.1",
-    "pandas>=2.2.3",
-    "pytest>=8.3.5",
-    "pytest-docker>=3.2.0",
-    "ruff>=0.9.10",
-]
-
 [tool.isort]
 force_alphabetical_sort = true
 line_length = 100
 profile = "black"
-py_version = 312
+py_version = 313
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.pytest.ini_options]
 addopts = "--no-header -vv"
-norecursedirs = [
-    "*.egg",
-    ".*",
-    "_darcs",
-    "build",
-    "CVS",
-    "dist",
-    "node_modules",
-    "venv",
-    "{arch}",
-    ".venv",
-    "__pycache__",
-]
 python_classes = ["Test*"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]

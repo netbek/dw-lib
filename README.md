@@ -45,6 +45,12 @@ Tools for working with Postgres and ClickHouse.
     eval "$(direnv hook bash)"
     ```
 
+7. Allow `.envrc`:
+
+    ```shell
+    direnv allow
+    ```
+
 ## Development: Usage
 
 | Command                    | Description                                                         |

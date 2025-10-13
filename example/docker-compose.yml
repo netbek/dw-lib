@@ -1,0 +1,115 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8.10.7-alpine
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=default
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - TZ=UTC
+    ports:
+      - 28123:8123
+      - 29000:9000
+    healthcheck:
+      test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    stop_grace_period: 0s
+
+  postgres:
+    image: postgres:17.6-alpine3.22
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+      - TZ=UTC
+    ports:
+      - 25432:5432
+    volumes:
+      - ./infra/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+    command: postgres -c wal_level=logical -c max_wal_senders=2 -c max_replication_slots=4
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    stop_grace_period: 0s
+
+  catalog:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: catalog
+    stop_grace_period: 0s
+
+  temporal:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: temporal
+    stop_grace_period: 0s
+
+  temporal-admin-tools:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: temporal-admin-tools
+    stop_grace_period: 0s
+    healthcheck:
+      # Added check for MirrorName attribute to ensure that temporal-admin-tools service is ready
+      # https://github.com/PeerDB-io/peerdb/blob/248fbe54d6b56b57d7908bdcc8cd0893d7f270f2/scripts/mirror-name-search.sh
+      test: ["CMD-SHELL", "temporal workflow list && temporal operator search-attribute list | grep -w MirrorName"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+
+  temporal-ui:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: temporal-ui
+    stop_grace_period: 0s
+
+  flow-api:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: flow-api
+    stop_grace_period: 0s
+
+  flow-snapshot-worker:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: flow-snapshot-worker
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    stop_grace_period: 0s
+
+  flow-worker:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: flow-worker
+    stop_grace_period: 0s
+
+  peerdb:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: peerdb
+    stop_grace_period: 0s
+
+  peerdb-ui:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: peerdb-ui
+    stop_grace_period: 0s
+
+  minio:
+    extends:
+      file: ../vendor/peerdb/docker-compose.yml
+      service: minio
+    stop_grace_period: 0s
+
+volumes:
+  pgdata:
+  minio-data:
+
+networks:
+  default:
+    name: dw-lib-example
+    driver: bridge

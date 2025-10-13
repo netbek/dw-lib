@@ -1,0 +1,68 @@
+api_url: http://localhost:3000/api
+
+settings:
+  PEERDB_NULLABLE: "true"
+
+peers:
+  source:
+    type: postgres
+    settings:
+      host: postgres
+      port: 5432
+      username: postgres
+      password: postgres
+      database: test
+
+    # Optional. The Python wrapper connects to the source database for some tasks, e.g.
+    # to check whether the source tables exist. This connection is created outside of the
+    # PeerDB API container, so the host and port could differ from the `settings` values.
+    adapter_settings:
+      host: localhost
+      port: 25432
+      username: postgres
+      password: postgres
+      database: test
+
+  destination:
+    type: clickhouse
+    settings:
+      host: clickhouse
+      http_port: 8123
+      tcp_port: 9000
+      username: default
+      password: default
+      database: default
+      secure: false
+
+    # Optional. The Python wrapper connects to the destination database for some tasks, e.g.
+    # to check whether the destination tables exist. This connection is created outside of the
+    # PeerDB API container, so the host and port could differ from the `settings` values.
+    adapter_settings:
+      host: localhost
+      http_port: 28123
+      tcp_port: 29000
+      username: default
+      password: default
+      database: default
+      secure: false
+
+mirrors:
+  +do_initial_snapshot: false
+  +resync: false
+
+  cdc_one:
+    source_name: source
+    destination_name: destination
+    table_mappings:
+    - source_table_identifier: public.table_1
+      destination_table_identifier: table_1
+    resync: true
+
+  cdc_many:
+    source_name: source
+    destination_name: destination
+    table_mappings:
+    - source_table_identifier: public.table_2
+      destination_table_identifier: table_2
+    - source_table_identifier: public.table_3
+      destination_table_identifier: table_3

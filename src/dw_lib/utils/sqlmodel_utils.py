@@ -1,4 +1,4 @@
-from ..database import ClickHouseAdapter
+from ..database.adapters import ClickHouseAdapter
 from ..types import ClickHouseSettings, DbtSource
 from ..utils.python_utils import is_python_keyword
 

@@ -1,7 +1,7 @@
 from ...asserts import assert_equal_ignoring_whitespace
 from ...conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib.database import PostgresAdapter
+from dw_lib.database.adapters import PostgresAdapter
 from dw_lib.exceptions import (
     PublicationNotFoundException,
     TableNotFoundException,

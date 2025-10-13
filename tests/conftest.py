@@ -1,5 +1,5 @@
 from collections.abc import Generator, Iterator
-from dw_lib.database import ClickHouseAdapter, PostgresAdapter
+from dw_lib.database.adapters import ClickHouseAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
 from dw_lib.types import ClickHouseSettings, PostgresSettings
 from pytest_docker.plugin import get_docker_services, Services
@@ -20,7 +20,7 @@ class DatabaseTest:
 
     @pytest.fixture(scope="session")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-database"  # Pin the project name to avoid creating multiple stacks
+        return "dw-lib-test-database"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="session")
     # def docker_setup(self) -> Union[List[str], str]:
@@ -83,7 +83,7 @@ class PeerDBTest:
 
     @pytest.fixture(scope="session")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-peerdb"  # Pin the project name to avoid creating multiple stacks
+        return "dw-lib-test-peerdb"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="session")
     # def docker_setup(self) -> Union[List[str], str]:

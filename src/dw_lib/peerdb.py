@@ -1,3 +1,4 @@
+from .constants import PEERDB_DESTINATION_PEER, PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import (
@@ -15,7 +16,6 @@ from .types import (
     PostgresSettings,
     PostgresTableIdentifier,
 )
-from .constants import PEERDB_SOURCE_PEER, PEERDB_DESTINATION_PEER
 from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
@@ -23,11 +23,11 @@ from pydantic import BaseModel, Field
 from sqlglot.dialects.dialect import Dialects
 from typing import Literal
 
-import rich
 import httpx
 import pydash
-import yaml
+import rich
 import time
+import yaml
 
 
 # https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/flow.proto#L409
@@ -537,7 +537,9 @@ class PeerDB:
 
         if not self.has_peer(peer_name):
             if if_exists:
-                return DropPeerResponse(message=f"Peer '{peer_name}' not found, skipping because if_exists=True")
+                return DropPeerResponse(
+                    message=f"Peer '{peer_name}' not found, skipping because if_exists=True"
+                )
             else:
                 raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
@@ -673,7 +675,9 @@ class PeerDB:
 
         if not self.has_mirror(flow_job_name):
             if if_exists:
-                return DropMirrorResponse(f"Mirror '{flow_job_name}' not found, skipping because if_exists=True")
+                return DropMirrorResponse(
+                    f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
+                )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 

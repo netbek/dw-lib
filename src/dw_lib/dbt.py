@@ -5,7 +5,6 @@ from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from typing import Any
 
-
 import json
 import os
 import yaml

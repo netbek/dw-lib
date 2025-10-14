@@ -1,9 +1,10 @@
-import rich
-import os
-import typer
 from .root import app
 from dw_lib.peerdb import PeerDB
 from typing import Literal
+
+import os
+import rich
+import typer
 
 peerdb_app = typer.Typer(name="peerdb", add_completion=True)
 app.add_typer(peerdb_app)

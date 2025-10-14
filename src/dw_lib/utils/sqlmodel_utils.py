@@ -1,6 +1,7 @@
 from ..database.adapters import ClickHouseAdapter
 from ..types import ClickHouseSettings, DbtSource
 from ..utils.python_utils import is_python_keyword
+from sqlglot.dialects.dialect import Dialects
 
 import datetime
 import os
@@ -90,7 +91,7 @@ def parse_create_table_statement(statement: str) -> dict:
         "settings": {},
         "columns": [],
     }
-    parsed = sqlglot.parse_one(statement, dialect="clickhouse")
+    parsed = sqlglot.parse_one(statement, dialect=Dialects.CLICKHOUSE)
 
     properties = parsed.args.get("properties")
     if properties:
@@ -241,7 +242,7 @@ def to_sqlalchemy_type(column_def: sqlglot.exp.ColumnDef) -> str:
             else:
                 return ArgumentNode(string)
 
-    return parse(column_def.kind.sql(dialect="clickhouse"))
+    return parse(column_def.kind.sql(dialect=Dialects.CLICKHOUSE))
 
 
 def serialize_dict(data: dict) -> str:

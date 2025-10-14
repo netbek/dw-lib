@@ -383,7 +383,7 @@ wheels = [
 [[package]]
 name = "dw-lib"
 version = "1.0.0"
-source = { editable = "../" }
+source = { editable = "../../../../" }
 dependencies = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-sqlalchemy" },
@@ -438,20 +438,9 @@ dev = [
 ]
 
 [[package]]
-name = "example"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "example-cli" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "example-cli", editable = "packages/example_cli" }]
-
-[[package]]
 name = "example-cli"
 version = "0.1.0"
-source = { editable = "packages/example_cli" }
+source = { editable = "." }
 dependencies = [
     { name = "dw-lib" },
     { name = "rich" },
@@ -460,7 +449,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dw-lib", editable = "../" },
+    { name = "dw-lib", editable = "../../../../" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "typer", specifier = ">=0.19.2" },
 ]

@@ -35,4 +35,4 @@ target-version = "py313"
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.uv.sources]
-dw-lib = { path = "../../../", editable = true }
+dw-lib = { path = "../../../../", editable = true }

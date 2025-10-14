@@ -47,8 +47,7 @@ peers:
       secure: false
 
 mirrors:
-  +do_initial_snapshot: false
-  +resync: false
+  +do_initial_snapshot: true
 
   cdc_one:
     source_name: source
@@ -56,7 +55,6 @@ mirrors:
     table_mappings:
     - source_table_identifier: public.table_1
       destination_table_identifier: table_1
-    resync: true
 
   cdc_many:
     source_name: source

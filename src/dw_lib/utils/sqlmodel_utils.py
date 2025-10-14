@@ -99,7 +99,12 @@ def parse_create_table_statement(statement: str) -> dict:
             if isinstance(prop, sqlglot.exp.EngineProperty):
                 engine_expr = prop.this
 
-                if isinstance(engine_expr, sqlglot.exp.Var):
+                # In SQLGlot v26.14.0, a table engine without settings was an instance of Var, not Identifier.
+                # TODO Remove this after confirming it works in production and has test coverage (if not already)
+                # if isinstance(engine_expr, sqlglot.exp.Var):
+                #     result["engine"] = engine_expr.name
+
+                if isinstance(engine_expr, sqlglot.exp.Identifier):
                     result["engine"] = engine_expr.name
 
                 elif isinstance(engine_expr, sqlglot.exp.Anonymous):

@@ -1,8 +1,16 @@
 from enum import StrEnum
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
+from sqlglot.dialects.dialect import Dialects
 from typing import TypedDict
+
+import math
+import psutil
+
+
+class TableIndexType(StrEnum):
+    BTREE = "btree"
 
 
 class CreateTableStatementOptions(TypedDict):
@@ -89,6 +97,62 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
         return all([self.database, self.schema_, self.table])
 
 
+class DuckDBTableIdentifier(PostgresTableIdentifier):
+    pass
+
+
+DIALECT_TO_TABLE_IDENTIFIER_MAP = {
+    Dialects.DUCKDB: DuckDBTableIdentifier,
+    Dialects.POSTGRES: PostgresTableIdentifier,
+}
+
+
+def table_identifier_from_string(
+    dialect: Dialects, identifier: str
+) -> DuckDBTableIdentifier | PostgresTableIdentifier:
+    class_ = DIALECT_TO_TABLE_IDENTIFIER_MAP[dialect]
+    return class_.from_string(identifier)
+
+
+def calculate_memory_limit(percent) -> str:
+    amount = round(psutil.virtual_memory().total / (1024**3) * percent / 100, 1)
+    return f"{amount}GB"
+
+
+def calculate_threads(percent) -> int:
+    return max(1, int(math.floor(psutil.cpu_count(logical=True) * percent / 100)))
+
+
+# Default values from https://duckdb.org/docs/stable/configuration/overview.html#global-configuration-options
+class DuckDBSystemSettings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    memory_limit: str | None = calculate_memory_limit(80)
+    threads: int | str | None = calculate_threads(100)
+
+    @field_validator("memory_limit", mode="before")
+    @classmethod
+    def convert_memory_limit(cls, value):
+        if isinstance(value, str) and value.endswith("%"):
+            try:
+                percent = float(value.strip("%"))
+                return calculate_memory_limit(percent)
+            except ValueError:
+                raise ValueError("Invalid percentage format for memory_limit.")
+        return value
+
+    @field_validator("threads", mode="before")
+    @classmethod
+    def convert_threads(cls, value):
+        if isinstance(value, str) and value.endswith("%"):
+            try:
+                percent = float(value.strip("%"))
+                return calculate_threads(percent)
+            except ValueError:
+                raise ValueError("Invalid percentage format for threads.")
+        return value
+
+
 class ClickHouseSettings(BaseSettings):
     host: str
     http_port: int
@@ -98,6 +162,13 @@ class ClickHouseSettings(BaseSettings):
     database: str
     secure: bool | None = Field(default=False)
     driver: str | None = Field(default=None)
+
+
+class DuckDBSettings(BaseSettings):
+    database: Path | str
+    schema_: str = Field(default="main", serialization_alias="schema")
+    extensions: list[str] | None = None
+    settings: DuckDBSystemSettings | None = None
 
 
 class PostgresSettings(BaseSettings):

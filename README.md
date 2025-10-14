@@ -1,6 +1,6 @@
 # dw-lib
 
-Tools for working with Postgres and ClickHouse.
+Tools for working with Postgres, ClickHouse, and DuckDB.
 
 ## Development: Installation
 

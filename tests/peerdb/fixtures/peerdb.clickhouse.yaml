@@ -12,12 +12,12 @@ peers:
       username: postgres
       password: postgres
       database: test
-    # adapter_settings:
-    #   host: localhost
-    #   port: 25432
-    #   username: postgres
-    #   password: postgres
-    #   database: test
+    adapter_settings:
+      host: localhost
+      port: 25432
+      username: postgres
+      password: postgres
+      database: test
 
   destination:
     type: clickhouse
@@ -29,14 +29,14 @@ peers:
       password: default
       database: default
       secure: false
-    # adapter_settings:
-    #   host: localhost
-    #   http_port: 28123
-    #   tcp_port: 29000
-    #   username: default
-    #   password: default
-    #   database: default
-    #   secure: false
+    adapter_settings:
+      host: localhost
+      http_port: 28123
+      tcp_port: 29000
+      username: default
+      password: default
+      database: default
+      secure: false
 
 mirrors:
   +do_initial_snapshot: false

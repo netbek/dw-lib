@@ -98,7 +98,7 @@ class TestLoadConfig(DatabaseTest):
                     "peerdb": {
                         "type": 3,
                         "postgres_config": {
-                            "host": "localhost",
+                            "host": "host.docker.internal",
                             "port": 25432,
                             "user": "postgres",
                             "password": "postgres",
@@ -122,7 +122,7 @@ class TestLoadConfig(DatabaseTest):
                     "peerdb": {
                         "type": 3,
                         "postgres_config": {
-                            "host": "localhost",
+                            "host": "host.docker.internal",
                             "port": 25432,
                             "user": "postgres",
                             "password": "postgres",

@@ -2,7 +2,6 @@ from enum import StrEnum
 from pathlib import Path
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
-from sqlglot.dialects.dialect import Dialects
 from typing import TypedDict
 
 

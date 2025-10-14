@@ -18,7 +18,7 @@ peers:
     # PeerDB API container, so the host and port could differ from the `settings` values.
     adapter_settings:
       host: localhost
-      port: 25432
+      port: 28010
       username: postgres
       password: postgres
       database: test
@@ -39,8 +39,8 @@ peers:
     # PeerDB API container, so the host and port could differ from the `settings` values.
     adapter_settings:
       host: localhost
-      http_port: 28123
-      tcp_port: 29000
+      http_port: 28030
+      tcp_port: 28031
       username: default
       password: default
       database: default

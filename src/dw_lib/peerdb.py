@@ -12,7 +12,6 @@ from .exceptions import (
 from .types import (
     ClickHouseSettings,
     ClickHouseTableIdentifier,
-    DIALECT_TO_PEERDB_TYPE_MAP,
     PostgresSettings,
     PostgresTableIdentifier,
 )
@@ -28,6 +27,12 @@ import pydash
 import rich
 import time
 import yaml
+
+# https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/peers.proto#L261
+DIALECT_TO_PEERDB_TYPE_MAP = {
+    Dialects.POSTGRES: 3,
+    Dialects.CLICKHOUSE: 8,
+}
 
 
 # https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/flow.proto#L409

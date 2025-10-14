@@ -6,10 +6,6 @@ from sqlglot.dialects.dialect import Dialects
 from typing import TypedDict
 
 
-class TableIndexType(StrEnum):
-    BTREE = "btree"
-
-
 class CreateTableStatementOptions(TypedDict):
     schema: str | None = None
     if_not_exists: bool | None = False
@@ -92,12 +88,6 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
 
     def is_fully_qualified(self) -> bool:
         return all([self.database, self.schema_, self.table])
-
-
-DIALECT_TO_PEERDB_TYPE_MAP = {
-    Dialects.CLICKHOUSE: 8,
-    Dialects.POSTGRES: 3,
-}
 
 
 class ClickHouseSettings(BaseSettings):

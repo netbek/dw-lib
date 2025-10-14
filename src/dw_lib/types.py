@@ -8,10 +8,6 @@ import math
 import psutil
 
 
-class TableIndexType(StrEnum):
-    BTREE = "btree"
-
-
 class CreateTableStatementOptions(TypedDict):
     schema: str | None = None
     if_not_exists: bool | None = False

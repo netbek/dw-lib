@@ -101,19 +101,6 @@ class DuckDBTableIdentifier(PostgresTableIdentifier):
     pass
 
 
-DIALECT_TO_TABLE_IDENTIFIER_MAP = {
-    Dialects.DUCKDB: DuckDBTableIdentifier,
-    Dialects.POSTGRES: PostgresTableIdentifier,
-}
-
-
-def table_identifier_from_string(
-    dialect: Dialects, identifier: str
-) -> DuckDBTableIdentifier | PostgresTableIdentifier:
-    class_ = DIALECT_TO_TABLE_IDENTIFIER_MAP[dialect]
-    return class_.from_string(identifier)
-
-
 def calculate_memory_limit(percent) -> str:
     amount = round(psutil.virtual_memory().total / (1024**3) * percent / 100, 1)
     return f"{amount}GB"

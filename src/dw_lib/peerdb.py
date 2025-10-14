@@ -537,7 +537,7 @@ class PeerDB:
 
         if not self.has_peer(peer_name):
             if if_exists:
-                return DropPeerResponse(message=f"Peer '{peer_name}' not found, skipping")
+                return DropPeerResponse(message=f"Peer '{peer_name}' not found, skipping because if_exists=True")
             else:
                 raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
@@ -673,7 +673,7 @@ class PeerDB:
 
         if not self.has_mirror(flow_job_name):
             if if_exists:
-                return DropMirrorResponse(f"Mirror '{flow_job_name}' not found, skipping")
+                return DropMirrorResponse(f"Mirror '{flow_job_name}' not found, skipping because if_exists=True")
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 

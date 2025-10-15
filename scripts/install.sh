@@ -11,7 +11,7 @@ help() {
     echo "Usage: $0 <PACKAGE> [PACKAGE ...]"
     echo ""
     echo "Arguments:"
-    echo "    package: docker, mkcert, precommit, precommit_hook, tilt, uv"
+    echo "    package: docker"
 }
 
 docker_compose_exists() {
@@ -51,45 +51,6 @@ install_docker() {
     echo "${tput_green}Installed Docker${tput_reset}"
 }
 
-install_mkcert() {
-    echo "${tput_yellow}Installing mkcert ...${tput_reset}"
-    sudo apt install libnss3-tools
-    curl -JLO "https://dl.filippo.io/mkcert/v1.4.4?for=linux/amd64"
-    chmod +x mkcert-v*-linux-amd64
-    sudo mv mkcert-v*-linux-amd64 /usr/local/bin/mkcert
-    echo "${tput_green}Installed mkcert${tput_reset}"
-}
-
-install_tilt() {
-    echo "${tput_yellow}Installing Tilt ...${tput_reset}"
-    curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/v0.33.21/scripts/install.sh | bash
-    echo "${tput_green}Installed Tilt${tput_reset}"
-}
-
-install_uv() {
-    echo "${tput_yellow}Installing uv ...${tput_reset}"
-
-    if command_exists "uv"; then
-        uv self update
-    else
-        curl -fsSL https://astral.sh/uv/0.7.4/install.sh | sh
-    fi
-
-    echo "${tput_green}Installed uv${tput_reset}"
-}
-
-install_precommit() {
-    echo "${tput_yellow}Installing pre-commit ...${tput_reset}"
-    pip install --user pre-commit
-    echo "${tput_green}Installed pre-commit${tput_reset}"
-}
-
-install_precommit_hook() {
-    echo "${tput_yellow}Installing pre-commit hook ...${tput_reset}"
-    pre-commit install
-    echo "${tput_green}Installed pre-commit hook${tput_reset}"
-}
-
 if [[ "$1" == "--help" || "$1" == "-h" ]] || [ -z "$1" ]; then
     help
     exit 0
@@ -104,6 +65,6 @@ for package in "$@"; do
     if command_exists "$cmd"; then
         "$cmd"
     else
-        echo "${tput_red}Error: Package must be one of: docker, mkcert, precommit, precommit_hook, tilt, uv${tput_reset}"
+        echo "${tput_red}Error: Package must be one of: docker${tput_reset}"
     fi
 done

@@ -1,6 +1,7 @@
-from ..database import ClickHouseAdapter
+from ..database.adapters import ClickHouseAdapter
 from ..types import ClickHouseSettings, DbtSource
 from ..utils.python_utils import is_python_keyword
+from sqlglot.dialects.dialect import Dialects
 
 import datetime
 import os
@@ -90,7 +91,7 @@ def parse_create_table_statement(statement: str) -> dict:
         "settings": {},
         "columns": [],
     }
-    parsed = sqlglot.parse_one(statement, dialect="clickhouse")
+    parsed = sqlglot.parse_one(statement, dialect=Dialects.CLICKHOUSE)
 
     properties = parsed.args.get("properties")
     if properties:
@@ -99,7 +100,12 @@ def parse_create_table_statement(statement: str) -> dict:
             if isinstance(prop, sqlglot.exp.EngineProperty):
                 engine_expr = prop.this
 
-                if isinstance(engine_expr, sqlglot.exp.Var):
+                # In SQLGlot v26.14.0, a table engine without settings was an instance of Var, not Identifier.
+                # TODO Remove this after confirming it works in production and has test coverage (if not already)
+                # if isinstance(engine_expr, sqlglot.exp.Var):
+                #     result["engine"] = engine_expr.name
+
+                if isinstance(engine_expr, sqlglot.exp.Identifier):
                     result["engine"] = engine_expr.name
 
                 elif isinstance(engine_expr, sqlglot.exp.Anonymous):
@@ -236,7 +242,7 @@ def to_sqlalchemy_type(column_def: sqlglot.exp.ColumnDef) -> str:
             else:
                 return ArgumentNode(string)
 
-    return parse(column_def.kind.sql(dialect="clickhouse"))
+    return parse(column_def.kind.sql(dialect=Dialects.CLICKHOUSE))
 
 
 def serialize_dict(data: dict) -> str:

@@ -1,3 +1,4 @@
+from .constants import PEERDB_DESTINATION_PEER, PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import (
@@ -11,7 +12,6 @@ from .exceptions import (
 from .types import (
     ClickHouseSettings,
     ClickHouseTableIdentifier,
-    DIALECT_TO_PEERDB_TYPE_MAP,
     PostgresSettings,
     PostgresTableIdentifier,
 )
@@ -24,7 +24,31 @@ from typing import Literal
 
 import httpx
 import pydash
+import rich
+import time
 import yaml
+
+# https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/peers.proto#L261
+DIALECT_TO_PEERDB_TYPE_MAP = {
+    Dialects.POSTGRES: 3,
+    Dialects.CLICKHOUSE: 8,
+}
+
+
+# https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/flow.proto#L409
+class FlowStatus:
+    STATUS_UNKNOWN = 0
+    STATUS_RUNNING = 1
+    STATUS_PAUSED = 2
+    STATUS_PAUSING = 3
+    STATUS_SETUP = 4
+    STATUS_SNAPSHOT = 5
+    STATUS_TERMINATING = 6
+    STATUS_TERMINATED = 7
+    STATUS_COMPLETED = 8
+    STATUS_RESYNC = 9
+    STATUS_FAILED = 10
+    STATUS_MODIFYING = 11
 
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L48
@@ -106,9 +130,31 @@ class ListPeersResponse(BaseModel):
 
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L106
-class CreatePeerResponse(BaseModel):
+class RawCreatePeerResponse(BaseModel):
     message: str
     status: Literal["VALIDATION_UNKNOWN", "CREATED", "FAILED"]
+
+
+class CreatePeerResponse(BaseModel):
+    message: str
+    response: RawCreatePeerResponse | None = None
+
+
+class DropPeerResponse(BaseModel):
+    message: str
+
+
+class RawCreateMirrorResponse(BaseModel):
+    workflow_id: str = Field(alias="workflowId")
+
+
+class CreateMirrorResponse(BaseModel):
+    message: str
+    response: RawCreateMirrorResponse | None = None
+
+
+class DropMirrorResponse(BaseModel):
+    message: str
 
 
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L280
@@ -239,6 +285,7 @@ class PeerDB:
         self._config_path = config_path
         self._config = self._load_config()
         self._headers = {"Content-Type": "application/json"}
+        self._console = rich.console.Console()
 
     @property
     def config(self) -> Config:
@@ -291,6 +338,11 @@ class PeerDB:
             config["peers"] = process_node(config["peers"])
 
             for key, value in config["peers"].items():
+                adapter_config = {
+                    "type": value["type"],
+                    "settings": value.get("adapter_settings", value["settings"]),
+                }
+
                 if value["type"] == Dialects.CLICKHOUSE:
                     peerdb_config = {
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
@@ -320,7 +372,7 @@ class PeerDB:
                 peers.append(
                     {
                         "name": key,
-                        "adapter": value,
+                        "adapter": adapter_config,
                         "peerdb": peerdb_config,
                     }
                 )
@@ -356,6 +408,35 @@ class PeerDB:
             mirrors=mirrors,
         )
 
+    def debug(self):
+        source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
+        destination_adapter = self.get_peer_adapter(PEERDB_DESTINATION_PEER)
+
+        self._console.print("Source peer:")
+        self._console.print(f"  URL: {source_adapter.url}")
+        self._console.print(
+            f"  Connection test: {'[green]OK[/green]' if source_adapter.can_connect() else '[red]Not OK[/red]'}"
+        )
+
+        self._console.print("Destination peer:")
+        self._console.print(f"  URL: {destination_adapter.url}")
+        self._console.print(
+            f"  Connection test: {'[green]OK[/green]' if destination_adapter.can_connect() else '[red]Not OK[/red]'}"
+        )
+
+    def get_peer_adapter(self, peer_name: str) -> ClickHouseAdapter | PostgresAdapter:
+        peer = pydash.find(self.config.peers, lambda x: x.name == peer_name)
+
+        if not peer:
+            raise PeerNotFoundException(f"Peer '{peer_name}' not found")
+
+        if peer.adapter.type == Dialects.CLICKHOUSE:
+            return ClickHouseAdapter(peer.adapter.settings)
+        elif peer.adapter.type == Dialects.POSTGRES:
+            return PostgresAdapter(peer.adapter.settings)
+        else:
+            raise Exception(f"Peer type '{peer.adapter.type}' has no adapter")
+
     def get_settings(self) -> GetDynamicSettingsResponse:
         url = f"{self.config.api_url}/v1/dynamic_settings"
         response = httpx.get(url, headers=self._headers)
@@ -368,6 +449,8 @@ class PeerDB:
         return GetDynamicSettingsResponse(**response.json())
 
     def update_settings(self, settings: dict[str, str]) -> None:
+        self._console.print("Updating settings")
+
         url = f"{self.config.api_url}/v1/dynamic_settings"
 
         for key, value in settings.items():
@@ -408,10 +491,16 @@ class PeerDB:
         return PeerTypeResponse(**response.json())
 
     def create_peer(
-        self, peer: dict, if_exists: Literal["fail", "replace"] = "fail"
+        self, peer: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
     ) -> CreatePeerResponse:
-        if self.has_peer(peer["name"]):
-            if if_exists == "replace":
+        self._console.print(f"Creating peer '{peer['name']}'")
+
+        has_peer = self.has_peer(peer["name"])
+
+        if has_peer:
+            if if_exists == "keep":
+                return CreatePeerResponse(message=f"Kept peer '{peer['name']}'")
+            elif if_exists == "replace":
                 self.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
             else:
                 raise PeerExistsException(f"Peer '{peer['name']}' exists")
@@ -425,14 +514,19 @@ class PeerDB:
                 f"Failed to create peer '{peer['name']}' (error {response.status_code}: {response.text})"
             )
 
-        deserialized = CreatePeerResponse(**response.json())
+        deserialized = RawCreatePeerResponse(**response.json())
 
         if deserialized.status != "CREATED":
             raise Exception(
                 f"Failed to create peer '{peer['name']}' (status {deserialized.status})"
             )
 
-        return deserialized
+        if has_peer:
+            message = f"Replaced peer '{peer['name']}'"
+        else:
+            message = f"Created peer '{peer['name']}'"
+
+        return CreatePeerResponse(message=message, response=deserialized)
 
     def drop_peer(
         self,
@@ -440,13 +534,17 @@ class PeerDB:
         drop_mirrors: bool | None = True,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
-    ) -> None:
+    ) -> DropPeerResponse:
+        self._console.print(f"Dropping peer '{peer_name}'")
+
         if drop_mirrors:
             self.drop_mirrors_of_peer(peer_name, drop_destination_tables=drop_destination_tables)
 
         if not self.has_peer(peer_name):
             if if_exists:
-                return
+                return DropPeerResponse(
+                    message=f"Peer '{peer_name}' not found, skipping because if_exists=True"
+                )
             else:
                 raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
@@ -458,6 +556,8 @@ class PeerDB:
             raise Exception(
                 f"Failed to drop peer '{peer_name}' (error {response.status_code}: {response.text})"
             )
+
+        return DropPeerResponse(message=f"Dropped peer '{peer_name}'")
 
     def drop_mirrors_of_peer(
         self, peer_name: str, drop_destination_tables: bool | None = False
@@ -489,7 +589,9 @@ class PeerDB:
 
         if response.status_code == 200:
             return MirrorStatusResponse(**response.json())
-        elif (
+        # TODO Check what the canonical status code is. Older versions of PeerDB returned code 500
+        # and the workflow message. PeerDB v0.34.5 returns code 404.
+        elif response.status_code == 404 or (
             response.status_code == 500
             and "unable to get the workflow id of mirror" in message.lower()
         ):
@@ -499,9 +601,17 @@ class PeerDB:
                 f"Failed to get status of mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-    def create_mirror(self, mirror: dict, if_exists: Literal["fail", "replace"] = "fail") -> None:
-        if self.has_mirror(mirror["flow_job_name"]):
-            if if_exists == "replace":
+    def create_mirror(
+        self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
+    ) -> CreateMirrorResponse:
+        self._console.print(f"Creating mirror '{mirror['flow_job_name']}'")
+
+        has_mirror = self.has_mirror(mirror["flow_job_name"])
+
+        if has_mirror:
+            if if_exists == "keep":
+                return CreateMirrorResponse(message=f"Kept mirror '{mirror['flow_job_name']}'")
+            elif if_exists == "replace":
                 self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
             else:
                 raise MirrorExistsException(f"Mirror '{mirror['flow_job_name']}' exists")
@@ -551,20 +661,38 @@ class PeerDB:
                 f"Failed to create mirror '{mirror['flow_job_name']}' (error {response.status_code}: {response.text})"
             )
 
+        deserialized = RawCreateMirrorResponse(**response.json())
+
+        if has_mirror:
+            message = f"Replaced mirror '{mirror['flow_job_name']}'"
+        else:
+            message = f"Created mirror '{mirror['flow_job_name']}'"
+
+        return CreateMirrorResponse(message=message, response=deserialized)
+
     def drop_mirror(
         self,
         flow_job_name: str,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
-    ) -> None:
+    ) -> DropMirrorResponse:
+        self._console.print(f"Dropping mirror '{flow_job_name}'")
+
         if not self.has_mirror(flow_job_name):
             if if_exists:
-                return
+                return DropMirrorResponse(
+                    f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
+                )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
         url = f"{self.config.api_url}/v1/mirrors/state_change"
-        data = {"flowJobName": flow_job_name, "requestedFlowState": "STATUS_TERMINATED"}
+        data = {
+            "flowJobName": flow_job_name,
+            "requestedFlowState": FlowStatus.STATUS_TERMINATING,
+            "dropMirrorStats": True,
+            "skipDestinationDrop": False,
+        }
         response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
         if response.status_code != 200:
@@ -572,8 +700,16 @@ class PeerDB:
                 f"Failed to drop mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
+        # If the mirror hasn't finished terminating, then wait
+        for _ in range(10):
+            if not self.has_mirror(flow_job_name):
+                break
+            time.sleep(1)
+
         if drop_destination_tables:
             self.drop_destination_tables_of_mirror(flow_job_name)
+
+        return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
 
     def drop_destination_tables_of_mirror(self, flow_job_name):
         mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)

@@ -1,10 +1,8 @@
 from .constants import DBT_PROFILES_DIR
-from .project import Project
 from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
 from .utils.filesystem import get_file_extension
 from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
-from prefect_shell.commands import ShellOperation
 from typing import Any
 
 import json
@@ -22,7 +20,7 @@ RESOURCE_TYPE_TO_CLASS = {
 
 
 def resolve_resource_path(project_dir: str, resource: dict) -> str | None:
-    project_name = Project.get_name_from_path(project_dir)
+    project_name = os.path.dirname(project_dir)
 
     if resource["package_name"] == project_name:
         path = os.path.join(project_dir, resource["original_file_path"])
@@ -288,26 +286,29 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> str:
-        cmd = self.run_command(
-            debug=debug,
-            fail_fast=fail_fast,
-            full_refresh=full_refresh,
-            exclude=exclude,
-            models=models,
-            quiet=quiet,
-            select=select,
-            selector=selector,
-            target=target,
-            use_colors=use_colors,
-            vars=vars,
-        )
+        raise NotImplementedError()
 
-        async with ShellOperation(commands=[" ".join(cmd)], working_dir=self.project_dir) as op:
-            process = await op.trigger()
-            await process.wait_for_completion()
-            result = await process.fetch_result()
+        # cmd = self.run_command(
+        #     debug=debug,
+        #     fail_fast=fail_fast,
+        #     full_refresh=full_refresh,
+        #     exclude=exclude,
+        #     models=models,
+        #     quiet=quiet,
+        #     select=select,
+        #     selector=selector,
+        #     target=target,
+        #     use_colors=use_colors,
+        #     vars=vars,
+        # )
 
-        return result
+        # TODO Replace prefect_shell.commands.ShellOperation with generic solution that doesn't require Prefect
+        # async with ShellOperation(commands=[" ".join(cmd)], working_dir=self.project_dir) as op:
+        #     process = await op.trigger()
+        #     await process.wait_for_completion()
+        #     result = await process.fetch_result()
+
+        # return result
 
     def run_sync(
         self,

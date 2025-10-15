@@ -1,14 +1,12 @@
 from collections.abc import Generator, Iterator
-from dw_lib.database import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
+from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
 from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings
 from pytest_docker.plugin import get_docker_services, Services
-from sqlglot.dialects.dialect import Dialects
 from typing import Any
 
 import httpx
 import os
-import pydash
 import pytest
 import yaml
 
@@ -20,7 +18,7 @@ class DatabaseTest:
 
     @pytest.fixture(scope="session")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-database"  # Pin the project name to avoid creating multiple stacks
+        return "dw-lib-test-database"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="session")
     # def docker_setup(self) -> Union[List[str], str]:
@@ -92,7 +90,7 @@ class PeerDBTest:
 
     @pytest.fixture(scope="session")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-peerdb"  # Pin the project name to avoid creating multiple stacks
+        return "dw-lib-test-peerdb"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="session")
     # def docker_setup(self) -> Union[List[str], str]:
@@ -159,17 +157,5 @@ class PeerDBTest:
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
 
         peerdb = PeerDB(peerdb_config_path)
-
-        # Override the config because it's used in different contexts:
-        # 1. In PeerDB._load_config(), it must be localhost
-        # 2. In the peerdb-ui service (API), it must be host.docker.internal
-        source_peer = pydash.find(peerdb._config.peers, lambda x: x.name == "source")
-        source_peer.peerdb.postgres_config.host = "host.docker.internal"
-        destination_peer = pydash.find(peerdb._config.peers, lambda x: x.name == "destination")
-
-        if destination_peer.adapter.type == Dialects.CLICKHOUSE:
-            destination_peer.peerdb.clickhouse_config.host = "host.docker.internal"
-        elif destination_peer.adapter.type == Dialects.POSTGRES:
-            destination_peer.peerdb.postgres_config.host = "host.docker.internal"
 
         yield peerdb

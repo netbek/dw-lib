@@ -7,6 +7,8 @@ services:
       - CLICKHOUSE_DB=default
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - TZ=UTC
+    extra_hosts:
+      - host.docker.internal:host-gateway
     ports:
       - 28123:8123
       - 29000:9000
@@ -26,6 +28,8 @@ services:
       - TZ=UTC
     ports:
       - 25432:5432
+    volumes:
+      - ./infra/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
     command: postgres -c wal_level=logical -c max_wal_senders=2 -c max_replication_slots=4
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
@@ -36,19 +40,19 @@ services:
 
   catalog:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: catalog
     stop_grace_period: 0s
 
   temporal:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: temporal
     stop_grace_period: 0s
 
   temporal-admin-tools:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: temporal-admin-tools
     stop_grace_period: 0s
     healthcheck:
@@ -61,19 +65,19 @@ services:
 
   temporal-ui:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: temporal-ui
     stop_grace_period: 0s
 
   flow-api:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: flow-api
     stop_grace_period: 0s
 
   flow-snapshot-worker:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: flow-snapshot-worker
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -81,28 +85,33 @@ services:
 
   flow-worker:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: flow-worker
     stop_grace_period: 0s
 
   peerdb:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: peerdb
     stop_grace_period: 0s
 
   peerdb-ui:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: peerdb-ui
     stop_grace_period: 0s
 
   minio:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../../vendor/peerdb/docker-compose.yml
       service: minio
     stop_grace_period: 0s
 
 volumes:
   pgdata:
   minio-data:
+
+networks:
+  default:
+    name: dw-lib-example
+    driver: bridge

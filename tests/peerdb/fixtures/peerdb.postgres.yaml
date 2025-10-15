@@ -7,6 +7,12 @@ peers:
   source:
     type: postgres
     settings:
+      host: host.docker.internal
+      port: 25432
+      username: postgres
+      password: postgres
+      database: test
+    adapter_settings:
       host: localhost
       port: 25432
       username: postgres
@@ -16,6 +22,12 @@ peers:
   destination:
     type: postgres
     settings:
+      host: host.docker.internal
+      port: 25432
+      username: postgres
+      password: postgres
+      database: test
+    adapter_settings:
       host: localhost
       port: 25432
       username: postgres

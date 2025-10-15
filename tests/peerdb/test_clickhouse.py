@@ -1,7 +1,7 @@
 from ..asserts import assert_count_equal
 from ..conftest import DatabaseTest, PeerDBTest
 from collections.abc import Generator
-from dw_lib.database import PostgresAdapter
+from dw_lib.database.adapters import PostgresAdapter
 from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
 from dw_lib.peerdb import PeerDB
 from sqlmodel import Table
@@ -98,7 +98,7 @@ class TestLoadConfig(DatabaseTest):
                     "peerdb": {
                         "type": 3,
                         "postgres_config": {
-                            "host": "localhost",
+                            "host": "host.docker.internal",
                             "port": 25432,
                             "user": "postgres",
                             "password": "postgres",
@@ -124,7 +124,7 @@ class TestLoadConfig(DatabaseTest):
                     "peerdb": {
                         "type": 8,
                         "clickhouse_config": {
-                            "host": "localhost",
+                            "host": "host.docker.internal",
                             "port": 29000,
                             "user": "default",
                             "database": "default",

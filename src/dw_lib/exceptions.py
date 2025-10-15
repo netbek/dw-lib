@@ -1,43 +1,58 @@
-class EmptyConfigException(Exception): ...
+class EmptyConfigException(Exception):
+    pass
 
 
-class PeerExistsException(Exception): ...
+class PeerExistsException(Exception):
+    pass
 
 
-class PeerNotFoundException(Exception): ...
+class PeerNotFoundException(Exception):
+    pass
 
 
-class MirrorExistsException(Exception): ...
+class MirrorExistsException(Exception):
+    pass
 
 
-class MirrorNotFoundException(Exception): ...
+class MirrorNotFoundException(Exception):
+    pass
 
 
-class DatabaseExistsException(Exception): ...
+class DatabaseExistsException(Exception):
+    pass
 
 
-class DatabaseNotFoundException(Exception): ...
+class DatabaseNotFoundException(Exception):
+    pass
 
 
-class SchemaExistsException(Exception): ...
+class SchemaExistsException(Exception):
+    pass
 
 
-class SchemaNotFoundException(Exception): ...
+class SchemaNotFoundException(Exception):
+    pass
 
 
-class TableExistsException(Exception): ...
+class TableExistsException(Exception):
+    pass
 
 
-class TableNotFoundException(Exception): ...
+class TableNotFoundException(Exception):
+    pass
 
 
-class UserExistsException(Exception): ...
+class UserExistsException(Exception):
+    pass
 
 
-class UserNotFoundException(Exception): ...
+class UserNotFoundException(Exception):
+    pass
 
 
-class PublicationExistsException(Exception): ...
+class PublicationExistsException(Exception):
+    pass
 
 
-class PublicationNotFoundException(Exception): ...
+class PublicationNotFoundException(Exception):
+    pass

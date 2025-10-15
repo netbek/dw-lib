@@ -1,5 +1,7 @@
 from .root import app
 from dw_lib.peerdb import PeerDB
+from dw_lib.utils.filesystem import find_up
+from pathlib import Path
 from typing import Literal
 
 import os
@@ -11,17 +13,29 @@ app.add_typer(peerdb_app)
 console = rich.console.Console()
 
 
+def find_config_file() -> Path:
+    cwd = os.getcwd()
+    config_file = find_up(cwd, "peerdb.yaml")
+
+    if not config_file:
+        raise Exception(f"peerdb.yaml not found in {cwd} or higher")
+
+    return config_file
+
+
 @peerdb_app.command()
-def debug(config: str = "peerdb.yaml") -> None:
+def debug() -> None:
     """Check the PeerDB configuration and connections."""
-    peerdb = PeerDB(os.path.abspath(config))
+    config_file = find_config_file()
+    peerdb = PeerDB(config_file)
     peerdb.debug()
 
 
 @peerdb_app.command()
-def up(config: str = "peerdb.yaml", if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def up(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
     """Add PeerDB publications and replication slots to the source database."""
-    peerdb = PeerDB(os.path.abspath(config))
+    config_file = find_config_file()
+    peerdb = PeerDB(config_file)
 
     peerdb.update_settings({setting.name: setting.value for setting in peerdb.config.settings})
     console.print("Updated settings", style="green")
@@ -38,9 +52,10 @@ def up(config: str = "peerdb.yaml", if_exists: Literal["fail", "keep", "replace"
 
 
 @peerdb_app.command()
-def down(config: str = "peerdb.yaml", if_exists: bool | None = False) -> None:
+def down(if_exists: bool | None = False) -> None:
     """Remove PeerDB publications and replication slots from the source database, and remove tables from the destination database."""
-    peerdb = PeerDB(os.path.abspath(config))
+    config_file = find_config_file()
+    peerdb = PeerDB(config_file)
 
     for peer in peerdb.config.peers:
         response = peerdb.drop_peer(

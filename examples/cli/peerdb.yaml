@@ -31,7 +31,7 @@ peers:
       tcp_port: 9000
       username: default
       password: default
-      database: default
+      database: test
       secure: false
 
     # Optional. The Python wrapper connects to the destination database for some tasks, e.g.
@@ -43,7 +43,7 @@ peers:
       tcp_port: 29000
       username: default
       password: default
-      database: default
+      database: test
       secure: false
 
 mirrors:

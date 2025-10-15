@@ -1,0 +1,14 @@
+example:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      threads: 1
+      host: localhost
+      port: 28123
+      user: default
+      password: default
+      schema: test
+      driver: http
+      secure: false
+      use_lw_deletes: true

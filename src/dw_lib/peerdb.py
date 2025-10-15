@@ -281,8 +281,8 @@ class Config(BaseModel):
 
 
 class PeerDB:
-    def __init__(self, config_path: Path | str) -> None:
-        self._config_path = config_path
+    def __init__(self, config_file: Path | str) -> None:
+        self._config_file = config_file
         self._config = self._load_config()
         self._headers = {"Content-Type": "application/json"}
         self._console = rich.console.Console()
@@ -292,7 +292,7 @@ class PeerDB:
         return self._config
 
     def _load_config_data(self) -> dict:
-        data = render_template(self._config_path)
+        data = render_template(self._config_file)
         data = yaml.safe_load(data)
         return data
 

@@ -1,8 +1,8 @@
-from .constants import DBT_PROFILES_DIR
 from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
 from .utils.filesystem import get_file_extension
 from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
+from pathlib import Path
 from typing import Any
 
 import json
@@ -19,22 +19,30 @@ RESOURCE_TYPE_TO_CLASS = {
 }
 
 
-def resolve_resource_path(project_dir: str, resource: dict) -> str | None:
-    project_name = os.path.dirname(project_dir)
+def get_profiles_dir() -> Path:
+    home_dir = Path.home()
+    default_profiles_dir = home_dir / ".dbt"
+    return Path(os.environ.get("DBT_PROFILES_DIR", default_profiles_dir))
+
+
+def resolve_resource_path(project_dir: Path | str, resource: dict) -> Path | None:
+    project_dir = Path(project_dir)
+    project_name = project_dir.name
 
     if resource["package_name"] == project_name:
-        path = os.path.join(project_dir, resource["original_file_path"])
+        path = project_dir / resource["original_file_path"]
     else:
-        path = os.path.join(project_dir, "dbt_packages", resource["original_file_path"])
+        path = project_dir / "dbt_packages" / resource["original_file_path"]
 
-    if os.path.exists(path):
+    if path.exists():
         return path
 
 
 class Dbt:
-    def __init__(self, project_dir: str, target: str | None = None) -> None:
-        self.project_dir = project_dir
-        self.target = target
+    def __init__(self, project_dir: Path | str, target: str | None = None) -> None:
+        self._profiles_dir = get_profiles_dir()
+        self._project_dir = project_dir
+        self._target = target
 
     def list_command(
         self,
@@ -52,15 +60,15 @@ class Dbt:
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
         if target is None:
-            target = self.target
+            target = self._target
 
         cmd = [
             "dbt",
             "list",
             "--profiles-dir",
-            DBT_PROFILES_DIR,
+            str(self._profiles_dir),
             "--project-dir",
-            str(self.project_dir),
+            str(self._project_dir),
         ]
 
         if debug:
@@ -179,7 +187,7 @@ class Dbt:
         for resource in resource_dicts:
             if resource["resource_type"] == DbtResourceType.SOURCE:
                 original_config = None
-                path = resolve_resource_path(self.project_dir, resource)
+                path = resolve_resource_path(self._project_dir, resource)
 
                 if path and get_file_extension(path) in [".yml", ".yaml"]:
                     if path not in cache:
@@ -218,15 +226,15 @@ class Dbt:
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
         if target is None:
-            target = self.target
+            target = self._target
 
         cmd = [
             "dbt",
             "run",
             "--profiles-dir",
-            DBT_PROFILES_DIR,
+            str(self._profiles_dir),
             "--project-dir",
-            str(self.project_dir),
+            str(self._project_dir),
         ]
 
         if debug:
@@ -303,7 +311,7 @@ class Dbt:
         # )
 
         # TODO Replace prefect_shell.commands.ShellOperation with generic solution that doesn't require Prefect
-        # async with ShellOperation(commands=[" ".join(cmd)], working_dir=self.project_dir) as op:
+        # async with ShellOperation(commands=[" ".join(cmd)], working_dir=self._project_dir) as op:
         #     process = await op.trigger()
         #     await process.wait_for_completion()
         #     result = await process.fetch_result()
@@ -350,15 +358,15 @@ class Dbt:
         use_colors: bool | None = False,
     ) -> list[str]:
         if target is None:
-            target = self.target
+            target = self._target
 
         cmd = [
             "dbt",
             "seed",
             "--profiles-dir",
-            DBT_PROFILES_DIR,
+            str(self._profiles_dir),
             "--project-dir",
-            str(self.project_dir),
+            str(self._project_dir),
         ]
 
         if debug:

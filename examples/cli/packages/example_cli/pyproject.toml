@@ -6,13 +6,15 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "dw-lib",
+    "livereload>=2.7.1",
     "rich>=14.2.0",
     "typer>=0.19.2",
 ]
 
 [project.scripts]
-# cli = "example_cli:app"
-peerdb = "example_cli.peerdb_cli:peerdb_app"
+cli = "example_cli:app"
+# dbt = "example_cli.dbt_cli:dbt_app"
+# peerdb = "example_cli.peerdb_cli:peerdb_app"
 
 [build-system]
 requires = ["hatchling"]

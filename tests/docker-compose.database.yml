@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:17.6-alpine3.22
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+      - TZ=UTC
+    ports:
+      - 15432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    stop_grace_period: 0s
+
   clickhouse:
     image: clickhouse/clickhouse-server:25.8.10.7-alpine
     environment:
@@ -12,22 +28,6 @@ services:
       - 19000:9000
     healthcheck:
       test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
-      interval: 1s
-      timeout: 1s
-      retries: 10
-    stop_grace_period: 0s
-
-  postgres:
-    image: postgres:17.6-alpine3.22
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=test
-      - TZ=UTC
-    ports:
-      - 15432:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 1s
       timeout: 1s
       retries: 10

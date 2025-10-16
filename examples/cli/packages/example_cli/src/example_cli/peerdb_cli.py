@@ -1,26 +1,13 @@
 from .root import app
-from dw_lib.peerdb import PeerDB
-from dw_lib.utils.filesystem import find_up
-from pathlib import Path
+from dw_lib.peerdb import find_config_file, PeerDB
 from typing import Literal
 
-import os
 import rich
 import typer
 
 peerdb_app = typer.Typer(name="peerdb", add_completion=True)
 app.add_typer(peerdb_app)
 console = rich.console.Console()
-
-
-def find_config_file() -> Path:
-    cwd = os.getcwd()
-    config_file = find_up(cwd, "peerdb.yaml")
-
-    if not config_file:
-        raise Exception(f"peerdb.yaml not found in {cwd} or higher")
-
-    return config_file
 
 
 @peerdb_app.command()

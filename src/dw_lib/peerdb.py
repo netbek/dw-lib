@@ -15,6 +15,7 @@ from .types import (
     PostgresSettings,
     PostgresTableIdentifier,
 )
+from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,7 @@ from sqlglot.dialects.dialect import Dialects
 from typing import Literal
 
 import httpx
+import os
 import pydash
 import rich
 import time
@@ -758,3 +760,13 @@ class PeerDB:
             )
 
         return ListMirrorsResponse(**response.json())
+
+
+def find_config_file() -> Path:
+    cwd = os.getcwd()
+    config_file = find_up(cwd, "peerdb.yaml")
+
+    if not config_file:
+        raise Exception(f"peerdb.yaml not found in {cwd} or higher")
+
+    return config_file

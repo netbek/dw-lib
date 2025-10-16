@@ -758,20 +758,3 @@ class PeerDB:
             )
 
         return ListMirrorsResponse(**response.json())
-
-
-# TODO Deprecate
-class SourcePeer(PostgresAdapter):
-    def create_user(self, username: str, password: str) -> None:
-        return super().create_user(username, password, options={"login": True, "replication": True})
-
-
-# TODO Deprecate
-class DestinationPeer(ClickHouseAdapter):
-    def __init__(self, db_settings: ClickHouseSettings, database: str) -> None:
-        self._database = database
-        super().__init__(db_settings)
-
-    @property
-    def database(self) -> str:
-        return self._database

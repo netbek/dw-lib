@@ -14,7 +14,7 @@
     docker compose up
     ```
 
-3. Installed the dbt dependencies:
+3. Install the dbt dependencies:
 
     ```shell
     cd dbt
@@ -57,9 +57,9 @@ Note that dbt and CLI commands must be run in the dbt project directory `dbt`.
 | Command                       | Description                                                                                                                 |
 |-------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | `cli dbt version`             | Print dbt version.                                                                                                          |
-| `cli dbt model-yaml`          | Generate dbt model schema YAML, e.g. `cli dbt model-yaml my_first_dbt_model`                                                |
-| `cli dbt docs generate`       | Generate dbt project docs.                                                                                                  |
-| `cli dbt docs serve`          | Serve dbt project docs.                                                                                                     |
+| `cli dbt model-yaml`          | Generate the model schema YAML, e.g. `cli dbt model-yaml my_first_dbt_model`                                                |
+| `cli dbt docs generate`       | Generate the project docs.                                                                                                  |
+| `cli dbt docs serve`          | Serve the project docs.                                                                                                     |
 
 Append the `--help` option to see the options of each command.
 

@@ -1,12 +1,14 @@
 [project]
-name = "example"
+name = "cli"
 version = "0.1.0"
-description = "Example"
+description = "CLI example"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "dbt-clickhouse",
     "example-cli",
 ]
 
 [tool.uv.sources]
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.8.9-batch" }
 example-cli = { path = "./packages/example_cli", editable = true }

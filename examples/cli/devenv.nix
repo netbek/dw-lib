@@ -7,6 +7,7 @@
 }:
 {
   env.DEVENV_TASKS_QUIET = 1;
+  env.DBT_PROFILES_DIR = "${config.env.DEVENV_ROOT}/.dbt";
 
   languages = {
     python = {
@@ -18,17 +19,17 @@
           allGroups = true;
         };
       };
-      venv = {
-        enable = true;
-      };
     };
   };
 
   enterShell = ''
-    if [ -d "${config.env.DEVENV_STATE}/venv" ]; then
-      ln -sfn ${config.env.DEVENV_STATE}/venv venv
+    VENV_PATH="${config.env.DEVENV_STATE}/venv"
+
+    if [ -d "$VENV_PATH" ]; then
+      ln -sfn "$VENV_PATH" venv
+      source "$VENV_PATH/bin/activate"
     else
-      echo "${config.env.DEVENV_STATE}/venv not found"
+      echo "$VENV_PATH not found"
       exit 1
     fi
   '';

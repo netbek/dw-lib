@@ -15,6 +15,7 @@ from .types import (
     PostgresSettings,
     PostgresTableIdentifier,
 )
+from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,7 @@ from sqlglot.dialects.dialect import Dialects
 from typing import Literal
 
 import httpx
+import os
 import pydash
 import rich
 import time
@@ -281,8 +283,8 @@ class Config(BaseModel):
 
 
 class PeerDB:
-    def __init__(self, config_path: Path | str) -> None:
-        self._config_path = config_path
+    def __init__(self, config_file: Path | str) -> None:
+        self._config_file = config_file
         self._config = self._load_config()
         self._headers = {"Content-Type": "application/json"}
         self._console = rich.console.Console()
@@ -292,7 +294,7 @@ class PeerDB:
         return self._config
 
     def _load_config_data(self) -> dict:
-        data = render_template(self._config_path)
+        data = render_template(self._config_file)
         data = yaml.safe_load(data)
         return data
 
@@ -760,18 +762,11 @@ class PeerDB:
         return ListMirrorsResponse(**response.json())
 
 
-# TODO Deprecate
-class SourcePeer(PostgresAdapter):
-    def create_user(self, username: str, password: str) -> None:
-        return super().create_user(username, password, options={"login": True, "replication": True})
+def find_config_file() -> Path:
+    cwd = os.getcwd()
+    config_file = find_up(cwd, "peerdb.yaml")
 
+    if not config_file:
+        raise Exception(f"peerdb.yaml not found in {cwd} or higher")
 
-# TODO Deprecate
-class DestinationPeer(ClickHouseAdapter):
-    def __init__(self, db_settings: ClickHouseSettings, database: str) -> None:
-        self._database = database
-        super().__init__(db_settings)
-
-    @property
-    def database(self) -> str:
-        return self._database
+    return config_file

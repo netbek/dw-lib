@@ -1,5 +1,6 @@
+from .constants import CODEGEN_TO_CLICKHOUSE_DATA_TYPE
 from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
-from .utils.filesystem import get_file_extension
+from .utils.filesystem import find_up, get_file_extension
 from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from pathlib import Path
@@ -7,6 +8,8 @@ from typing import Any
 
 import json
 import os
+import pydash
+import subprocess
 import yaml
 
 RE_REF = r"^ref\(['\"](.*?)['\"]\)$"
@@ -19,10 +22,23 @@ RESOURCE_TYPE_TO_CLASS = {
 }
 
 
+def find_project_config_file() -> Path:
+    cwd = os.getcwd()
+    project_config_file = find_up(cwd, "dbt_project.yml")
+
+    if not project_config_file:
+        raise Exception(f"dbt_project.yml not found in {cwd} or higher")
+
+    return project_config_file
+
+
 def get_profiles_dir() -> Path:
-    home_dir = Path.home()
-    default_profiles_dir = home_dir / ".dbt"
-    return Path(os.environ.get("DBT_PROFILES_DIR", default_profiles_dir))
+    dbt_profiles_dir = os.environ.get("DBT_PROFILES_DIR")
+
+    if dbt_profiles_dir:
+        return Path(dbt_profiles_dir)
+
+    return Path.home() / ".dbt"
 
 
 def resolve_resource_path(project_dir: Path | str, resource: dict) -> Path | None:
@@ -495,3 +511,67 @@ class Dbt:
         )
 
         return dbtRunner().invoke(cmd[1:])
+
+    def generate_model_yaml(self, models: list[str]):
+        """Generate the schema YAML for the given models using dbt-codegen."""
+        resources = self.list_resources(resource_types=[DbtResourceType.MODEL])
+        selected_resources = pydash.filter_(resources, lambda resource: resource.name in models)
+
+        # Build the models
+        model_names = [resource.name for resource in selected_resources]
+        self.run_sync(quiet=True, full_refresh=True, models=" ".join(model_names))
+
+        # Generate the schema YAML
+        cmd = self.run_operation_command(
+            "generate_model_yaml", quiet=True, args={"model_names": model_names}
+        )
+        output = subprocess.check_output(cmd, cwd=self._project_dir).decode().strip()
+
+        new_models = yaml.safe_load(output)["models"]
+
+        for resource in selected_resources:
+            model_name = resource.name
+            model_path = self._project_dir / resource.original_file_path
+            schema_path = model_path.parent / f"{model_name}.yml"
+            schema_dir = schema_path.parent
+
+            new_model = pydash.find(new_models, lambda model: model["name"] == model_name)
+
+            if not new_model:
+                continue
+
+            os.makedirs(schema_dir, exist_ok=True)
+
+            # Load existing schema
+            if schema_path.exists():
+                schema = safe_load_file(schema_path)
+            else:
+                schema = {"version": 2, "models": []}
+
+            new_model = {
+                "name": new_model["name"],
+                "columns": [
+                    {
+                        "name": column["name"],
+                        "data_type": CODEGEN_TO_CLICKHOUSE_DATA_TYPE.get(
+                            column["data_type"], column["data_type"]
+                        ),
+                    }
+                    for column in new_model["columns"]
+                ],
+            }
+            old_model_indexes = [
+                i for i, model in enumerate(schema["models"]) if model["name"] == model_name
+            ]
+
+            if old_model_indexes:
+                schema["models"][old_model_indexes[0]] = new_model
+            else:
+                schema["models"].append(new_model)
+
+            schema["models"] = sorted(schema["models"], key=lambda model: model["name"])
+
+            # Write schema file
+            with open(schema_path, "w") as fp:
+                data = yaml.safe_dump(schema, sort_keys=False)
+                fp.write(data)

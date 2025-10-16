@@ -46,8 +46,7 @@ def find_project_dir() -> Path:
     return find_project_config_file().parent
 
 
-def resolve_resource_path(project_dir: Path | str, resource: dict) -> Path | None:
-    project_dir = Path(project_dir)
+def resolve_resource_path(project_dir: Path, resource: dict) -> Path | None:
     project_name = project_dir.name
 
     if resource["package_name"] == project_name:
@@ -95,9 +94,9 @@ def bundle_docs(project_dir: Path) -> None:
 
 
 class Dbt:
-    def __init__(self, project_dir: Path | str, target: str | None = None) -> None:
+    def __init__(self, project_dir: Path, target: str | None = None) -> None:
         self._profiles_dir = get_profiles_dir()
-        self._project_dir = Path(project_dir)
+        self._project_dir = project_dir
         self._project_docs_dir = self._project_dir / "docs"
         self._project_config_file = self._project_dir / "dbt_project.yml"
         self._target = target

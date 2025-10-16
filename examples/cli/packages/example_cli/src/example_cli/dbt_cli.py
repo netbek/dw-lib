@@ -1,6 +1,6 @@
 from .dbt_docs_cli import dbt_docs_app
 from .root import app
-from dw_lib.dbt import Dbt, find_project_config_file
+from dw_lib.dbt import Dbt, find_project_dir
 
 import dbt.version
 import rich
@@ -21,7 +21,7 @@ def version():
 @dbt_app.command()
 def resources():
     """List dbt project resources."""
-    project_dir = find_project_config_file().parent
+    project_dir = find_project_dir()
     dbt = Dbt(project_dir)
     for resource in dbt.list_resources():
         print(f"{resource.resource_type}: {resource.name}")
@@ -29,7 +29,8 @@ def resources():
 
 @dbt_app.command()
 def model_yaml(models: list[str]):
-    """Generate dbt model YAML."""
-    project_dir = find_project_config_file().parent
+    """Generate dbt model schema YAML."""
+    project_dir = find_project_dir()
     dbt = Dbt(project_dir)
     dbt.generate_model_yaml(models)
+    console.print(f"Generated schema YAML for: {', '.join(models)}", style="green")

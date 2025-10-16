@@ -4,3 +4,6 @@ target
 
 # Schema files are created by the `cli dbt model-yaml` command. For the purpose of this example, ignore these files.
 models/*/*.yml
+
+# Docs are created by the `cli dbt docs generate` command. For the purpose of this example, ignore these files.
+docs

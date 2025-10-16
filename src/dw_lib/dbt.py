@@ -3,6 +3,7 @@ from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
 from .utils.filesystem import find_up, get_file_extension
 from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
+from livereload import Server
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,15 @@ RESOURCE_TYPE_TO_CLASS = {
 }
 
 
+def get_profiles_dir() -> Path:
+    dbt_profiles_dir = os.environ.get("DBT_PROFILES_DIR")
+
+    if dbt_profiles_dir:
+        return Path(dbt_profiles_dir)
+
+    return Path.home() / ".dbt"
+
+
 def find_project_config_file() -> Path:
     cwd = os.getcwd()
     project_config_file = find_up(cwd, "dbt_project.yml")
@@ -32,13 +42,8 @@ def find_project_config_file() -> Path:
     return project_config_file
 
 
-def get_profiles_dir() -> Path:
-    dbt_profiles_dir = os.environ.get("DBT_PROFILES_DIR")
-
-    if dbt_profiles_dir:
-        return Path(dbt_profiles_dir)
-
-    return Path.home() / ".dbt"
+def find_project_dir() -> Path:
+    return find_project_config_file().parent
 
 
 def resolve_resource_path(project_dir: Path | str, resource: dict) -> Path | None:
@@ -54,10 +59,47 @@ def resolve_resource_path(project_dir: Path | str, resource: dict) -> Path | Non
         return path
 
 
+def bundle_docs(project_dir: Path) -> None:
+    """
+    Transform output from `dbt docs generate` into a single HTML file.
+
+    Source: https://data-banana.github.io/dbt-generate-doc-in-one-static-html-file.html
+    """
+    html_path = project_dir / "target" / "index.html"
+    manifest_path = project_dir / "target" / "manifest.json"
+    catalog_path = project_dir / "target" / "catalog.json"
+    dest_path = project_dir / "docs" / "index.html"
+
+    with open(html_path) as fp:
+        html = fp.read()
+
+    with open(manifest_path) as fp:
+        manifest = json.load(fp)
+
+    with open(catalog_path) as fp:
+        catalog = json.load(fp)
+
+    search_str = 'n=[o("manifest","manifest.json"+t),o("catalog","catalog.json"+t)]'
+    replace_str = (
+        "n=[{label: 'manifest', data: "
+        + json.dumps(manifest)
+        + "},{label: 'catalog', data: "
+        + json.dumps(catalog)
+        + "}]"
+    )
+    html = html.replace(search_str, replace_str)
+
+    os.makedirs(dest_path.parent, exist_ok=True)
+    with open(dest_path, "w") as fp:
+        fp.write(html)
+
+
 class Dbt:
     def __init__(self, project_dir: Path | str, target: str | None = None) -> None:
         self._profiles_dir = get_profiles_dir()
         self._project_dir = Path(project_dir)
+        self._project_docs_dir = self._project_dir / "docs"
+        self._project_config_file = self._project_dir / "dbt_project.yml"
         self._target = target
 
     def list_command(
@@ -135,7 +177,7 @@ class Dbt:
 
         return cmd
 
-    def list_sync(
+    def list_(
         self,
         debug: bool | None = False,
         exclude: str | None = None,
@@ -191,7 +233,7 @@ class Dbt:
                     f"'resource_types' must be any of: {', '.join(valid_resource_types)}"
                 )
 
-        result = self.list_sync(
+        result = self.list_(
             output="json",
             quiet=True,
             resource_types=resource_types,
@@ -296,45 +338,7 @@ class Dbt:
 
         return cmd
 
-    async def run_async(
-        self,
-        debug: bool | None = False,
-        exclude: str | None = None,
-        fail_fast: bool | None = True,
-        full_refresh: bool | None = False,
-        models: str | None = None,
-        quiet: bool | None = False,
-        select: str | None = None,
-        selector: str | None = None,
-        target: str | None = None,
-        use_colors: bool | None = False,
-        vars: dict[str, Any] | None = None,
-    ) -> str:
-        raise NotImplementedError()
-
-        # cmd = self.run_command(
-        #     debug=debug,
-        #     fail_fast=fail_fast,
-        #     full_refresh=full_refresh,
-        #     exclude=exclude,
-        #     models=models,
-        #     quiet=quiet,
-        #     select=select,
-        #     selector=selector,
-        #     target=target,
-        #     use_colors=use_colors,
-        #     vars=vars,
-        # )
-
-        # TODO Replace prefect_shell.commands.ShellOperation with generic solution that doesn't require Prefect
-        # async with ShellOperation(commands=[" ".join(cmd)], working_dir=self._project_dir) as op:
-        #     process = await op.trigger()
-        #     await process.wait_for_completion()
-        #     result = await process.fetch_result()
-
-        # return result
-
-    def run_sync(
+    def run(
         self,
         debug: bool | None = False,
         exclude: str | None = None,
@@ -419,7 +423,7 @@ class Dbt:
 
         return cmd
 
-    def run_operation_sync(
+    def run_operation(
         self,
         macro: str,
         args: dict[str, Any] | None = None,
@@ -492,7 +496,7 @@ class Dbt:
 
         return cmd
 
-    def seed_sync(
+    def seed(
         self,
         debug: bool | None = False,
         fail_fast: bool | None = True,
@@ -519,14 +523,13 @@ class Dbt:
 
         # Build the models
         model_names = [resource.name for resource in selected_resources]
-        self.run_sync(quiet=True, full_refresh=True, models=" ".join(model_names))
+        self.run(quiet=True, full_refresh=True, models=" ".join(model_names))
 
         # Generate the schema YAML
         cmd = self.run_operation_command(
             "generate_model_yaml", quiet=True, args={"model_names": model_names}
         )
         output = subprocess.check_output(cmd, cwd=self._project_dir).decode().strip()
-
         new_models = yaml.safe_load(output)["models"]
 
         for resource in selected_resources:
@@ -534,7 +537,6 @@ class Dbt:
             model_path = self._project_dir / resource.original_file_path
             schema_path = model_path.parent / f"{model_name}.yml"
             schema_dir = schema_path.parent
-
             new_model = pydash.find(new_models, lambda model: model["name"] == model_name)
 
             if not new_model:
@@ -575,3 +577,127 @@ class Dbt:
             with open(schema_path, "w") as fp:
                 data = yaml.safe_dump(schema, sort_keys=False)
                 fp.write(data)
+
+    def docs_generate_command(
+        self,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        models: str | None = None,
+        quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "docs",
+            "generate",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+        ]
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if exclude:
+            cmd.extend(["--exclude", exclude])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if models:
+            cmd.extend(["--models", models])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if select:
+            cmd.extend(["--select", select])
+
+        if selector:
+            cmd.extend(["--selector", selector])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+
+        return cmd
+
+    def docs_generate(
+        self,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        models: str | None = None,
+        quiet: bool | None = True,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> dbtRunnerResult:
+        cmd = self.docs_generate_command(
+            debug=debug,
+            fail_fast=fail_fast,
+            exclude=exclude,
+            models=models,
+            quiet=quiet,
+            select=select,
+            selector=selector,
+            target=target,
+            use_colors=use_colors,
+            vars=vars,
+        )
+        result = dbtRunner().invoke(cmd[1:])
+        bundle_docs(self._project_dir)
+
+        return result
+
+    def docs_serve(self):
+        project_config = safe_load_file(self._project_dir / "dbt_project.yml")
+
+        # If the docs page has not been generated before, then do so now
+        if not os.path.exists(os.path.join(self._project_docs_dir, "index.html")):
+            self.docs_generate()
+
+        watch_paths = [self._project_config_file]
+        for path in project_config["macro-paths"]:
+            watch_paths.extend(
+                [
+                    os.path.join(self._project_dir, path, "**", "*.sql"),
+                ]
+            )
+        for path in project_config["model-paths"]:
+            watch_paths.extend(
+                [
+                    os.path.join(self._project_dir, path, "**", "*.sql"),
+                    os.path.join(self._project_dir, path, "**", "*.yml"),
+                ]
+            )
+
+        # Start the LiveReload server
+        server = Server()
+        for path in watch_paths:
+            server.watch(path, lambda: self.docs_generate())
+        server.serve(host="0.0.0.0", port=8080, root=self._project_docs_dir)

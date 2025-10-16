@@ -23,7 +23,7 @@
 
 ## Databases
 
-The example spins up Postgres and ClickHouse servers. The connection settings are:
+The connection settings of the database servers in this example are:
 
 | Server         | Host        | Port    | Username   | Password   | Database   |
 |----------------|-------------|---------|------------|------------|------------|
@@ -57,7 +57,7 @@ Note that dbt and CLI commands must be run in the dbt project directory `dbt`.
 | Command                       | Description                                                                                                                 |
 |-------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | `cli dbt version`             | Print dbt version.                                                                                                          |
-| `cli dbt model-yaml`          | Generate dbt model YAML, e.g. `cli dbt model-yaml my_first_dbt_model`                                                       |
+| `cli dbt model-yaml`          | Generate dbt model schema YAML, e.g. `cli dbt model-yaml my_first_dbt_model`                                                |
 | `cli dbt docs generate`       | Generate dbt project docs.                                                                                                  |
 | `cli dbt docs serve`          | Serve dbt project docs.                                                                                                     |
 

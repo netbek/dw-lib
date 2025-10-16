@@ -447,6 +447,7 @@ dependencies = [
     { name = "duckdb-engine" },
     { name = "httpx" },
     { name = "jinja2" },
+    { name = "livereload" },
     { name = "polyfactory" },
     { name = "psutil" },
     { name = "psycopg2-binary" },
@@ -473,6 +474,7 @@ requires-dist = [
     { name = "duckdb-engine", specifier = ">=0.17.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "livereload", specifier = ">=2.7.1" },
     { name = "polyfactory", specifier = ">=2.22.2" },
     { name = "psutil", specifier = ">=7.1.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
@@ -500,7 +502,6 @@ version = "0.1.0"
 source = { editable = "packages/example_cli" }
 dependencies = [
     { name = "dw-lib" },
-    { name = "livereload" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -508,7 +509,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "dw-lib", editable = "../../" },
-    { name = "livereload", specifier = ">=2.7.1" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "typer", specifier = ">=0.19.2" },
 ]

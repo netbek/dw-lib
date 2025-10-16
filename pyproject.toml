@@ -14,6 +14,7 @@ dependencies = [
     "duckdb-engine>=0.17.0",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
+    "livereload>=2.7.1",
     "polyfactory>=2.22.2",
     "psutil>=7.1.0",
     "psycopg2-binary>=2.9.11",

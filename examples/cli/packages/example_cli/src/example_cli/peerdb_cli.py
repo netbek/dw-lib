@@ -5,7 +5,7 @@ from typing import Literal
 import rich
 import typer
 
-peerdb_app = typer.Typer(name="peerdb", add_completion=True)
+peerdb_app = typer.Typer(name="peerdb")
 app.add_typer(peerdb_app)
 console = rich.console.Console()
 

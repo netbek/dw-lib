@@ -6,7 +6,7 @@ import dbt.version
 import rich
 import typer
 
-dbt_app = typer.Typer(name="dbt", add_completion=True)
+dbt_app = typer.Typer(name="dbt")
 dbt_app.add_typer(dbt_docs_app)
 app.add_typer(dbt_app)
 console = rich.console.Console()
@@ -20,7 +20,7 @@ def version():
 
 @dbt_app.command()
 def resources():
-    """List dbt project resources."""
+    """List project resources."""
     project_dir = find_project_dir()
     dbt = Dbt(project_dir)
     for resource in dbt.list_resources():

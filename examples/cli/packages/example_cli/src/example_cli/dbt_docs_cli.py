@@ -3,13 +3,13 @@ from dw_lib.dbt import Dbt, find_project_dir
 import rich.console
 import typer
 
-dbt_docs_app = typer.Typer(name="docs", add_completion=True)
+dbt_docs_app = typer.Typer(name="docs")
 console = rich.console.Console()
 
 
 @dbt_docs_app.command()
 def generate():
-    """Generate dbt project docs."""
+    """Generate project docs."""
     project_dir = find_project_dir()
     dbt = Dbt(project_dir)
     dbt.docs_generate()
@@ -18,7 +18,7 @@ def generate():
 
 @dbt_docs_app.command()
 def serve():
-    """Serve dbt project docs."""
+    """Serve project docs."""
     project_dir = find_project_dir()
     dbt = Dbt(project_dir)
     dbt.docs_serve()

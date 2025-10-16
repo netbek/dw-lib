@@ -41,7 +41,7 @@ def resolve_resource_path(project_dir: Path | str, resource: dict) -> Path | Non
 class Dbt:
     def __init__(self, project_dir: Path | str, target: str | None = None) -> None:
         self._profiles_dir = get_profiles_dir()
-        self._project_dir = project_dir
+        self._project_dir = Path(project_dir)
         self._target = target
 
     def list_command(
@@ -341,6 +341,85 @@ class Dbt:
             quiet=quiet,
             select=select,
             selector=selector,
+            target=target,
+            use_colors=use_colors,
+            vars=vars,
+        )
+
+        return dbtRunner().invoke(cmd[1:])
+
+    def run_operation_command(
+        self,
+        macro: str,
+        args: dict[str, Any] | None = None,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "run-operation",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+            macro,
+        ]
+
+        if args:
+            cmd.extend(["--args", json.dumps(args)])
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+
+        return cmd
+
+    def run_operation_sync(
+        self,
+        macro: str,
+        args: dict[str, Any] | None = None,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> dbtRunnerResult:
+        cmd = self.run_operation_command(
+            macro,
+            args=args,
+            debug=debug,
+            fail_fast=fail_fast,
+            quiet=quiet,
             target=target,
             use_colors=use_colors,
             vars=vars,

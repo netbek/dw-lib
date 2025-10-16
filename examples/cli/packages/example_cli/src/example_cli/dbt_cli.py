@@ -55,17 +55,35 @@ def model_yaml(models: list[str]):
     project_dir = find_project_config_file().parent
     dbt = Dbt(project_dir)
     resources = dbt.list_resources(resource_types=[DbtResourceType.MODEL])
+    selected_resources = pydash.filter_(resources, lambda resource: resource.name in models)
 
-    for model in models:
-        resource = pydash.find(resources, lambda resource: resource.name == model)
+    # Build the models
+    model_names = [resource.name for resource in selected_resources]
+    dbt.run_sync(quiet=True, full_refresh=True, models=" ".join(model_names))
 
-        if not resource:
-            continue
+    # Generate the schema YAML using dbt-codegen
+    cmd = dbt.run_operation_command(
+        "generate_model_yaml", quiet=True, args={"model_names": model_names}
+    )
+    try:
+        output = subprocess.check_output(cmd, cwd=project_dir).decode().strip()
+    except subprocess.CalledProcessError as exc:
+        output = exc.output.decode().strip()
+        console.print(output, style="red")
+        raise exc
 
+    new_models = yaml.safe_load(output)["models"]
+
+    for resource in selected_resources:
         model_name = resource.name
         model_path = project_dir / resource.original_file_path
         schema_path = model_path.parent / f"{model_name}.yml"
         schema_dir = schema_path.parent
+
+        new_model = pydash.find(new_models, lambda model: model["name"] == model_name)
+
+        if not new_model:
+            continue
 
         os.makedirs(schema_dir, exist_ok=True)
 
@@ -75,41 +93,6 @@ def model_yaml(models: list[str]):
         else:
             schema = {"version": 2, "models": []}
 
-        # Build model
-        cmd = [
-            "dbt",
-            "--fail-fast",
-            "--quiet",
-            "run",
-            "-m",
-            model_name,
-            "--full-refresh",
-        ]
-        try:
-            subprocess.check_output(cmd, cwd=project_dir)
-        except subprocess.CalledProcessError as exc:
-            output = exc.output.decode().strip()
-            console.print(output, style="red")
-            raise exc
-
-        # Generate schema YAML
-        # Source: https://github.com/dbt-labs/dbt-codegen/blob/f6666ca441af7cbc01c02eb0e2b32043a9f412a7/README.md#generate_model_yaml-source
-        cmd = [
-            "dbt",
-            "--quiet",
-            "run-operation",
-            "generate_model_yaml",
-            "--args",
-            json.dumps({"model_names": [model_name]}),
-        ]
-        try:
-            output = subprocess.check_output(cmd, cwd=project_dir).decode().strip()
-        except subprocess.CalledProcessError as exc:
-            output = exc.output.decode().strip()
-            console.print(output, style="red")
-            raise exc
-
-        new_model = yaml.safe_load(output)["models"][0]
         new_model = {
             "name": new_model["name"],
             "columns": [
@@ -122,7 +105,6 @@ def model_yaml(models: list[str]):
                 for column in new_model["columns"]
             ],
         }
-
         old_model_indexes = [
             i for i, model in enumerate(schema["models"]) if model["name"] == model_name
         ]
@@ -132,7 +114,7 @@ def model_yaml(models: list[str]):
         else:
             schema["models"].append(new_model)
 
-        schema["models"] = sorted(schema["models"], key=lambda x: x["name"])
+        schema["models"] = sorted(schema["models"], key=lambda model: model["name"])
 
         # Write schema file
         with open(schema_path, "w") as fp:

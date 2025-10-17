@@ -26,10 +26,14 @@
     };
   };
 
+  # For an unknown reason, after running `cd examples/cli/packages/example_cli && uv sync`,
+  # the current pytest is the one in the Nix store, not the virtual environment. As a workaround,
+  # run `uv sync` again in the root.
   scripts.uv_sync_all.exec = ''
     cd "$DEVENV_ROOT" && uv sync
     cd "$DEVENV_ROOT/examples/cli" && uv sync
     cd "$DEVENV_ROOT/examples/cli/packages/example_cli" && uv sync
+    cd "$DEVENV_ROOT" && uv sync
   '';
 
   scripts.uv_lock_upgrade_all.exec = ''

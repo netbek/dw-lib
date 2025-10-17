@@ -7,9 +7,8 @@ requires-python = ">=3.13"
 dependencies = [
     "clickhouse-connect>=0.9.2",
     "clickhouse-sqlalchemy",
-    "dbt-artifacts-parser==0.8.1",
     "dbt-clickhouse",
-    "dbt-core==1.8.9", # Pinned because of dbt-clickhouse
+    "dbt-core==1.9.4", # Pinned because of dbt-clickhouse
     "duckdb>=1.4.1",
     "duckdb-engine>=0.17.0",
     "httpx>=0.28.1",
@@ -59,4 +58,4 @@ filterwarnings = "ignore::DeprecationWarning:dbt_common.invocation" # https://gi
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }
-dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.8.9-batch" }
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.4-batch" }

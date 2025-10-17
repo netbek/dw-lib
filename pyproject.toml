@@ -54,7 +54,10 @@ ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.pytest.ini_options]
 addopts = "--no-header --tb=no"
-filterwarnings = "ignore::DeprecationWarning:dbt_common.invocation" # https://github.com/dbt-labs/dbt-core/issues/9791
+filterwarnings = [
+    "ignore::DeprecationWarning:dbt_common.invocation", # https://github.com/dbt-labs/dbt-core/issues/9791
+    "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038
+]
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }

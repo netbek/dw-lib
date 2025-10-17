@@ -26,6 +26,18 @@
     };
   };
 
+  scripts.uv_sync_all.exec = ''
+    cd "$DEVENV_ROOT" && uv sync
+    cd "$DEVENV_ROOT/examples/cli" && uv sync
+    cd "$DEVENV_ROOT/examples/cli/packages/example_cli" && uv sync
+  '';
+
+  scripts.uv_lock_upgrade_all.exec = ''
+    cd "$DEVENV_ROOT" && uv lock --upgrade
+    cd "$DEVENV_ROOT/examples/cli" && uv lock --upgrade
+    cd "$DEVENV_ROOT/examples/cli/packages/example_cli" && uv lock --upgrade
+  '';
+
   enterShell = ''
     VENV_PATH="${config.env.DEVENV_STATE}/venv"
 

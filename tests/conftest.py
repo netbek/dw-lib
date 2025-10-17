@@ -52,8 +52,8 @@ class DatabaseTest:
         yield clickhouse_adapter
 
     @pytest.fixture(scope="function")
-    def duckdb_adapter(self, pytestconfig) -> Generator[DuckDBAdapter, Any, None]:
-        file = pytestconfig.rootpath / "tests" / "temp" / "test.duckdb"
+    def duckdb_adapter(self) -> Generator[DuckDBAdapter, Any, None]:
+        file = Path(__file__).parent / "temp" / "test.duckdb"
         duckdb_settings = DuckDBSettings(database=file)
         duckdb_adapter = DuckDBAdapter(duckdb_settings)
 

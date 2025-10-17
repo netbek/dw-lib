@@ -1,6 +1,6 @@
 [project]
 name = "dw-lib"
-version = "1.0.4"
+version = "1.0.5"
 description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -8,7 +8,7 @@ dependencies = [
     "clickhouse-connect>=0.9.2",
     "clickhouse-sqlalchemy",
     "dbt-clickhouse",
-    "dbt-core==1.9.4", # Pinned because of dbt-clickhouse
+    "dbt-core>=1.9.4,<1.10", # Pinned because of dbt-clickhouse
     "duckdb>=1.4.1",
     "duckdb-engine>=0.17.0",
     "httpx>=0.28.1",
@@ -54,7 +54,10 @@ ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.pytest.ini_options]
 addopts = "--no-header --tb=no"
-filterwarnings = "ignore::DeprecationWarning:dbt_common.invocation" # https://github.com/dbt-labs/dbt-core/issues/9791
+filterwarnings = [
+    "ignore::DeprecationWarning:dbt_common.invocation", # https://github.com/dbt-labs/dbt-core/issues/9791
+    "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038
+]
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }

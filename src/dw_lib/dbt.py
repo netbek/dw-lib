@@ -58,27 +58,31 @@ def resolve_resource_path(project_dir: Path, resource: dict) -> Path | None:
         return path
 
 
-def bundle_docs(project_dir: Path) -> None:
+def bundle_docs(project_dir: Path, dest_dir: Path | None = None) -> Path:
     """
     Transform output from `dbt docs generate` into a single HTML file.
 
     Source: https://data-banana.github.io/dbt-generate-doc-in-one-static-html-file.html
     """
-    html_path = project_dir / "target" / "index.html"
-    manifest_path = project_dir / "target" / "manifest.json"
-    catalog_path = project_dir / "target" / "catalog.json"
-    dest_path = project_dir / "docs" / "index.html"
+    if dest_dir is None:
+        dest_dir = project_dir / "docs"
 
-    with open(html_path) as fp:
+    target_dir = project_dir / "target"
+    html_file = target_dir / "index.html"
+    manifest_file = target_dir / "manifest.json"
+    catalog_file = target_dir / "catalog.json"
+    dest_file = dest_dir / "index.html"
+
+    with open(html_file) as fp:
         html = fp.read()
 
-    with open(manifest_path) as fp:
+    with open(manifest_file) as fp:
         manifest = json.load(fp)
 
-    with open(catalog_path) as fp:
+    with open(catalog_file) as fp:
         catalog = json.load(fp)
 
-    search_str = 'n=[o("manifest","manifest.json"+t),o("catalog","catalog.json"+t)]'
+    search_str = 'n = [o("manifest", "manifest.json" + t), o("catalog", "catalog.json" + t)]'
     replace_str = (
         "n=[{label: 'manifest', data: "
         + json.dumps(manifest)
@@ -88,9 +92,11 @@ def bundle_docs(project_dir: Path) -> None:
     )
     html = html.replace(search_str, replace_str)
 
-    os.makedirs(dest_path.parent, exist_ok=True)
-    with open(dest_path, "w") as fp:
+    os.makedirs(dest_file.parent, exist_ok=True)
+    with open(dest_file, "w") as fp:
         fp.write(html)
+
+    return dest_file
 
 
 class Dbt:
@@ -655,7 +661,7 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
-    ) -> dbtRunnerResult:
+    ) -> tuple[dbtRunnerResult, Path]:
         cmd = self.docs_generate_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -669,9 +675,9 @@ class Dbt:
             vars=vars,
         )
         result = dbtRunner().invoke(cmd[1:])
-        bundle_docs(self._project_dir)
+        dest_file = bundle_docs(self._project_dir)
 
-        return result
+        return (result, dest_file)
 
     def docs_serve(self):
         project_config = safe_load_file(self._project_dir / "dbt_project.yml")

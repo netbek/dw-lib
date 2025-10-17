@@ -55,10 +55,6 @@ ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.pytest.ini_options]
 addopts = "--no-header --tb=no"
-# python_classes = ["Test*"]
-# python_files = ["test_*.py"]
-# python_functions = ["test_*"]
-# testpaths = ["tests"]
 filterwarnings = "ignore::DeprecationWarning:dbt_common.invocation" # https://github.com/dbt-labs/dbt-core/issues/9791
 
 [tool.uv.sources]

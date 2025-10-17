@@ -31,6 +31,7 @@
 
     if [ -d "$VENV_PATH" ]; then
       ln -sfn "$VENV_PATH" venv
+      source "$VENV_PATH/bin/activate"
     else
       echo "$VENV_PATH not found"
       exit 1

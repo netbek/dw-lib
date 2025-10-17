@@ -4,10 +4,10 @@ from collections.abc import Generator
 from dw_lib.database.adapters import PostgresAdapter
 from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
 from dw_lib.peerdb import PeerDB
+from pathlib import Path
 from sqlmodel import Table
 from typing import Any
 
-import os
 import pydash
 import pytest
 
@@ -72,7 +72,7 @@ class TestLoadConfig(DatabaseTest):
         with pytest.raises(EmptyConfigException):
             PeerDB(None)
 
-    def test_valid_config(self, pytestconfig, all_postgres_tables: list[Table]):
+    def test_valid_config(self, all_postgres_tables: list[Table]):
         expected = {
             "api_url": "http://localhost:3000/api",
             "settings": [
@@ -193,16 +193,14 @@ class TestLoadConfig(DatabaseTest):
             # "publication_schemas": ["private", "public"],
         }
 
-        config_path = os.path.join(
-            pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.postgres.yaml"
-        )
-        assert PeerDB(config_path).config.model_dump(by_alias=True) == expected
+        config_file = Path(__file__).parent / "data" / "peerdb.postgres.yaml"
+        assert PeerDB(config_file).config.model_dump(by_alias=True) == expected
 
 
 class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
-    def peerdb_config_path(self, pytestconfig) -> Generator[str, Any, None]:
-        yield os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.postgres.yaml")
+    def peerdb_config_path(self) -> Path:
+        return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
 
     @pytest.fixture(scope="function")
     def some_postgres_tables(

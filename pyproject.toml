@@ -1,6 +1,6 @@
 [project]
 name = "dw-lib"
-version = "1.0.2"
+version = "1.0.3"
 description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -54,11 +54,7 @@ target-version = "py313"
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.pytest.ini_options]
-addopts = "--no-header -vv"
-python_classes = ["Test*"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-testpaths = ["tests"]
+addopts = "--no-header --tb=no"
 filterwarnings = "ignore::DeprecationWarning:dbt_common.invocation" # https://github.com/dbt-labs/dbt-core/issues/9791
 
 [tool.uv.sources]

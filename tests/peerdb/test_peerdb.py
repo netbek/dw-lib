@@ -1,17 +1,15 @@
 from ..conftest import PeerDBTest
-from collections.abc import Generator
 from dw_lib.peerdb import PeerDB
-from typing import Any
+from pathlib import Path
 
-import os
 import pydash
 import pytest
 
 
 class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
-    def peerdb_config_path(self, pytestconfig) -> Generator[str, Any, None]:
-        yield os.path.join(pytestconfig.rootpath, "tests/peerdb/fixtures/peerdb.postgres.yaml")
+    def peerdb_config_path(self) -> Path:
+        return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
 
     def test_get_and_update_settings(self, peerdb: PeerDB):
         settings = peerdb.get_settings().settings

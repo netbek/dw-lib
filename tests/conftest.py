@@ -14,7 +14,7 @@ import yaml
 
 class DatabaseTest:
     @pytest.fixture(scope="session")
-    def docker_compose_file(self):
+    def docker_compose_file(self) -> Path:
         return Path(__file__).parent / "docker-compose.database.yml"
 
     @pytest.fixture(scope="session")
@@ -85,7 +85,7 @@ class DatabaseTest:
 
 class PeerDBTest:
     @pytest.fixture(scope="session")
-    def docker_compose_file(self):
+    def docker_compose_file(self) -> Path:
         return Path(__file__).parent / "docker-compose.peerdb.yml"
 
     @pytest.fixture(scope="session")

@@ -2,6 +2,7 @@ from collections.abc import Generator, Iterator
 from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
 from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings
+from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from typing import Any
 
@@ -13,15 +14,15 @@ import yaml
 
 class DatabaseTest:
     @pytest.fixture(scope="session")
-    def docker_compose_file(self, pytestconfig) -> list[str] | str:
-        return os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.database.yml")
+    def docker_compose_file(self):
+        return Path(__file__).parent / "docker-compose.database.yml"
 
     @pytest.fixture(scope="session")
     def docker_compose_project_name(self) -> str:
         return "dw-lib-test-database"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="session")
-    # def docker_setup(self) -> Union[List[str], str]:
+    # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="session")
@@ -52,9 +53,8 @@ class DatabaseTest:
 
     @pytest.fixture(scope="function")
     def duckdb_adapter(self, pytestconfig) -> Generator[DuckDBAdapter, Any, None]:
-        duckdb_settings = DuckDBSettings(
-            database=os.path.join(pytestconfig.rootpath, "tests/temp/test.duckdb")
-        )
+        file = pytestconfig.rootpath / "tests" / "temp" / "test.duckdb"
+        duckdb_settings = DuckDBSettings(database=file)
         duckdb_adapter = DuckDBAdapter(duckdb_settings)
 
         yield duckdb_adapter
@@ -85,15 +85,15 @@ class DatabaseTest:
 
 class PeerDBTest:
     @pytest.fixture(scope="session")
-    def docker_compose_file(self, pytestconfig) -> list[str] | str:
-        return os.path.join(str(pytestconfig.rootdir), "tests/docker-compose.peerdb.yml")
+    def docker_compose_file(self):
+        return Path(__file__).parent / "docker-compose.peerdb.yml"
 
     @pytest.fixture(scope="session")
     def docker_compose_project_name(self) -> str:
         return "dw-lib-test-peerdb"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="session")
-    # def docker_setup(self) -> Union[List[str], str]:
+    # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="session")

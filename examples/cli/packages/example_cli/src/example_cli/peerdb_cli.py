@@ -15,7 +15,7 @@ def debug() -> None:
     """Check the PeerDB configuration and connections."""
     config_file = find_config_file()
     peerdb = PeerDB(config_file)
-    peerdb.debug()
+    peerdb.debug(print=True)
 
 
 @peerdb_app.command()

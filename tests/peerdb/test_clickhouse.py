@@ -260,6 +260,27 @@ class TestIntegration(PeerDBTest):
         for peer in peerdb.config.peers:
             peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
+    def test_debug(self, peerdb: PeerDB):
+        actual = peerdb.debug()
+        expected = {
+            "API": {
+                "URL": "http://localhost:3000/api",
+                "Connection test": "OK",
+            },
+            "Source peer": {
+                "URL": "postgresql://postgres:***@localhost:25432/test",
+                "Connection test": "OK",
+                "max_replication_slots >= 4": "OK",
+                "max_wal_senders >= 1": "OK",
+                "wal_level = logical": "OK",
+            },
+            "Destination peer": {
+                "URL": "clickhouse://default:***@localhost:28123/default",
+                "Connection test": "OK",
+            },
+        }
+        assert actual == expected
+
     def test_create_and_drop_peer(self, all_postgres_tables: list[Table], peerdb: PeerDB):
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 

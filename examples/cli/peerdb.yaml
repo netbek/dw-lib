@@ -1,4 +1,4 @@
-api_url: http://localhost:3000/api
+api_url: http://localhost:28920/api
 
 settings:
   PEERDB_NULLABLE: "true"
@@ -11,7 +11,7 @@ peers:
       port: 5432
       username: postgres
       password: postgres
-      database: test
+      database: example
 
     # Optional. The Python wrapper connects to the source database for some tasks, e.g.
     # to check whether the source tables exist. This connection is created outside of the
@@ -21,7 +21,7 @@ peers:
       port: 25432
       username: postgres
       password: postgres
-      database: test
+      database: example
 
   destination:
     type: clickhouse
@@ -31,7 +31,7 @@ peers:
       tcp_port: 9000
       username: default
       password: default
-      database: test
+      database: example
       secure: false
 
     # Optional. The Python wrapper connects to the destination database for some tasks, e.g.
@@ -43,7 +43,7 @@ peers:
       tcp_port: 29000
       username: default
       password: default
-      database: test
+      database: example
       secure: false
 
 mirrors:

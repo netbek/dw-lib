@@ -410,21 +410,78 @@ class PeerDB:
             mirrors=mirrors,
         )
 
-    def debug(self):
+    def debug(self, print: bool = False) -> dict[str, dict[str, str]] | None:
+        # TODO Table mappings: check whether the source schema and table exists, check whether the destination schema exists
+
+        try:
+            self.get_settings()
+            api_can_connect = True
+        except Exception:
+            api_can_connect = False
+
         source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
         destination_adapter = self.get_peer_adapter(PEERDB_DESTINATION_PEER)
+        source_can_connect = source_adapter.can_connect()
+        destination_can_connect = destination_adapter.can_connect()
 
-        self._console.print("Source peer:")
-        self._console.print(f"  URL: {source_adapter.url}")
-        self._console.print(
-            f"  Connection test: {'[green]OK[/green]' if source_adapter.can_connect() else '[red]Not OK[/red]'}"
-        )
+        # Check settings of source peer
+        # https://docs.peerdb.io/usecases/Real-time%20CDC/postgres-to-postgres#prerequisites
+        if source_can_connect:
+            with source_adapter.create_client() as (conn, cur):
+                cur.execute("""
+                    SELECT
+                        current_setting('max_replication_slots')::int,
+                        current_setting('max_wal_senders')::int,
+                        lower(current_setting('wal_level'));
+                    """)
+                max_replication_slots, max_wal_senders, wal_level = cur.fetchone()
 
-        self._console.print("Destination peer:")
-        self._console.print(f"  URL: {destination_adapter.url}")
-        self._console.print(
-            f"  Connection test: {'[green]OK[/green]' if destination_adapter.can_connect() else '[red]Not OK[/red]'}"
-        )
+            max_replication_slots_is_valid = max_replication_slots >= 4
+            max_wal_senders_is_valid = max_wal_senders >= 1
+            wal_level_is_valid = wal_level == "logical"
+        else:
+            max_replication_slots_is_valid = None
+            max_wal_senders_is_valid = None
+            wal_level_is_valid = None
+
+        def create_message(condition: bool) -> str:
+            if condition:
+                if print:
+                    return "[green]OK[/green]"
+                else:
+                    return "OK"
+            else:
+                if print:
+                    return "[red]Not OK[/red]"
+                else:
+                    return "Not OK"
+
+        result = {
+            "API": {
+                "URL": self.config.api_url,
+                "Connection test": create_message(api_can_connect),
+            },
+            "Source peer": {
+                "URL": str(source_adapter.url),
+                "Connection test": create_message(source_can_connect),
+                "max_replication_slots >= 4": create_message(max_replication_slots_is_valid),
+                "max_wal_senders >= 1": create_message(max_wal_senders_is_valid),
+                "wal_level = logical": create_message(wal_level_is_valid),
+            },
+            "Destination peer": {
+                "URL": str(destination_adapter.url),
+                "Connection test": create_message(destination_can_connect),
+            },
+        }
+
+        if print:
+            for i, item in enumerate(result.items()):
+                k1, v1 = item
+                self._console.print(f"{'\n' if i > 0 else ''}{k1}:")
+                for k2, v2 in v1.items():
+                    self._console.print(f"  {k2}: {v2}")
+
+        return result
 
     def get_peer_adapter(self, peer_name: str) -> ClickHouseAdapter | PostgresAdapter:
         peer = pydash.find(self.config.peers, lambda x: x.name == peer_name)

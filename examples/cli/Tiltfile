@@ -1,0 +1,17 @@
+analytics_settings(enable=False)
+
+project_name = "dw-lib-example"
+
+docker_compose("./docker-compose.yml", project_name=project_name)
+
+dc_resource("postgres", labels=["postgres"], project_name=project_name)
+dc_resource("clickhouse", labels=["clickhouse"], project_name=project_name)
+dc_resource("flow-api", labels=["peerdb"], project_name=project_name)
+dc_resource("flow-snapshot-worker", labels=["peerdb"], project_name=project_name)
+dc_resource("flow-worker", labels=["peerdb"], project_name=project_name)
+dc_resource("minio", labels=["peerdb"], project_name=project_name)
+dc_resource("peerdb-ui", labels=["peerdb"], project_name=project_name)
+dc_resource("peerdb", labels=["peerdb"], project_name=project_name)
+dc_resource("temporal-admin-tools", labels=["peerdb"], project_name=project_name)
+dc_resource("temporal-ui", labels=["peerdb"], project_name=project_name)
+dc_resource("temporal", labels=["peerdb"], project_name=project_name)

@@ -8,7 +8,7 @@
     direnv allow
     ```
 
-2. Start the Docker containers:
+2. Start the Docker services:
 
     ```shell
     docker compose up
@@ -65,7 +65,7 @@ Append the `--help` option to see the options of each command.
 
 ## Teardown
 
-1. Stop the Docker containers:
+1. Stop the Docker services:
 
     ```shell
     docker compose down -v

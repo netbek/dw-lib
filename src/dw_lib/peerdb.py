@@ -410,7 +410,7 @@ class PeerDB:
             mirrors=mirrors,
         )
 
-    def debug(self, print: bool = False) -> dict[str, dict[str, str]] | None:
+    def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:
         # TODO Table mappings: check whether the source schema and table exists, check whether the destination schema exists
 
         try:
@@ -446,12 +446,12 @@ class PeerDB:
 
         def create_message(condition: bool) -> str:
             if condition:
-                if print:
+                if echo:
                     return "[green]OK[/green]"
                 else:
                     return "OK"
             else:
-                if print:
+                if echo:
                     return "[red]Not OK[/red]"
                 else:
                     return "Not OK"
@@ -474,7 +474,7 @@ class PeerDB:
             },
         }
 
-        if print:
+        if echo:
             for i, item in enumerate(result.items()):
                 k1, v1 = item
                 self._console.print(f"{'\n' if i > 0 else ''}{k1}:")

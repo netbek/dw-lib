@@ -1,18 +1,16 @@
+from .cloud.adapters.s3 import S3Adapter
 from .database.adapters import PostgresAdapter
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
 from .types import PostgresSettings, PostgresTableIdentifier, S3Settings
 from .utils.filesystem import find_up
 from .utils.yaml_utils import safe_load_file
-from botocore.client import Config as BotoConfig
 from chdb import session
 from enum import StrEnum
 from jinja2 import Template
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
-from typing import Any, Type
 from urllib.parse import urlparse
 
-import boto3
 import json
 import os
 import pydash
@@ -193,52 +191,6 @@ def s3_to_endpoint_uri(s3_uri: str, endpoint: str, use_ssl: bool = False) -> str
     return f"{scheme}://{endpoint}/{bucket}/{path}"
 
 
-def s3_can_connect(s3_settings: S3Settings) -> bool:
-    if s3_settings.use_ssl:
-        scheme = "https"
-    else:
-        scheme = "http"
-
-    endpoint_url = f"{scheme}://{s3_settings.endpoint}"
-
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=endpoint_url,
-        aws_access_key_id=s3_settings.key_id,
-        aws_secret_access_key=s3_settings.secret,
-        config=BotoConfig(signature_version="s3v4"),
-        region_name=s3_settings.region,
-    )
-
-    try:
-        s3.head_bucket(Bucket=s3_settings.bucket)
-    except Exception:
-        return False
-
-    return True
-
-
-def s3_list_objects(s3_settings: S3Settings, prefix: str | None = None) -> list[dict[str, Any]]:
-    if s3_settings.use_ssl:
-        scheme = "https"
-    else:
-        scheme = "http"
-
-    endpoint_url = f"{scheme}://{s3_settings.endpoint}"
-
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=endpoint_url,
-        aws_access_key_id=s3_settings.key_id,
-        aws_secret_access_key=s3_settings.secret,
-        config=BotoConfig(signature_version="s3v4"),
-        region_name=s3_settings.region,
-    )
-    response = s3.list_objects_v2(Bucket=s3_settings.bucket, Prefix=prefix)
-
-    return response.get("Contents")
-
-
 class PG2S3:
     def __init__(self, config_file: Path | str) -> None:
         self._config_file = config_file
@@ -265,10 +217,10 @@ class PG2S3:
                     "Connection test": can_connect,
                 }
             elif connection.type == ConnectionType.S3:
-                s3_uri = f"s3://{connection.settings.bucket}"
-                can_connect = s3_can_connect(connection.settings)
+                adapter = S3Adapter(connection.settings)
+                can_connect = adapter.can_connect()
                 result[name] = {
-                    "URL": s3_uri,
+                    "URL": adapter.url,
                     "Connection test": can_connect,
                 }
 
@@ -351,9 +303,10 @@ class PG2S3:
             sess.query(sql)
 
         prefix = urlparse(s3_uri).path.lstrip("/")
-        s3_objects = s3_list_objects(destination_connection.settings, prefix=prefix)
+        s3_adapter = S3Adapter(destination_connection.settings)
+        objects = s3_adapter.list_objects(prefix=prefix)
 
-        if not s3_objects:
+        if not objects:
             raise Exception(
                 f"Failed to copy table '{stream.source}' from '{source_connection_name}' to '{destination_connection_name}'"
             )

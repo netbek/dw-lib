@@ -1,4 +1,5 @@
 from .cloud.adapters import S3Adapter
+from .cloud.utils import s3_to_endpoint_uri
 from .database.adapters import PostgresAdapter
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
 from .types import PostgresSettings, PostgresTableIdentifier, S3Settings
@@ -163,22 +164,6 @@ def detect_stream_class(source: str) -> type["BaseStream"]:
         return DatabaseStream
     else:
         raise ValueError(f"Invalid stream source: {source}")
-
-
-def s3_to_endpoint_uri(s3_uri: str, endpoint: str, use_ssl: bool = False) -> str:
-    parsed = urlparse(s3_uri)
-    if parsed.scheme != "s3":
-        raise ValueError(f"Invalid S3 URI: {s3_uri}")
-
-    if use_ssl:
-        scheme = "https"
-    else:
-        scheme = "http"
-
-    bucket = parsed.netloc
-    path = parsed.path.lstrip("/")
-
-    return f"{scheme}://{endpoint}/{bucket}/{path}"
 
 
 class PG2S3:

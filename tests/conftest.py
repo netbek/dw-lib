@@ -1,7 +1,9 @@
 from collections.abc import Generator, Iterator
+from dw_lib.cloud.adapters.s3 import S3Adapter
 from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
-from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings
+from dw_lib.pg2s3 import PG2S3
+from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from typing import Any
@@ -127,9 +129,7 @@ class PeerDBTest:
 
         def is_responsive():
             try:
-                with postgres_adapter.create_client() as (conn, cur):
-                    cur.execute("select 1;")
-                return True
+                return postgres_adapter.can_connect()
             except Exception:
                 return False
 
@@ -159,3 +159,90 @@ class PeerDBTest:
         peerdb = PeerDB(peerdb_config_path)
 
         yield peerdb
+
+
+class PG2S3Test:
+    @pytest.fixture(scope="session")
+    def docker_compose_file(self) -> Path:
+        return Path(__file__).parent / "docker-compose.pg2s3.yml"
+
+    @pytest.fixture(scope="session")
+    def docker_compose_project_name(self) -> str:
+        return "dw-lib-test-pg2s3"  # Pin the project name to avoid creating multiple stacks
+
+    # @pytest.fixture(scope="session")
+    # def docker_setup(self) -> list[str] | str:
+    #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
+
+    @pytest.fixture(scope="session")
+    def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
+        clickhouse_settings = ClickHouseSettings(
+            host="localhost",
+            http_port=28123,
+            tcp_port=29000,
+            username="default",
+            password="default",
+            database="default",
+            secure=False,
+            driver="http",
+        )
+        clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
+
+        def is_responsive():
+            try:
+                return clickhouse_adapter.can_connect()
+            except Exception:
+                return False
+
+        docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
+
+        yield clickhouse_adapter
+
+    @pytest.fixture(scope="session")
+    def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
+        postgres_settings = PostgresSettings(
+            host="localhost",
+            port=25432,
+            username="postgres",
+            password="postgres",
+            database="test",
+        )
+        postgres_adapter = PostgresAdapter(postgres_settings)
+
+        def is_responsive():
+            try:
+                return postgres_adapter.can_connect()
+            except Exception:
+                return False
+
+        docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
+
+        yield postgres_adapter
+
+    @pytest.fixture(scope="session")
+    def s3_adapter(self, docker_services) -> Generator[S3Adapter, Any, None]:
+        s3_settings = S3Settings(
+            key_id="admin",
+            secret="password",
+            region="us-east-1",
+            endpoint="localhost:28950",
+            use_ssl=False,
+            bucket="pg2s3",
+        )
+        s3_adapter = S3Adapter(s3_settings)
+
+        docker_services.wait_until_responsive(
+            check=lambda: s3_adapter.can_connect(), timeout=10, pause=1
+        )
+
+        yield s3_adapter
+
+    @pytest.fixture(scope="function")
+    def pg2s3(
+        self,
+        pg2s3_config_path: str,
+        clickhouse_adapter: ClickHouseAdapter,
+        postgres_adapter: PostgresAdapter,
+        s3_adapter: S3Adapter,
+    ) -> Generator[PG2S3, Any, None]:
+        yield PG2S3(pg2s3_config_path)

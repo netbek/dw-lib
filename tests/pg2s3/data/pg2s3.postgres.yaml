@@ -6,7 +6,7 @@ connections:
       port: 25432
       username: postgres
       password: postgres
-      database: example
+      database: test
 
   destination_1:
     type: s3
@@ -19,16 +19,13 @@ connections:
       bucket: pg2s3
 
 streams:
-  # If no columns or select statement is specified, then all columns are copied.
   - source: public.table_1
     destination: s3://{{ bucket }}/{{ database }}/{{ schema }}/{{ table }}/data.parquet
 
-  # Copy the specified columns.
   - source: public.table_2
     destination: s3://{{ bucket }}/{{ database }}/{{ schema }}/{{ table }}/data.parquet
     columns: [id, longitude, latitude]
 
-  # Copy the result of the select statement.
   - source: public.table_3
     destination: s3://{{ bucket }}/{{ database }}/{{ schema }}/{{ table }}/data.parquet
     sql: select id, ts from {{ source }}

@@ -1,5 +1,5 @@
 from collections.abc import Generator, Iterator
-from dw_lib.cloud.adapters.s3 import S3Adapter
+from dw_lib.cloud.adapters import S3Adapter
 from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.peerdb import PeerDB
 from dw_lib.pg2s3 import PG2S3

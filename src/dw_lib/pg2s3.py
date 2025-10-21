@@ -1,4 +1,4 @@
-from .cloud.adapters.s3 import S3Adapter
+from .cloud.adapters import S3Adapter
 from .database.adapters import PostgresAdapter
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
 from .types import PostgresSettings, PostgresTableIdentifier, S3Settings

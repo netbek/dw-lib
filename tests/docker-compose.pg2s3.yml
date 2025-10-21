@@ -16,23 +16,23 @@ services:
       retries: 10
     stop_grace_period: 0s
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:25.8.10.7-alpine
-    environment:
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=default
-      - CLICKHOUSE_DB=default
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
-      - TZ=UTC
-    ports:
-      - 28123:8123
-      - 29000:9000
-    healthcheck:
-      test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
-      interval: 1s
-      timeout: 1s
-      retries: 10
-    stop_grace_period: 0s
+  # clickhouse:
+  #   image: clickhouse/clickhouse-server:25.8.10.7-alpine
+  #   environment:
+  #     - CLICKHOUSE_USER=default
+  #     - CLICKHOUSE_PASSWORD=default
+  #     - CLICKHOUSE_DB=default
+  #     - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+  #     - TZ=UTC
+  #   ports:
+  #     - 28123:8123
+  #     - 29000:9000
+  #   healthcheck:
+  #     test: wget --no-verbose --spider http://0.0.0.0:8123/ping || exit 1
+  #     interval: 1s
+  #     timeout: 1s
+  #     retries: 10
+  #   stop_grace_period: 0s
 
   minio:
     container_name: minio

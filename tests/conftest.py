@@ -174,29 +174,29 @@ class PG2S3Test:
     # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
-    @pytest.fixture(scope="session")
-    def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
-        clickhouse_settings = ClickHouseSettings(
-            host="localhost",
-            http_port=28123,
-            tcp_port=29000,
-            username="default",
-            password="default",
-            database="default",
-            secure=False,
-            driver="http",
-        )
-        clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
+    # @pytest.fixture(scope="session")
+    # def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
+    #     clickhouse_settings = ClickHouseSettings(
+    #         host="localhost",
+    #         http_port=28123,
+    #         tcp_port=29000,
+    #         username="default",
+    #         password="default",
+    #         database="default",
+    #         secure=False,
+    #         driver="http",
+    #     )
+    #     clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
 
-        def is_responsive():
-            try:
-                return clickhouse_adapter.can_connect()
-            except Exception:
-                return False
+    #     def is_responsive():
+    #         try:
+    #             return clickhouse_adapter.can_connect()
+    #         except Exception:
+    #             return False
 
-        docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
+    #     docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
 
-        yield clickhouse_adapter
+    #     yield clickhouse_adapter
 
     @pytest.fixture(scope="session")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
@@ -241,7 +241,7 @@ class PG2S3Test:
     def pg2s3(
         self,
         pg2s3_config_path: str,
-        clickhouse_adapter: ClickHouseAdapter,
+        # clickhouse_adapter: ClickHouseAdapter,
         postgres_adapter: PostgresAdapter,
         s3_adapter: S3Adapter,
     ) -> Generator[PG2S3, Any, None]:

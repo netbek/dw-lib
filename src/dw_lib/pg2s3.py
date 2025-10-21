@@ -72,28 +72,18 @@ class BaseStream(BaseModel):
         return self
 
 
-class DatabaseStreamIdentifier(BaseModel):
-    schema_: str = Field(alias="schema")
-    table: str
-
-    def __str__(self):
-        return f"{self.schema_}.{self.table}"
-
-
 class DatabaseStream(BaseStream):
     """Database-based stream: schema.table"""
 
-    source: DatabaseStreamIdentifier
+    source: PostgresTableIdentifier
 
     @model_validator(mode="before")
     @classmethod
     def parse_source(cls, values):
         source = values.get("source")
         if isinstance(source, str):
-            if not RE_DATABASE.match(source):
-                raise ValueError(f"Invalid database source: {source}")
-            schema, table = source.split(".")
-            values["source"] = DatabaseStreamIdentifier(schema=schema, table=table)
+            values["source"] = PostgresTableIdentifier.from_string(source)
+
         return values
 
     def render_stream_select(self, source_connection: Connection) -> str:
@@ -241,7 +231,8 @@ class PG2S3:
 
     def get_stream(self, stream_source: str) -> Stream:
         stream = pydash.find(
-            self._config.streams, lambda stream: str(stream.source) == stream_source
+            self._config.streams,
+            lambda stream: f"{stream.source.schema_}.{stream.source.table}" == stream_source,
         )
 
         if not stream:
@@ -305,14 +296,15 @@ class PG2S3:
         prefix = urlparse(s3_uri).path.lstrip("/")
         s3_adapter = S3Adapter(destination_connection.settings)
         objects = s3_adapter.list_objects(prefix=prefix)
+        stream_source_identifier = f"{stream.source.schema_}.{stream.source.table}"
 
         if not objects:
             raise Exception(
-                f"Failed to copy table '{stream.source}' from '{source_connection_name}' to '{destination_connection_name}'"
+                f"Failed to copy table '{stream_source_identifier}' from '{source_connection_name}' to '{destination_connection_name}'"
             )
 
         return RunResponse(
-            message=f"Copied table '{stream.source}' from '{source_connection_name}' to '{destination_connection_name}'"
+            message=f"Copied table '{stream_source_identifier}' from '{source_connection_name}' to '{destination_connection_name}'"
         )
 
 

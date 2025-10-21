@@ -5,6 +5,8 @@ description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "boto3>=1.40.55",
+    "chdb>=3.6.0",
     "clickhouse-connect>=0.9.2",
     "clickhouse-sqlalchemy",
     "dbt-clickhouse",

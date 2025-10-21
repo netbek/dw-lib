@@ -1,0 +1,31 @@
+connections:
+  source_1:
+    type: postgres
+    settings:
+      host: localhost
+      port: 25432
+      username: postgres
+      password: postgres
+      database: example
+
+  destination_1:
+    type: s3
+    settings:
+      key_id: admin
+      secret: password
+      region: us-east-1
+      endpoint: localhost:28950
+      use_ssl: false
+      bucket: pg2s3
+
+streams:
+  - source: public.table_1
+    destination: s3://{{ bucket }}/{{ database }}/{{ schema }}/{{ table }}/data.parquet
+
+  - source: public.table_2
+    destination: s3://{{ bucket }}/{{ database }}/{{ schema }}/{{ table }}/data.parquet
+    columns: [id, longitude, latitude]
+
+  - source: public.table_3
+    destination: s3://{{ bucket }}/{{ database }}/{{ schema }}/{{ table }}/data.parquet
+    sql: select id, ts from {{ source }}

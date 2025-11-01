@@ -15,19 +15,19 @@ import yaml
 
 
 class DatabaseTest:
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:
         return Path(__file__).parent / "docker-compose.database.yml"
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_compose_project_name(self) -> str:
         return "dw-lib-test-database"  # Pin the project name to avoid creating multiple stacks
 
-    # @pytest.fixture(scope="session")
+    # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
         clickhouse_settings = ClickHouseSettings(
             host="localhost",
@@ -61,7 +61,7 @@ class DatabaseTest:
 
         yield duckdb_adapter
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
         postgres_settings = PostgresSettings(
             host="localhost",
@@ -86,19 +86,19 @@ class DatabaseTest:
 
 
 class PeerDBTest:
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:
         return Path(__file__).parent / "docker-compose.peerdb.yml"
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_compose_project_name(self) -> str:
         return "dw-lib-test-peerdb"  # Pin the project name to avoid creating multiple stacks
 
-    # @pytest.fixture(scope="session")
+    # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_services(
         self,
         docker_compose_command: str,
@@ -116,7 +116,7 @@ class PeerDBTest:
         ) as docker_service:
             yield docker_service
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
         postgres_settings = PostgresSettings(
             host="localhost",
@@ -162,19 +162,19 @@ class PeerDBTest:
 
 
 class PG2S3Test:
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:
         return Path(__file__).parent / "docker-compose.pg2s3.yml"
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def docker_compose_project_name(self) -> str:
         return "dw-lib-test-pg2s3"  # Pin the project name to avoid creating multiple stacks
 
-    # @pytest.fixture(scope="session")
+    # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
-    # @pytest.fixture(scope="session")
+    # @pytest.fixture(scope="module")
     # def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
     #     clickhouse_settings = ClickHouseSettings(
     #         host="localhost",
@@ -198,7 +198,7 @@ class PG2S3Test:
 
     #     yield clickhouse_adapter
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
         postgres_settings = PostgresSettings(
             host="localhost",
@@ -219,7 +219,7 @@ class PG2S3Test:
 
         yield postgres_adapter
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def s3_adapter(self, docker_services) -> Generator[S3Adapter, Any, None]:
         s3_settings = S3Settings(
             key_id="admin",

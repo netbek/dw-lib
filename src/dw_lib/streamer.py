@@ -293,11 +293,11 @@ class Streamer:
         )
 
 
-def find_config_file() -> Path:
+def find_config_file(filename: str = "streamer.yaml") -> Path:
     cwd = os.getcwd()
-    config_file = find_up(cwd, "streamer.yaml")
+    config_file = find_up(cwd, filename)
 
     if not config_file:
-        raise Exception(f"streamer.yaml not found in {cwd} or higher")
+        raise Exception(f"{filename} not found in {cwd} or higher")
 
     return config_file

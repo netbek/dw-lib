@@ -819,11 +819,11 @@ class PeerDB:
         return ListMirrorsResponse(**response.json())
 
 
-def find_config_file() -> Path:
+def find_config_file(filename: str = "peerdb.yaml") -> Path:
     cwd = os.getcwd()
-    config_file = find_up(cwd, "peerdb.yaml")
+    config_file = find_up(cwd, filename)
 
     if not config_file:
-        raise Exception(f"peerdb.yaml not found in {cwd} or higher")
+        raise Exception(f"{filename} not found in {cwd} or higher")
 
     return config_file

@@ -16,7 +16,7 @@ connections:
       region: us-east-1
       endpoint: localhost:28950
       use_ssl: false
-      bucket: pg2s3
+      bucket: streamer
 
 streams:
   - source: public.table_1

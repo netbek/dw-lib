@@ -43,8 +43,8 @@ services:
       sleep 2;
       /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
       case \"$(/usr/bin/mc ls local)\" in
-        *pg2s3*) echo 'Bucket pg2s3 already exists';;
-        *) /usr/bin/mc mb local/pg2s3;;
+        *streamer*) echo 'Bucket streamer already exists';;
+        *) /usr/bin/mc mb local/streamer;;
       esac;
       wait
       "
@@ -55,7 +55,7 @@ services:
       - 28950:9000
       - 28951:9001
     healthcheck:
-      test: ["CMD-SHELL", "mc ls local/pg2s3"]
+      test: ["CMD-SHELL", "mc ls local/streamer"]
       interval: 1s
       timeout: 1s
       retries: 10

@@ -1,7 +1,7 @@
-from ..conftest import PG2S3Test
+from ..conftest import StreamerTest
 from collections.abc import Generator
 from dw_lib.database.adapters import PostgresAdapter
-from dw_lib.pg2s3 import PG2S3
+from dw_lib.streamer import Streamer
 from pathlib import Path
 from sqlmodel import Table
 from typing import Any
@@ -46,10 +46,10 @@ table_defs = [
 ]
 
 
-class TestIntegration(PG2S3Test):
+class TestIntegration(StreamerTest):
     @pytest.fixture(scope="function")
-    def pg2s3_config_path(self) -> Path:
-        return Path(__file__).parent / "data" / "pg2s3.postgres.yaml"
+    def streamer_config_path(self) -> Path:
+        return Path(__file__).parent / "data" / "streamer.postgres.yaml"
 
     @pytest.fixture(scope="function")
     def all_postgres_tables(
@@ -67,22 +67,22 @@ class TestIntegration(PG2S3Test):
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
 
-    def test_debug(self, pg2s3: PG2S3):
-        actual = pg2s3.debug()
+    def test_debug(self, streamer: Streamer):
+        actual = streamer.debug()
         expected = {
             "source_1": {
                 "URL": "postgresql://postgres:***@localhost:25432/test",
                 "Connection test": True,
             },
             "destination_1": {
-                "URL": "s3://pg2s3",
+                "URL": "s3://streamer",
                 "Connection test": True,
             },
         }
         assert actual == expected
 
-    def test_run(self, all_postgres_tables: list[Table], pg2s3: PG2S3):
-        response = pg2s3.run("source_1", "destination_1", "public.table_1")
+    def test_run(self, all_postgres_tables: list[Table], streamer: Streamer):
+        response = streamer.run("source_1", "destination_1", "public.table_1")
         assert (
             response.message == "Copied table 'public.table_1' from 'source_1' to 'destination_1'"
         )

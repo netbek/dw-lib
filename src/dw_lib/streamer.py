@@ -166,7 +166,7 @@ def detect_stream_class(source: str) -> type["BaseStream"]:
         raise ValueError(f"Invalid stream source: {source}")
 
 
-class PG2S3:
+class Streamer:
     def __init__(self, config_file: Path | str) -> None:
         self._config_file = config_file
         self._config = self._load_config()
@@ -295,9 +295,9 @@ class PG2S3:
 
 def find_config_file() -> Path:
     cwd = os.getcwd()
-    config_file = find_up(cwd, "pg2s3.yaml")
+    config_file = find_up(cwd, "streamer.yaml")
 
     if not config_file:
-        raise Exception(f"pg2s3.yaml not found in {cwd} or higher")
+        raise Exception(f"streamer.yaml not found in {cwd} or higher")
 
     return config_file

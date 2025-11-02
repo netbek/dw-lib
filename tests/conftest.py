@@ -1,8 +1,8 @@
 from collections.abc import Generator, Iterator
 from dw_lib.cloud.adapters import S3Adapter
 from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
+from dw_lib.loader import Loader
 from dw_lib.peerdb import PeerDB
-from dw_lib.streamer import Streamer
 from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
@@ -161,14 +161,14 @@ class PeerDBTest:
         yield peerdb
 
 
-class StreamerTest:
+class LoaderTest:
     @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:
-        return Path(__file__).parent / "docker-compose.streamer.yml"
+        return Path(__file__).parent / "docker-compose.loader.yml"
 
     @pytest.fixture(scope="module")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-test-streamer"  # Pin the project name to avoid creating multiple stacks
+        return "dw-lib-test-loader"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
@@ -227,7 +227,7 @@ class StreamerTest:
             region="us-east-1",
             endpoint="localhost:28950",
             use_ssl=False,
-            bucket="streamer",
+            bucket="loader",
         )
         s3_adapter = S3Adapter(s3_settings)
 
@@ -238,11 +238,11 @@ class StreamerTest:
         yield s3_adapter
 
     @pytest.fixture(scope="function")
-    def streamer(
+    def loader(
         self,
-        streamer_config_path: str,
+        loader_config_path: str,
         # clickhouse_adapter: ClickHouseAdapter,
         postgres_adapter: PostgresAdapter,
         s3_adapter: S3Adapter,
-    ) -> Generator[Streamer, Any, None]:
-        yield Streamer(streamer_config_path)
+    ) -> Generator[Loader, Any, None]:
+        yield Loader(loader_config_path)

@@ -16,7 +16,7 @@ connections:
       region: us-east-1
       endpoint: localhost:28950
       use_ssl: false
-      bucket: streamer
+      bucket: loader
 
 streams:
   - source: public.table_1

@@ -166,7 +166,7 @@ def detect_stream_class(source: str) -> type["BaseStream"]:
         raise ValueError(f"Invalid stream source: {source}")
 
 
-class Streamer:
+class Loader:
     def __init__(self, config_file: Path | str) -> None:
         self._config_file = config_file
         self._config = self._load_config()
@@ -293,7 +293,7 @@ class Streamer:
         )
 
 
-def find_config_file(filename: str = "streamer.yaml") -> Path:
+def find_config_file(filename: str = "loader.yaml") -> Path:
     cwd = os.getcwd()
     config_file = find_up(cwd, filename)
 

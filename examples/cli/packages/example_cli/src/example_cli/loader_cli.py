@@ -1,26 +1,26 @@
 from .root import app
-from dw_lib.streamer import find_config_file, Streamer
+from dw_lib.loader import find_config_file, Loader
 
 import rich
 import typer
 
-streamer_app = typer.Typer(name="streamer")
-app.add_typer(streamer_app)
+loader_app = typer.Typer(name="loader")
+app.add_typer(loader_app)
 console = rich.console.Console()
 
 
-@streamer_app.command()
+@loader_app.command()
 def debug() -> None:
     """Check the configuration and connections."""
     config_file = find_config_file()
-    streamer = Streamer(config_file)
-    streamer.debug(echo=True)
+    loader = Loader(config_file)
+    loader.debug(echo=True)
 
 
-@streamer_app.command()
+@loader_app.command()
 def run(source_connection: str, destination_connection: str, stream: str) -> None:
     """Run the stream."""
     config_file = find_config_file()
-    streamer = Streamer(config_file)
-    response = streamer.run(source_connection, destination_connection, stream)
+    loader = Loader(config_file)
+    response = loader.run(source_connection, destination_connection, stream)
     console.print(response.message, style="green")

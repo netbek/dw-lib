@@ -85,8 +85,8 @@ services:
         *) /usr/bin/mc mb local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;;
       esac;
       case \"$(/usr/bin/mc ls local)\" in
-        *streamer*) echo 'Bucket streamer already exists';;
-        *) /usr/bin/mc mb local/streamer;;
+        *loader*) echo 'Bucket loader already exists';;
+        *) /usr/bin/mc mb local/loader;;
       esac;
       wait
       "

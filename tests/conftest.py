@@ -174,30 +174,6 @@ class LoaderTest:
     # def docker_setup(self) -> list[str] | str:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
-    # @pytest.fixture(scope="module")
-    # def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
-    #     clickhouse_settings = ClickHouseSettings(
-    #         host="localhost",
-    #         http_port=28123,
-    #         tcp_port=29000,
-    #         username="default",
-    #         password="default",
-    #         database="default",
-    #         secure=False,
-    #         driver="http",
-    #     )
-    #     clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
-
-    #     def is_responsive():
-    #         try:
-    #             return clickhouse_adapter.can_connect()
-    #         except Exception:
-    #             return False
-
-    #     docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
-
-    #     yield clickhouse_adapter
-
     @pytest.fixture(scope="module")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
         postgres_settings = PostgresSettings(

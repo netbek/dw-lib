@@ -18,6 +18,14 @@ class MirrorNotFoundException(Exception):
     pass
 
 
+class ConnectionNotFoundException(Exception):
+    pass
+
+
+class StreamNotFoundException(Exception):
+    pass
+
+
 class DatabaseExistsException(Exception):
     pass
 

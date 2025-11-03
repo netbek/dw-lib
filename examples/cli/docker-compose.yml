@@ -81,8 +81,12 @@ services:
       sleep 2;
       /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
       case \"$(/usr/bin/mc ls local)\" in
-        *$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME*) echo 'Bucket already exists';;
+        *$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME*) echo 'Bucket $$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME already exists';;
         *) /usr/bin/mc mb local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;;
+      esac;
+      case \"$(/usr/bin/mc ls local)\" in
+        *loader*) echo 'Bucket loader already exists';;
+        *) /usr/bin/mc mb local/loader;;
       esac;
       wait
       "

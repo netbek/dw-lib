@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine3.22
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+      - TZ=UTC
+    ports:
+      - 25432:5432
+    command: postgres -c wal_level=logical -c max_wal_senders=2 -c max_replication_slots=4
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    stop_grace_period: 0s
+
+  minio:
+    container_name: minio
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    entrypoint: >
+      /bin/sh -c "
+      minio server /data --console-address=:9001 &
+      sleep 2;
+      /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      case \"$(/usr/bin/mc ls local)\" in
+        *loader*) echo 'Bucket loader already exists';;
+        *) /usr/bin/mc mb local/loader;;
+      esac;
+      wait
+      "
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+    ports:
+      - 28950:9000
+      - 28951:9001
+    healthcheck:
+      test: ["CMD-SHELL", "mc ls local/loader"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 30s
+    stop_grace_period: 0s

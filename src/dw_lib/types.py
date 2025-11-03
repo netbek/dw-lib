@@ -162,6 +162,17 @@ class PostgresSettings(BaseSettings):
     schema_: str = Field(default="public", serialization_alias="schema")
 
 
+class S3Settings(BaseSettings):
+    key_id: str
+    secret: str
+    region: str
+    endpoint: str
+    use_ssl: bool
+    url_style: str = "path"
+    bucket: str
+    prefix: str | None = None
+
+
 class DbtSettings(BaseSettings):
     directory: Path | str
     config: dict

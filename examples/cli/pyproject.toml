@@ -10,5 +10,5 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.4-batch" }
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.6-batch" }
 example-cli = { path = "./packages/example_cli", editable = true }

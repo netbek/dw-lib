@@ -3,7 +3,7 @@ name = "dw-lib"
 version = "1.1.0"
 description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 dependencies = [
     "boto3>=1.40.64",
     "chdb>=3.6.0",

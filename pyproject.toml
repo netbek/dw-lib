@@ -63,4 +63,4 @@ filterwarnings = [
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }
-dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.4-batch" }
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.6-batch" }

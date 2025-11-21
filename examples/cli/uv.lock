@@ -183,7 +183,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.4-batch" },
+    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.6-batch" },
     { name = "example-cli", editable = "packages/example_cli" },
 ]
 
@@ -295,8 +295,8 @@ wheels = [
 
 [[package]]
 name = "dbt-clickhouse"
-version = "1.9.4"
-source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.4-batch#15d8eda24d84d3236e0aa279d7327d82c637b64b" }
+version = "1.9.6"
+source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.6-batch#5c653e75f4829585277f18ba8f4719d16051b852" }
 dependencies = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-driver" },
@@ -491,7 +491,7 @@ requires-dist = [
     { name = "chdb", specifier = ">=3.7.2" },
     { name = "clickhouse-connect", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.4-batch" },
+    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.6-batch" },
     { name = "dbt-core", specifier = ">=1.9.10,<1.10" },
     { name = "duckdb", specifier = ">=1.4.2" },
     { name = "duckdb-engine", specifier = ">=0.17.0" },

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18.1-alpine3.22
+    image: postgres:18.1-alpine3.23
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -17,7 +17,7 @@ services:
     stop_grace_period: 0s
 
   clickhouse:
-    image: clickhouse/clickhouse-server:25.8.11.66-alpine
+    image: clickhouse/clickhouse-server:25.11.2.24-alpine
     environment:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=default

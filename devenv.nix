@@ -11,6 +11,7 @@
   packages = with pkgs; [
     nixfmt-rfc-style
     pre-commit
+    ripgrep
   ];
 
   languages = {

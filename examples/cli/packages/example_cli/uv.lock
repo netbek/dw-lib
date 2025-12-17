@@ -279,8 +279,8 @@ wheels = [
 
 [[package]]
 name = "dbt-clickhouse"
-version = "1.9.6"
-source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.6-batch#5c653e75f4829585277f18ba8f4719d16051b852" }
+version = "1.9.7"
+source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.7-batch#633edfee4757402ea03029f5808856dcccfd9a5d" }
 dependencies = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-driver" },
@@ -315,7 +315,7 @@ wheels = [
 
 [[package]]
 name = "dbt-core"
-version = "1.9.10"
+version = "1.10.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agate" },
@@ -324,13 +324,16 @@ dependencies = [
     { name = "dbt-adapters" },
     { name = "dbt-common" },
     { name = "dbt-extractor" },
+    { name = "dbt-protos" },
     { name = "dbt-semantic-interfaces" },
     { name = "jinja2" },
+    { name = "jsonschema" },
     { name = "mashumaro", extra = ["msgpack"] },
     { name = "networkx" },
     { name = "packaging" },
     { name = "pathspec" },
     { name = "protobuf" },
+    { name = "pydantic" },
     { name = "pytz" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -338,9 +341,9 @@ dependencies = [
     { name = "sqlparse" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/9e/2c4e30f231f92fa3cef665fd79e8db7790e9544cde1824047106ae32c3a8/dbt_core-1.9.10.tar.gz", hash = "sha256:ae0c4be496b349cd308221fe844965fb6736b951fccf0446af52383cea44d48b", size = 868138, upload-time = "2025-08-29T15:15:04.568Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/6c/966d4022584d2f176f9067a353bcb66bc05889a05fdaa66c060a87077f41/dbt_core-1.10.16.tar.gz", hash = "sha256:e20c5a47d4d401add9d15ee0ddffe279595b356133f8770fa25465610ab273fa", size = 900269, upload-time = "2025-12-16T16:58:16.205Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/49/ff60b7f3bd7a2c8f584dd6b31e1d1163a4f81935eaa2af6270a6fe07d6d6/dbt_core-1.9.10-py3-none-any.whl", hash = "sha256:3ec67de469902499083be4df70501f6c5cfea7caa5afa23ecaf898a4e505d56f", size = 947078, upload-time = "2025-08-29T15:15:02.244Z" },
+    { url = "https://files.pythonhosted.org/packages/02/2f/9ae693a5e8dd76cca00d658982ad76d64c1eafb0425ea2dae0e67ec97447/dbt_core-1.10.16-py3-none-any.whl", hash = "sha256:5e4cb7505efa3623b37476a1d06175ce14be69fd82fc9a14d1bc57a9ca35b615", size = 986991, upload-time = "2025-12-16T16:58:14.414Z" },
 ]
 
 [[package]]
@@ -380,7 +383,7 @@ wheels = [
 
 [[package]]
 name = "dbt-semantic-interfaces"
-version = "0.7.5"
+version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -393,9 +396,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/5e/b88f13d96f8da9704e11f29a63b74f0161cdefd85b0a893467e854030b43/dbt_semantic_interfaces-0.7.5.tar.gz", hash = "sha256:8857f1833bffe5194f9d676ae2dc8cbcc45e8af4152187e351f68377708c39bb", size = 96448, upload-time = "2025-07-02T19:03:27.799Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/91/c702d8fb143541fda10f5eb7a7a89f34bda38ee043ecb3e3653363d0c5a0/dbt_semantic_interfaces-0.9.0.tar.gz", hash = "sha256:5c921257dce8bb51c9ffb5479f2bdd959e16ebfb98ee833de6daa70788c47271", size = 93865, upload-time = "2025-07-09T20:06:30.454Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/94/c5d2469ff30897fac307d1f8b69dfb0121f46311dc11a4a07fda210861b4/dbt_semantic_interfaces-0.7.5-py3-none-any.whl", hash = "sha256:36315cfa6175da86904c86414948516bda3cf595bf9edd18e156437a2c5f6619", size = 141984, upload-time = "2025-07-02T19:03:28.975Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/82/41708b2b69d5fead88dea5ca0d863d6291da83ca6f1bd19246842d397e2b/dbt_semantic_interfaces-0.9.0-py3-none-any.whl", hash = "sha256:1b54c06ba89190a47a7f0563360930a0cce869e55b484ca09d261ade0e319155", size = 147008, upload-time = "2025-07-09T20:06:32.466Z" },
 ]
 
 [[package]]
@@ -476,8 +479,8 @@ requires-dist = [
     { name = "chdb", specifier = ">=3.7.2" },
     { name = "clickhouse-connect", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.6-batch" },
-    { name = "dbt-core", specifier = ">=1.9.10,<1.10" },
+    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.7-batch" },
+    { name = "dbt-core", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", specifier = ">=1.4.2" },
     { name = "duckdb-engine", specifier = ">=0.17.0" },
     { name = "httpx", specifier = ">=0.28.1" },

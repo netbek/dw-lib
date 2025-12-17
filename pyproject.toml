@@ -10,7 +10,7 @@ dependencies = [
     "clickhouse-connect>=0.10.0",
     "clickhouse-sqlalchemy",
     "dbt-clickhouse",
-    "dbt-core>=1.9.10,<1.10", # Pinned because of dbt-clickhouse
+    "dbt-core>=1.10.0,<1.11", # Pinned because of dbt-clickhouse
     "duckdb>=1.4.2",
     "duckdb-engine>=0.17.0",
     "httpx>=0.28.1",
@@ -63,4 +63,4 @@ filterwarnings = [
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }
-dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.6-batch" }
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.7-batch" }

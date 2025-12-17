@@ -2,7 +2,7 @@
 set -e
 
 psql -tc "SELECT 1 FROM pg_user WHERE usename = 'peerdb'" | grep -q 1 || \
-    psql -c "CREATE USER peerdb WITH PASSWORD 'peerdb' SUPERUSER;"
+    psql -c "CREATE USER peerdb WITH PASSWORD 'peerdb';"
 
 createdb --echo --owner=peerdb peerdb
 

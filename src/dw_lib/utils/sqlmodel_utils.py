@@ -5,7 +5,7 @@ from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from sqlalchemy.sql.ddl import CreateTable
 from sqlglot import exp
 from sqlglot.dialects.dialect import Dialects, DialectType
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Table
 
 import datetime
 import os
@@ -115,6 +115,20 @@ def make_create_table_statement(
     return tree.sql(dialect=dialect)
 
 
+def get_model_schema(model: type[SQLModel]) -> str | None:
+    table = getattr(model, "__table__", None)
+
+    if isinstance(table, Table):
+        return table.schema
+
+    table_args = getattr(model, "__table_args__", None)
+
+    if isinstance(table_args, dict):
+        return table_args.get("schema")
+
+    return None
+
+
 def make_create_view_statement(
     dialect: DialectType,
     model: type[SQLModel],
@@ -123,12 +137,7 @@ def make_create_view_statement(
     schema: str | None = None,
 ) -> str:
     resolved_table = table or model.__tablename__
-
-    model_schema = None
-    table_args = getattr(model, "__table_args__", None)
-    if isinstance(table_args, dict):
-        model_schema = table_args.get("schema")
-    resolved_schema = schema or model_schema
+    resolved_schema = schema or get_model_schema(model)
 
     table_exp = exp.Table(
         this=exp.Identifier(this=resolved_table),

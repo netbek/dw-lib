@@ -6,14 +6,14 @@ from sqlmodel import SQLModel
 import pytest
 
 
-class ModelWithoutSchema(SQLModel):
+class ViewWithoutSchema(SQLModel):
     __tablename__ = "view_without_schema"
     __sql__ = """
     SELECT 42 AS id
     """
 
 
-class ModelWithSchema(SQLModel):
+class ViewWithSchema(SQLModel):
     __tablename__ = "view_with_schema"
     __sql__ = """
     SELECT 42 AS id
@@ -21,14 +21,14 @@ class ModelWithSchema(SQLModel):
     __table_args__ = {"schema": "analytics"}
 
 
-class TestModelWithoutSchema:
+class TestViewWithoutSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithoutSchema
+        return ViewWithoutSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_view_statement(dialect, model, model.__sql__)
@@ -75,14 +75,14 @@ class TestModelWithoutSchema:
         assert_sql_equal(actual, expected)
 
 
-class TestModelWithSchema:
+class TestViewWithSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithSchema
+        return ViewWithSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_view_statement(dialect, model, model.__sql__)

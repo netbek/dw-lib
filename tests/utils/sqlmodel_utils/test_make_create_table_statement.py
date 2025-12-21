@@ -8,7 +8,7 @@ from sqlmodel import Field, SQLModel
 import pytest
 
 
-class ModelWithoutSchema(SQLModel, table=True):
+class TableWithoutSchema(SQLModel, table=True):
     __tablename__ = "table_without_schema"
 
     id: int = Field(sa_column=Column(types.Int32, primary_key=True))
@@ -21,7 +21,7 @@ class ModelWithoutSchema(SQLModel, table=True):
     )
 
 
-class ModelWithSchema(SQLModel, table=True):
+class TableWithSchema(SQLModel, table=True):
     __tablename__ = "table_with_schema"
 
     id: int = Field(sa_column=Column(types.Int32, primary_key=True))
@@ -35,14 +35,14 @@ class ModelWithSchema(SQLModel, table=True):
     )
 
 
-class TestModelWithoutSchema:
+class TestTableWithoutSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithoutSchema
+        return TableWithoutSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_table_statement(dialect, model)
@@ -121,14 +121,14 @@ class TestModelWithoutSchema:
         assert_sql_equal(actual, expected)
 
 
-class TestModelWithSchema:
+class TestTableWithSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithSchema
+        return TableWithSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_table_statement(dialect, model)

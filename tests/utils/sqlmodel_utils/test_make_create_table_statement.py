@@ -1,48 +1,19 @@
 from ...asserts import assert_sql_equal
-from clickhouse_sqlalchemy import engines, types
+from .fixtures import TableWithoutSchema, TableWithSchema
 from dw_lib.utils.sqlmodel_utils import make_create_table_statement
-from sqlalchemy import Column
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import Field, SQLModel
 
 import pytest
 
 
-class ModelWithoutSchema(SQLModel, table=True):
-    __tablename__ = "table_without_schema"
-
-    id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-
-    __table_args__ = (
-        engines.MergeTree(
-            order_by=("id"),
-            index_granularity=8192,
-        ),
-    )
-
-
-class ModelWithSchema(SQLModel, table=True):
-    __tablename__ = "table_with_schema"
-
-    id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-
-    __table_args__ = (
-        engines.MergeTree(
-            order_by=("id"),
-            index_granularity=8192,
-        ),
-        {"schema": "analytics"},
-    )
-
-
-class TestModelWithoutSchema:
+class TestTableWithoutSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithoutSchema
+        return TableWithoutSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_table_statement(dialect, model)
@@ -121,14 +92,14 @@ class TestModelWithoutSchema:
         assert_sql_equal(actual, expected)
 
 
-class TestModelWithSchema:
+class TestTableWithSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithSchema
+        return TableWithSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_table_statement(dialect, model)

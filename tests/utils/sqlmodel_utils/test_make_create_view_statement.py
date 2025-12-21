@@ -1,34 +1,19 @@
 from ...asserts import assert_sql_equal
+from .fixtures import ViewWithoutSchema, ViewWithSchema
 from dw_lib.utils.sqlmodel_utils import make_create_view_statement
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import SQLModel
 
 import pytest
 
 
-class ModelWithoutSchema(SQLModel):
-    __tablename__ = "view_without_schema"
-    __sql__ = """
-    SELECT 42 AS id
-    """
-
-
-class ModelWithSchema(SQLModel):
-    __tablename__ = "view_with_schema"
-    __sql__ = """
-    SELECT 42 AS id
-    """
-    __table_args__ = {"schema": "analytics"}
-
-
-class TestModelWithoutSchema:
+class TestViewWithoutSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithoutSchema
+        return ViewWithoutSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_view_statement(dialect, model, model.__sql__)
@@ -75,14 +60,14 @@ class TestModelWithoutSchema:
         assert_sql_equal(actual, expected)
 
 
-class TestModelWithSchema:
+class TestViewWithSchema:
     @pytest.fixture
     def dialect(self):
         return Dialects.CLICKHOUSE
 
     @pytest.fixture
     def model(self):
-        return ModelWithSchema
+        return ViewWithSchema
 
     def test_defaults(self, dialect, model):
         actual = make_create_view_statement(dialect, model, model.__sql__)

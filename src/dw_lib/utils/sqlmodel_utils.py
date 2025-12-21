@@ -1,7 +1,11 @@
 from ..database.adapters import ClickHouseAdapter
 from ..types import ClickHouseSettings, DbtSource
 from ..utils.python_utils import is_python_keyword
-from sqlglot.dialects.dialect import Dialects
+from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
+from sqlalchemy.sql.ddl import CreateTable
+from sqlglot import exp
+from sqlglot.dialects.dialect import Dialects, DialectType
+from sqlmodel import SQLModel
 
 import datetime
 import os
@@ -79,6 +83,36 @@ SQLGLOT_TO_PYTHON_TYPE = {
 }
 
 INDENT = pydash.repeat(" ", 4)
+
+
+def make_create_table_statement(
+    dialect: DialectType,
+    model: type[SQLModel],
+    table: str | None = None,
+    schema: str | None = None,
+    sql: str | None = None,
+) -> str:
+    statement = CreateTable(model.__table__).compile(dialect=ClickHouseDialect())
+    statement = str(statement)
+    tree = sqlglot.parse_one(statement, read=dialect)
+
+    if table is not None or schema is not None:
+        table_exp = tree.find(exp.Table)
+
+        if table_exp is None:
+            raise Exception()
+
+        if table is not None:
+            table_exp.set("this", exp.Identifier(this=table))
+
+        if schema is not None:
+            table_exp.set("db", exp.Identifier(this=schema))
+
+    if sql is not None:
+        query_exp = sqlglot.parse_one(sql, read=dialect)
+        tree.set("expression", query_exp)
+
+    return tree.sql(dialect=dialect)
 
 
 def parse_create_table_statement(statement: str) -> dict:

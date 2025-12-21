@@ -1,24 +1,9 @@
 from ...asserts import assert_sql_equal
+from .fixtures import ViewWithoutSchema, ViewWithSchema
 from dw_lib.utils.sqlmodel_utils import make_create_view_statement
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import SQLModel
 
 import pytest
-
-
-class ViewWithoutSchema(SQLModel):
-    __tablename__ = "view_without_schema"
-    __sql__ = """
-    SELECT 42 AS id
-    """
-
-
-class ViewWithSchema(SQLModel):
-    __tablename__ = "view_with_schema"
-    __sql__ = """
-    SELECT 42 AS id
-    """
-    __table_args__ = {"schema": "analytics"}
 
 
 class TestViewWithoutSchema:

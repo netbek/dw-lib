@@ -1,38 +1,9 @@
 from ...asserts import assert_sql_equal
-from clickhouse_sqlalchemy import engines, types
+from .fixtures import TableWithoutSchema, TableWithSchema
 from dw_lib.utils.sqlmodel_utils import make_create_table_statement
-from sqlalchemy import Column
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import Field, SQLModel
 
 import pytest
-
-
-class TableWithoutSchema(SQLModel, table=True):
-    __tablename__ = "table_without_schema"
-
-    id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-
-    __table_args__ = (
-        engines.MergeTree(
-            order_by=("id"),
-            index_granularity=8192,
-        ),
-    )
-
-
-class TableWithSchema(SQLModel, table=True):
-    __tablename__ = "table_with_schema"
-
-    id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-
-    __table_args__ = (
-        engines.MergeTree(
-            order_by=("id"),
-            index_granularity=8192,
-        ),
-        {"schema": "analytics"},
-    )
 
 
 class TestTableWithoutSchema:

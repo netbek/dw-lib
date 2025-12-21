@@ -1,3 +1,4 @@
+from ...asserts import assert_sql_equal
 from clickhouse_sqlalchemy import engines, types
 from dw_lib.utils.sqlmodel_utils import make_create_table_statement
 from sqlalchemy import Column
@@ -5,15 +6,6 @@ from sqlglot.dialects.dialect import Dialects
 from sqlmodel import Field, SQLModel
 
 import pytest
-import sqlparse
-
-
-def format_sql(sql: str) -> str:
-    return sqlparse.format(sql.strip(), reindent=True, keyword_case="upper")
-
-
-def assertSqlEqual(a: str, b: str):
-    assert format_sql(a) == format_sql(b)
 
 
 class ModelWithoutSchema(SQLModel, table=True):
@@ -62,7 +54,7 @@ class TestModelWithoutSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_sql_query(self, dialect, model):
         actual = make_create_table_statement(dialect, model, sql="SELECT 42 AS id")
@@ -75,7 +67,7 @@ class TestModelWithoutSchema:
         SETTINGS index_granularity = 8192
         AS SELECT 42 AS id
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_sql_cte(self, dialect, model):
         actual = make_create_table_statement(
@@ -90,7 +82,7 @@ class TestModelWithoutSchema:
         SETTINGS index_granularity = 8192
         AS WITH final AS (SELECT 42 AS id) SELECT * FROM final
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_override_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, table="my_table")
@@ -102,7 +94,7 @@ class TestModelWithoutSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_override_schema(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema")
@@ -114,7 +106,7 @@ class TestModelWithoutSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_override_schema_and_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema", table="my_table")
@@ -126,7 +118,7 @@ class TestModelWithoutSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
 
 class TestModelWithSchema:
@@ -148,7 +140,7 @@ class TestModelWithSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_override_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, table="my_table")
@@ -160,7 +152,7 @@ class TestModelWithSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_override_schema(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema")
@@ -172,7 +164,7 @@ class TestModelWithSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)
 
     def test_override_schema_and_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema", table="my_table")
@@ -184,4 +176,4 @@ class TestModelWithSchema:
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
-        assertSqlEqual(actual, expected)
+        assert_sql_equal(actual, expected)

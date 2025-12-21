@@ -1,6 +1,7 @@
 from collections import Counter
 
 import re
+import sqlparse
 
 
 def strip_whitespace(string: str) -> str:
@@ -28,3 +29,11 @@ def assert_count_equal(a, b):
     b_elements = sorted(map(dict_to_tuple, b))
 
     assert Counter(list(a_elements)) == Counter(list(b_elements)), "Lists have different elements"
+
+
+def format_sql(sql: str) -> str:
+    return sqlparse.format(sql.strip(), reindent=True, keyword_case="upper")
+
+
+def assert_sql_equal(a: str, b: str):
+    assert format_sql(a) == format_sql(b)

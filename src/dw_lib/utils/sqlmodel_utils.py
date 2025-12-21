@@ -100,7 +100,7 @@ def make_create_table_statement(
         table_exp = tree.find(exp.Table)
 
         if table_exp is None:
-            raise Exception()
+            raise Exception("Table expression not found")
 
         if table is not None:
             table_exp.set("this", exp.Identifier(this=table))

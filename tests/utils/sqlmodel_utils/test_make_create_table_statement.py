@@ -55,26 +55,26 @@ class TestModelWithoutSchema:
     def test_defaults(self, dialect, model):
         actual = make_create_table_statement(dialect, model)
         expected = """
-CREATE TABLE table_without_schema (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
     def test_sql_query(self, dialect, model):
         actual = make_create_table_statement(dialect, model, sql="SELECT 42 AS id")
         expected = """
-CREATE TABLE table_without_schema (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-AS SELECT 42 AS id
-"""
+        CREATE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        AS SELECT 42 AS id
+        """
         assertSqlEqual(actual, expected)
 
     def test_sql_cte(self, dialect, model):
@@ -82,50 +82,50 @@ AS SELECT 42 AS id
             dialect, model, sql="WITH final AS (SELECT 42 AS id) SELECT * FROM final"
         )
         expected = """
-CREATE TABLE table_without_schema (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-AS WITH final AS (SELECT 42 AS id) SELECT * FROM final
-"""
+        CREATE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        AS WITH final AS (SELECT 42 AS id) SELECT * FROM final
+        """
         assertSqlEqual(actual, expected)
 
     def test_override_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, table="my_table")
         expected = """
-CREATE TABLE my_table (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
     def test_override_schema(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema")
         expected = """
-CREATE TABLE my_schema.table_without_schema (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE my_schema.table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
     def test_override_schema_and_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema", table="my_table")
         expected = """
-CREATE TABLE my_schema.my_table (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE my_schema.my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
 
@@ -141,47 +141,47 @@ class TestModelWithSchema:
     def test_defaults(self, dialect, model):
         actual = make_create_table_statement(dialect, model)
         expected = """
-CREATE TABLE analytics.table_with_schema (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE analytics.table_with_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
     def test_override_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, table="my_table")
         expected = """
-CREATE TABLE analytics.my_table (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE analytics.my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
     def test_override_schema(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema")
         expected = """
-CREATE TABLE my_schema.table_with_schema (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE my_schema.table_with_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)
 
     def test_override_schema_and_table(self, dialect, model):
         actual = make_create_table_statement(dialect, model, schema="my_schema", table="my_table")
         expected = """
-CREATE TABLE my_schema.my_table (
-	id Int32
-)
-ENGINE=MergeTree()
-ORDER BY id
-SETTINGS index_granularity = 8192
-"""
+        CREATE TABLE my_schema.my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
         assertSqlEqual(actual, expected)

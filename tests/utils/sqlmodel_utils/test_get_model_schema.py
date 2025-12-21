@@ -1,10 +1,7 @@
 from clickhouse_sqlalchemy import engines, types
 from dw_lib.utils.sqlmodel_utils import get_model_schema
 from sqlalchemy import Column
-from sqlglot.dialects.dialect import Dialects
 from sqlmodel import Field, SQLModel
-
-import pytest
 
 
 class TableWithoutSchema(SQLModel, table=True):

@@ -115,6 +115,35 @@ def make_create_table_statement(
     return tree.sql(dialect=dialect)
 
 
+def make_create_view_statement(
+    dialect: DialectType,
+    model: type[SQLModel],
+    sql: str,
+    table: str | None = None,
+    schema: str | None = None,
+) -> str:
+    resolved_table = table or model.__tablename__
+
+    model_schema = None
+    table_args = getattr(model, "__table_args__", None)
+    if isinstance(table_args, dict):
+        model_schema = table_args.get("schema")
+    resolved_schema = schema or model_schema
+
+    table_exp = exp.Table(
+        this=exp.Identifier(this=resolved_table),
+        db=exp.Identifier(this=resolved_schema) if resolved_schema else None,
+    )
+    query_exp = sqlglot.parse_one(sql, read=dialect)
+    create_view = exp.Create(
+        this=table_exp,
+        kind="VIEW",
+        expression=query_exp,
+    )
+
+    return create_view.sql(dialect=dialect)
+
+
 def parse_create_table_statement(statement: str) -> dict:
     result = {
         "engine": None,

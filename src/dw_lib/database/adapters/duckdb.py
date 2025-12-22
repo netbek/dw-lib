@@ -114,6 +114,8 @@ class DuckDBAdapter(BaseAdapter):
         table: str | None = None,
         database: str | None = None,
         sql: str | None = None,
+        pretty: bool = False,
+        indent: int = 2,
     ) -> str:
         raise NotImplementedError()
 
@@ -123,6 +125,8 @@ class DuckDBAdapter(BaseAdapter):
         sql: str,
         table: str | None = None,
         database: str | None = None,
+        pretty: bool = False,
+        indent: int = 2,
     ) -> str:
         raise NotImplementedError()
 

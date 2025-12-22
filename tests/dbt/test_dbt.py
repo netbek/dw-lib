@@ -167,7 +167,7 @@ SETTINGS index_granularity = 8192
 \"""
 
 from clickhouse_sqlalchemy import engines
-from dw_lib.polyfactory.mixins import BaseMixin
+from dw_lib.dbt.polyfactory.mixins import BaseMixin
 from dw_lib.sqlalchemy.clickhouse import types
 from sqlmodel import Column, Field, SQLModel
 from uuid import UUID
@@ -211,8 +211,8 @@ class {python_class}(BaseMixin, SQLModel, table=True):
 
         expected_factory_code = f"""
 from .{table_identifier.table} import {python_class}
-from dw_lib.polyfactory.factories.sqlmodel_factory import SQLModelFactory
-from dw_lib.polyfactory.mixins import PeerDBFactoryMixin
+from dw_lib.dbt.polyfactory.factories.sqlmodel_factory import SQLModelFactory
+from dw_lib.dbt.polyfactory.mixins import PeerDBFactoryMixin
 import pydash
 
 

@@ -1,10 +1,10 @@
-from .constants import CODEGEN_TO_CLICKHOUSE_DATA_TYPE
-from .database.adapters import ClickHouseAdapter
-from .typing import ClickHouseSettings
-from .utils.filesystem import find_up, get_file_extension
-from .utils.python_utils import is_python_keyword
-from .utils.sqlmodel_utils import parse_create_table_statement
-from .utils.yaml_utils import safe_load_file
+from ..constants import CODEGEN_TO_CLICKHOUSE_DATA_TYPE
+from ..database.adapters import ClickHouseAdapter
+from ..typing import ClickHouseSettings
+from ..utils.filesystem import find_up, get_file_extension
+from ..utils.python_utils import is_python_keyword
+from ..utils.sqlmodel_utils import parse_create_table_statement
+from ..utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from enum import StrEnum
 from livereload import Server
@@ -230,7 +230,7 @@ def create_model_code(
 
     imports = [
         "from clickhouse_sqlalchemy import engines",
-        "from dw_lib.polyfactory.mixins import BaseMixin",
+        "from dw_lib.dbt.polyfactory.mixins import BaseMixin",
         "from dw_lib.sqlalchemy.clickhouse import types",
         "from sqlmodel import Column, Field, SQLModel",
     ]
@@ -305,8 +305,8 @@ def create_model_code(
 
     imports = [
         f"from .{model_filename} import {model_name}",
-        "from dw_lib.polyfactory.factories.sqlmodel_factory import SQLModelFactory",
-        "from dw_lib.polyfactory.mixins import PeerDBFactoryMixin",
+        "from dw_lib.dbt.polyfactory.factories.sqlmodel_factory import SQLModelFactory",
+        "from dw_lib.dbt.polyfactory.mixins import PeerDBFactoryMixin",
     ]
 
     lines = []

@@ -1,5 +1,5 @@
 from .constants import CODEGEN_TO_CLICKHOUSE_DATA_TYPE
-from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
+from .typing import DbtModel, DbtResourceType, DbtSeed, DbtSource
 from .utils.filesystem import find_up, get_file_extension
 from .utils.yaml_utils import safe_load_file
 from dbt.cli.main import dbtRunner, dbtRunnerResult

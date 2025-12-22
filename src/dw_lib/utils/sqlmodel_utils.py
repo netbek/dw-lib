@@ -1,5 +1,5 @@
 from ..database.adapters import ClickHouseAdapter
-from ..types import ClickHouseSettings, DbtSource
+from ..typing import ClickHouseSettings, DbtSource
 from ..utils.python_utils import is_python_keyword
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from sqlalchemy.sql.ddl import CreateTable

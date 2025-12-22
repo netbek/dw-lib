@@ -6,7 +6,7 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import (
+from ...typing import (
     CreateTableStatementOptions,
     PostgresIdentifier,
     PostgresSettings,

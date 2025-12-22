@@ -224,6 +224,7 @@ class ClickHouseAdapter(BaseAdapter):
         database: str | None = None,
         sql: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str:
         statement = CreateTable(model.__table__).compile(dialect=ClickHouseDialect())
@@ -255,6 +256,7 @@ class ClickHouseAdapter(BaseAdapter):
         table: str | None = None,
         database: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str:
         resolved_table = table or model.__tablename__

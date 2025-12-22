@@ -152,6 +152,7 @@ class BaseAdapter(ABC):
         database: str | None = None,
         sql: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str: ...
 
@@ -165,6 +166,7 @@ class BaseAdapter(ABC):
         schema: str | None = None,
         sql: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str: ...
 
@@ -180,6 +182,7 @@ class BaseAdapter(ABC):
         table: str | None = None,
         database: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str: ...
 
@@ -193,6 +196,7 @@ class BaseAdapter(ABC):
         database: str | None = None,
         schema: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str: ...
 

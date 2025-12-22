@@ -532,7 +532,7 @@ class PostgresAdapter(BaseAdapter):
                 raise PublicationExistsException(f"Publication '{publication}' exists")
 
         quoted_publication = PostgresIdentifier.quote(publication)
-        tables = [PostgresTableIdentifier.from_string(table) for table in tables]
+        tables = [str(PostgresTableIdentifier.from_string(table)) for table in tables]
         statement = f"create publication {quoted_publication} for table {', '.join(tables)};"
 
         with self.create_client() as (conn, cur):

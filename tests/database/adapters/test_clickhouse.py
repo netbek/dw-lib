@@ -151,11 +151,11 @@ class TestClickHouseAdapter(DatabaseTest):
 
         assert clickhouse_adapter.drop_table(table, if_exists=True) is None
 
-    def test_get_create_table_statement(
+    def test_make_create_table_statement_from_table(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
         with pytest.raises(TableNotFoundException):
-            clickhouse_adapter.get_create_table_statement("non_existent")
+            clickhouse_adapter.make_create_table_statement_from_table("non_existent")
 
         expected = f"""
         CREATE TABLE {clickhouse_adapter.settings.database}.{clickhouse_table.name}
@@ -168,7 +168,8 @@ class TestClickHouseAdapter(DatabaseTest):
         SETTINGS index_granularity = 8192
         """
         assert_equal_ignoring_whitespace(
-            clickhouse_adapter.get_create_table_statement(clickhouse_table.name), expected
+            clickhouse_adapter.make_create_table_statement_from_table(clickhouse_table.name),
+            expected,
         )
 
     def test_list_tables_empty_database(self, clickhouse_adapter: ClickHouseAdapter):

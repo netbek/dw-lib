@@ -126,11 +126,13 @@ class BaseAdapter(ABC):
 
     @overload
     @abstractmethod
-    def get_create_table_statement(self, table: str, database: str | None = None) -> None: ...
+    def make_create_table_statement_from_table(
+        self, table: str, database: str | None = None
+    ) -> None: ...
 
     @overload
     @abstractmethod
-    def get_create_table_statement(
+    def make_create_table_statement_from_table(
         self,
         table: str,
         database: str | None = None,
@@ -139,7 +141,7 @@ class BaseAdapter(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def get_create_table_statement(self, *args, **kwargs) -> None: ...
+    def make_create_table_statement_from_table(self, *args, **kwargs) -> None: ...
 
     @overload
     @abstractmethod

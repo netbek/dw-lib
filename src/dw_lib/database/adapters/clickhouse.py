@@ -190,7 +190,9 @@ class ClickHouseAdapter(BaseAdapter):
         with self.create_client() as client:
             client.command(statement)
 
-    def get_create_table_statement(self, table: str, database: str | None = None) -> None:
+    def make_create_table_statement_from_table(
+        self, table: str, database: str | None = None
+    ) -> None:
         if database is None:
             database = self.settings.database
 

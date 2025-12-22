@@ -53,7 +53,9 @@ def create_model_code(
     clickhouse_adapter = ClickHouseAdapter(db_settings)
     table_name = dbt_resource.name
     model_name = dbt_resource.original_config.meta.python_class
-    statement = clickhouse_adapter.get_create_table_statement(table_name, database=database)
+    statement = clickhouse_adapter.make_create_table_statement_from_table(
+        table_name, database=database
+    )
     parsed_statement = parse_create_table_statement(statement)
     table_kwargs = {"schema": database}
     engine = parsed_statement["engine"]

@@ -182,7 +182,7 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement)
 
-    def get_create_table_statement(
+    def make_create_table_statement_from_table(
         self,
         table: str,
         database: str | None = None,

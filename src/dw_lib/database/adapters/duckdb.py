@@ -103,7 +103,7 @@ class DuckDBAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def get_create_table_statement(
+    def make_create_table_statement_from_table(
         self, table: str, database: str | None = None, schema: str | None = None
     ) -> None:
         raise NotImplementedError()

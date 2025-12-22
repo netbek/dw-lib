@@ -247,7 +247,7 @@ class ClickHouseAdapter(BaseAdapter):
             query_exp = sqlglot.parse_one(sql, read=self.dialect)
             tree.set("expression", query_exp)
 
-        return tree.sql(dialect=self.dialect, pretty=pretty, indent=indent)
+        return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
     def make_create_view_statement_from_model(
         self,
@@ -273,7 +273,7 @@ class ClickHouseAdapter(BaseAdapter):
             expression=query_exp,
         )
 
-        return create_view.sql(dialect=self.dialect, pretty=pretty, indent=indent)
+        return create_view.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
     def drop_table(
         self, table: str, database: str | None = None, if_exists: bool | None = False

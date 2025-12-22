@@ -1,4 +1,3 @@
-from .constants import PEERDB_DESTINATION_PEER, PEERDB_SOURCE_PEER
 from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import (
@@ -29,6 +28,9 @@ import pydash
 import rich
 import time
 import yaml
+
+PEERDB_SOURCE_PEER = "source"
+PEERDB_DESTINATION_PEER = "destination"
 
 # https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/peers.proto#L261
 DIALECT_TO_PEERDB_TYPE_MAP = {

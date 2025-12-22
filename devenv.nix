@@ -21,6 +21,7 @@
         enable = true;
         sync = {
           enable = true;
+          allExtras = true;
           allGroups = true;
         };
       };
@@ -31,10 +32,10 @@
   # the current pytest is the one in the Nix store, not the virtual environment. As a workaround,
   # run `uv sync` again in the root.
   scripts.uv_sync_all.exec = ''
-    cd "$DEVENV_ROOT" && uv sync --all-groups
-    cd "$DEVENV_ROOT/examples/cli" && uv sync --all-groups
-    cd "$DEVENV_ROOT/examples/cli/packages/example_cli" && uv sync --all-groups
-    cd "$DEVENV_ROOT" && uv sync --all-groups
+    cd "$DEVENV_ROOT" && uv sync --all-extras --all-groups
+    cd "$DEVENV_ROOT/examples/cli" && uv sync --all-extras --all-groups
+    cd "$DEVENV_ROOT/examples/cli/packages/example_cli" && uv sync --all-extras --all-groups
+    cd "$DEVENV_ROOT" && uv sync --all-extras --all-groups
   '';
 
   scripts.uv_lock_upgrade_all.exec = ''

@@ -1,4 +1,4 @@
-from ...typing import DuckDBSettings
+from ...types import DuckDBSettings
 from ..adapters.base import BaseAdapter
 from collections.abc import Generator
 from contextlib import contextmanager

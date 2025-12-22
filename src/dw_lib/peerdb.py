@@ -9,7 +9,7 @@ from .exceptions import (
     PeerNotFoundException,
     TableNotFoundException,
 )
-from .typing import (
+from .types import (
     ClickHouseSettings,
     ClickHouseTableIdentifier,
     PostgresSettings,

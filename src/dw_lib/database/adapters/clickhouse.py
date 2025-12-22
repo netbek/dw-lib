@@ -222,8 +222,7 @@ class ClickHouseAdapter(BaseAdapter):
             else:
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-        quoted_table = ClickHouseTableIdentifier(database=database, table=table).to_string()
-        statement = f"drop table {quoted_table};"
+        statement = f"drop table {ClickHouseTableIdentifier(database=database, table=table)};"
 
         with self.create_client() as client:
             client.command(statement)
@@ -235,8 +234,7 @@ class ClickHouseAdapter(BaseAdapter):
         if not self.has_table(table=table, database=database):
             return
 
-        quoted_table = ClickHouseTableIdentifier(database=database, table=table).to_string()
-        statement = f"truncate table {quoted_table};"
+        statement = f"truncate table {ClickHouseTableIdentifier(database=database, table=table)};"
 
         with self.create_client() as client:
             client.command(statement)

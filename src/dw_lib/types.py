@@ -42,7 +42,7 @@ class ClickHouseTableIdentifier(ClickHouseIdentifier, BaseModel):
         else:
             raise ValueError()
 
-    def to_string(self) -> str:
+    def __str__(self) -> str:
         if self.database is not None:
             return f"{self.quote(self.database)}.{self.quote(self.table)}"
         else:
@@ -77,7 +77,7 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
         else:
             raise ValueError()
 
-    def to_string(self) -> str:
+    def __str__(self) -> str:
         if self.database is not None and self.schema_ is not None:
             return (
                 f"{self.quote(self.database)}.{self.quote(self.schema_)}.{self.quote(self.table)}"

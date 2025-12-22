@@ -29,9 +29,8 @@ class TestPostgresAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
     def postgres_table(self, postgres_adapter: PostgresAdapter) -> Generator[Table, Any, None]:
         table = "test_table"
-        quoted_table = PostgresTableIdentifier(table=table).to_string()
         statement = f"""
-        create table if not exists {quoted_table} (
+        create table if not exists {PostgresTableIdentifier(table=table)} (
             id bigint,
             updated_at timestamp default now()
         );
@@ -121,9 +120,8 @@ class TestPostgresAdapter(DatabaseTest):
 
     def test_create_and_drop_table(self, postgres_adapter: PostgresAdapter):
         table = "test_table"
-        quoted_table = PostgresTableIdentifier(table=table).to_string()
         statement = f"""
-        create table if not exists {quoted_table} (
+        create table if not exists {PostgresTableIdentifier(table=table)} (
             id bigint,
             updated_at timestamp default now()
         );

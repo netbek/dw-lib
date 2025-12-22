@@ -259,10 +259,9 @@ class PostgresAdapter(BaseAdapter):
             else:
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-        quoted_table = PostgresTableIdentifier(
-            database=database, schema_=schema, table=table
-        ).to_string()
-        statement = f"drop table {quoted_table};"
+        statement = (
+            f"drop table {PostgresTableIdentifier(database=database, schema_=schema, table=table)};"
+        )
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -279,10 +278,9 @@ class PostgresAdapter(BaseAdapter):
         if not self.has_table(table=table, database=database, schema=schema):
             return
 
-        quoted_table = PostgresTableIdentifier(
-            database=database, schema_=schema, table=table
-        ).to_string()
-        statement = f"truncate table {quoted_table};"
+        statement = f"truncate table {
+            PostgresTableIdentifier(database=database, schema_=schema, table=table)
+        };"
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -369,10 +367,7 @@ class PostgresAdapter(BaseAdapter):
         if not self.has_table(table=table, database=database, schema=schema):
             return
 
-        quoted_table = PostgresTableIdentifier(
-            database=database, schema_=schema, table=table
-        ).to_string()
-        statement = f"alter table {quoted_table} replica identity {replica_identity};"
+        statement = f"alter table {PostgresTableIdentifier(database=database, schema_=schema, table=table)} replica identity {replica_identity};"
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -537,8 +532,8 @@ class PostgresAdapter(BaseAdapter):
                 raise PublicationExistsException(f"Publication '{publication}' exists")
 
         quoted_publication = PostgresIdentifier.quote(publication)
-        quoted_tables = [PostgresTableIdentifier.from_string(table).to_string() for table in tables]
-        statement = f"create publication {quoted_publication} for table {', '.join(quoted_tables)};"
+        tables = [str(PostgresTableIdentifier.from_string(table)) for table in tables]
+        statement = f"create publication {quoted_publication} for table {', '.join(tables)};"
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)

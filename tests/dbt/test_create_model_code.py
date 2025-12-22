@@ -24,7 +24,7 @@ class TestCreateModelCode(DatabaseTest):
         self, clickhouse_adapter: ClickHouseAdapter, table_identifier: ClickHouseTableIdentifier
     ) -> Generator[ClickHouseTableIdentifier, Any, None]:
         create_table_statement = f"""
-create or replace table {table_identifier.to_string()}
+create or replace table {table_identifier}
 (
     `uint64` UInt64,
     `int64` Int64,

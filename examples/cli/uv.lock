@@ -466,8 +466,6 @@ dependencies = [
     { name = "chdb" },
     { name = "clickhouse-connect" },
     { name = "clickhouse-sqlalchemy" },
-    { name = "dbt-clickhouse" },
-    { name = "dbt-core" },
     { name = "duckdb" },
     { name = "duckdb-engine" },
     { name = "httpx" },
@@ -494,8 +492,8 @@ requires-dist = [
     { name = "chdb", specifier = ">=3.7.2" },
     { name = "clickhouse-connect", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.7-batch" },
-    { name = "dbt-core", specifier = ">=1.10.0,<1.11" },
+    { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.7-batch" },
+    { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", specifier = ">=1.4.2" },
     { name = "duckdb-engine", specifier = ">=0.17.0" },
     { name = "httpx", specifier = ">=0.28.1" },
@@ -515,6 +513,7 @@ requires-dist = [
     { name = "sqlparse", specifier = ">=0.5.3" },
     { name = "typer", specifier = ">=0.20.0" },
 ]
+provides-extras = ["dbt"]
 
 [package.metadata.requires-dev]
 dev = [

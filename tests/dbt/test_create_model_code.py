@@ -1,8 +1,8 @@
-from ...conftest import DatabaseTest
+from ..conftest import DatabaseTest
 from collections.abc import Generator
 from dw_lib.database.adapters import ClickHouseAdapter
-from dw_lib.typing import ClickHouseTableIdentifier, DbtSource
-from dw_lib.utils.sqlmodel_utils import create_model_code
+from dw_lib.dbt import create_model_code, DbtSource
+from dw_lib.typing import ClickHouseTableIdentifier
 from sqlmodel import Table
 from typing import Any
 

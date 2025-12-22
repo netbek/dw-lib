@@ -448,7 +448,6 @@ version = "1.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
-    { name = "chdb" },
     { name = "clickhouse-connect" },
     { name = "clickhouse-sqlalchemy" },
     { name = "duckdb" },
@@ -476,6 +475,9 @@ dbt = [
     { name = "dbt-core" },
     { name = "polyfactory" },
 ]
+loader = [
+    { name = "chdb" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -486,7 +488,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.41.1" },
-    { name = "chdb", specifier = ">=3.7.2" },
+    { name = "chdb", marker = "extra == 'loader'", specifier = ">=3.7.2" },
     { name = "clickhouse-connect", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.7-batch" },
@@ -510,7 +512,7 @@ requires-dist = [
     { name = "sqlparse", specifier = ">=0.5.3" },
     { name = "typer", specifier = ">=0.20.0" },
 ]
-provides-extras = ["dbt"]
+provides-extras = ["dbt", "loader"]
 
 [package.metadata.requires-dev]
 dev = [

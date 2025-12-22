@@ -7,7 +7,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.types import ClickHouseTableIdentifier
+from dw_lib.typing import ClickHouseTableIdentifier
 from sqlmodel import Table, text
 from typing import Any
 

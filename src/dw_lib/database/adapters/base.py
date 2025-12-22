@@ -1,4 +1,4 @@
-from ...types import CreateTableStatementOptions
+from ...typing import CreateTableStatementOptions
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager

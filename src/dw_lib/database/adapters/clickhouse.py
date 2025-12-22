@@ -6,7 +6,7 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import ClickHouseIdentifier, ClickHouseSettings, ClickHouseTableIdentifier
+from ...typing import ClickHouseIdentifier, ClickHouseSettings, ClickHouseTableIdentifier
 from ..adapters.base import BaseAdapter
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError

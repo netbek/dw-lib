@@ -19,7 +19,7 @@ from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.schema import CreateTable
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import Column, MetaData, Session, Table
+from sqlmodel import Column, MetaData, Session, SQLModel, Table
 from typing import Any, Literal
 
 import psycopg2
@@ -182,13 +182,13 @@ class PostgresAdapter(BaseAdapter):
         with self.create_client() as (conn, cur):
             cur.execute(statement)
 
-    def get_create_table_statement(
+    def make_create_table_statement_from_table(
         self,
         table: str,
         database: str | None = None,
         schema: str | None = None,
         options: CreateTableStatementOptions | None = None,
-    ) -> None:
+    ) -> str:
         if database is None:
             database = self.settings.database
 
@@ -239,6 +239,24 @@ class PostgresAdapter(BaseAdapter):
             statement = str(CreateTable(table_metadata, **kwargs).compile(engine))
 
         return statement
+
+    def make_create_table_statement_from_model(
+        self,
+        model: type[SQLModel],
+        table: str | None = None,
+        database: str | None = None,
+        sql: str | None = None,
+    ) -> str:
+        raise NotImplementedError()
+
+    def make_create_view_statement_from_model(
+        self,
+        model: type[SQLModel],
+        sql: str,
+        table: str | None = None,
+        database: str | None = None,
+    ) -> str:
+        raise NotImplementedError()
 
     def drop_table(
         self,

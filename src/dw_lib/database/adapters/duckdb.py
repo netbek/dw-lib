@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from sqlalchemy import URL
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import Table
+from sqlmodel import SQLModel, Table
 from typing import Any, Literal
 
 import duckdb
@@ -103,9 +103,27 @@ class DuckDBAdapter(BaseAdapter):
     ) -> None:
         raise NotImplementedError()
 
-    def get_create_table_statement(
+    def make_create_table_statement_from_table(
         self, table: str, database: str | None = None, schema: str | None = None
-    ) -> None:
+    ) -> str:
+        raise NotImplementedError()
+
+    def make_create_table_statement_from_model(
+        self,
+        model: type[SQLModel],
+        table: str | None = None,
+        database: str | None = None,
+        sql: str | None = None,
+    ) -> str:
+        raise NotImplementedError()
+
+    def make_create_view_statement_from_model(
+        self,
+        model: type[SQLModel],
+        sql: str,
+        table: str | None = None,
+        database: str | None = None,
+    ) -> str:
         raise NotImplementedError()
 
     def drop_table(

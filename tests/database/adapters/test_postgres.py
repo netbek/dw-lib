@@ -140,14 +140,16 @@ class TestPostgresAdapter(DatabaseTest):
 
         assert postgres_adapter.drop_table(table, if_exists=True) is None
 
-    def test_get_create_table_statement_non_existent(self, postgres_adapter: PostgresAdapter):
+    def test_make_create_table_statement_from_table_non_existent(
+        self, postgres_adapter: PostgresAdapter
+    ):
         with pytest.raises(TableNotFoundException):
-            postgres_adapter.get_create_table_statement("non_existent")
+            postgres_adapter.make_create_table_statement_from_table("non_existent")
 
-    def test_get_create_table_statement_existent(
+    def test_make_create_table_statement_from_table_existent(
         self, postgres_adapter: PostgresAdapter, postgres_table: Table
     ):
-        actual = postgres_adapter.get_create_table_statement(postgres_table.name)
+        actual = postgres_adapter.make_create_table_statement_from_table(postgres_table.name)
         expected = f"""
         CREATE TABLE {postgres_adapter.settings.schema_}.{postgres_table.name} (
             id BIGINT,
@@ -156,7 +158,7 @@ class TestPostgresAdapter(DatabaseTest):
         """
         assert_equal_ignoring_whitespace(actual, expected)
 
-        actual = postgres_adapter.get_create_table_statement(
+        actual = postgres_adapter.make_create_table_statement_from_table(
             postgres_table.name, options={"schema": "other_schema"}
         )
         expected = f"""

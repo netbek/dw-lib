@@ -1,5 +1,11 @@
-from ...asserts import assert_equal_ignoring_whitespace
-from ...conftest import DatabaseTest
+from ...asserts import assert_equal_ignoring_whitespace, assert_sql_equal
+from ...conftest import (
+    DatabaseTest,
+    TableWithoutSchema,
+    TableWithSchema,
+    ViewWithoutSchema,
+    ViewWithSchema,
+)
 from collections.abc import Generator
 from dw_lib.database.adapters import ClickHouseAdapter
 from dw_lib.exceptions import (
@@ -151,11 +157,11 @@ class TestClickHouseAdapter(DatabaseTest):
 
         assert clickhouse_adapter.drop_table(table, if_exists=True) is None
 
-    def test_get_create_table_statement(
+    def test_make_create_table_statement_from_table(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
         with pytest.raises(TableNotFoundException):
-            clickhouse_adapter.get_create_table_statement("non_existent")
+            clickhouse_adapter.make_create_table_statement_from_table("non_existent")
 
         expected = f"""
         CREATE TABLE {clickhouse_adapter.settings.database}.{clickhouse_table.name}
@@ -168,7 +174,8 @@ class TestClickHouseAdapter(DatabaseTest):
         SETTINGS index_granularity = 8192
         """
         assert_equal_ignoring_whitespace(
-            clickhouse_adapter.get_create_table_statement(clickhouse_table.name), expected
+            clickhouse_adapter.make_create_table_statement_from_table(clickhouse_table.name),
+            expected,
         )
 
     def test_list_tables_empty_database(self, clickhouse_adapter: ClickHouseAdapter):
@@ -201,3 +208,247 @@ class TestClickHouseAdapter(DatabaseTest):
             clickhouse_adapter.drop_user(username)
 
         assert clickhouse_adapter.drop_user(username, if_exists=True) is None
+
+
+class TestTableWithoutSchema(DatabaseTest):
+    @pytest.fixture(scope="function")
+    def model(self):
+        return TableWithoutSchema
+
+    def test_defaults(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(model)
+        expected = """
+        CREATE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_sql_query(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(
+            model, sql="SELECT 42 AS id"
+        )
+        expected = """
+        CREATE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_sql_cte(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(
+            model, sql="WITH final AS (SELECT 42 AS id) SELECT * FROM final"
+        )
+        expected = """
+        CREATE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        AS WITH final AS (SELECT 42 AS id) SELECT * FROM final
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(model, table="my_table")
+        expected = """
+        CREATE TABLE my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(
+            model, database="my_database"
+        )
+        expected = """
+        CREATE TABLE my_database.table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema_and_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(
+            model, database="my_database", table="my_table"
+        )
+        expected = """
+        CREATE TABLE my_database.my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+
+class TestTableWithSchema(DatabaseTest):
+    @pytest.fixture(scope="function")
+    def model(self):
+        return TableWithSchema
+
+    def test_defaults(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(model)
+        expected = """
+        CREATE TABLE analytics.table_with_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(model, table="my_table")
+        expected = """
+        CREATE TABLE analytics.my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(
+            model, database="my_database"
+        )
+        expected = """
+        CREATE TABLE my_database.table_with_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema_and_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(
+            model, database="my_database", table="my_table"
+        )
+        expected = """
+        CREATE TABLE my_database.my_table (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+
+class TestViewWithoutSchema(DatabaseTest):
+    @pytest.fixture(scope="function")
+    def model(self):
+        return ViewWithoutSchema
+
+    def test_defaults(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(model, model.__sql__)
+        expected = """
+        CREATE VIEW view_without_schema
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_sql_cte(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, "WITH final AS (SELECT 42 AS id) SELECT * FROM final"
+        )
+        expected = """
+        CREATE VIEW view_without_schema
+        AS WITH final AS (SELECT 42 AS id) SELECT * FROM final
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, table="my_view"
+        )
+        expected = """
+        CREATE VIEW my_view
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, database="my_database"
+        )
+        expected = """
+        CREATE VIEW my_database.view_without_schema
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema_and_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, database="my_database", table="my_view"
+        )
+        expected = """
+        CREATE VIEW my_database.my_view
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+
+class TestViewWithSchema(DatabaseTest):
+    @pytest.fixture(scope="function")
+    def model(self):
+        return ViewWithSchema
+
+    def test_defaults(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(model, model.__sql__)
+        expected = """
+        CREATE VIEW analytics.view_with_schema
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, table="my_view"
+        )
+        expected = """
+        CREATE VIEW analytics.my_view
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, database="my_database"
+        )
+        expected = """
+        CREATE VIEW my_database.view_with_schema
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_override_schema_and_table(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, database="my_database", table="my_view"
+        )
+        expected = """
+        CREATE VIEW my_database.my_view
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)

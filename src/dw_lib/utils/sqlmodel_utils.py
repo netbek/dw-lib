@@ -1,7 +1,4 @@
-from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
-from sqlalchemy.sql.ddl import CreateTable
-from sqlglot import exp
-from sqlglot.dialects.dialect import Dialects, DialectType
+from sqlglot.dialects.dialect import Dialects
 from sqlmodel import SQLModel, Table
 
 import datetime
@@ -78,36 +75,6 @@ SQLGLOT_TO_PYTHON_TYPE = {
 }
 
 
-def make_create_table_statement(
-    dialect: DialectType,
-    model: type[SQLModel],
-    table: str | None = None,
-    schema: str | None = None,
-    sql: str | None = None,
-) -> str:
-    statement = CreateTable(model.__table__).compile(dialect=ClickHouseDialect())
-    statement = str(statement)
-    tree = sqlglot.parse_one(statement, read=dialect)
-
-    if table is not None or schema is not None:
-        table_exp = tree.find(exp.Table)
-
-        if table_exp is None:
-            raise Exception("Table expression not found")
-
-        if table is not None:
-            table_exp.set("this", exp.Identifier(this=table))
-
-        if schema is not None:
-            table_exp.set("db", exp.Identifier(this=schema))
-
-    if sql is not None:
-        query_exp = sqlglot.parse_one(sql, read=dialect)
-        tree.set("expression", query_exp)
-
-    return tree.sql(dialect=dialect)
-
-
 def get_model_schema(model: type[SQLModel]) -> str | None:
     table = getattr(model, "__table__", None)
 
@@ -120,30 +87,6 @@ def get_model_schema(model: type[SQLModel]) -> str | None:
         return table_args.get("schema")
 
     return None
-
-
-def make_create_view_statement(
-    dialect: DialectType,
-    model: type[SQLModel],
-    sql: str,
-    table: str | None = None,
-    schema: str | None = None,
-) -> str:
-    resolved_table = table or model.__tablename__
-    resolved_schema = schema or get_model_schema(model)
-
-    table_exp = exp.Table(
-        this=exp.Identifier(this=resolved_table),
-        db=exp.Identifier(this=resolved_schema) if resolved_schema else None,
-    )
-    query_exp = sqlglot.parse_one(sql, read=dialect)
-    create_view = exp.Create(
-        this=table_exp,
-        kind="VIEW",
-        expression=query_exp,
-    )
-
-    return create_view.sql(dialect=dialect)
 
 
 def parse_create_table_statement(statement: str) -> dict:

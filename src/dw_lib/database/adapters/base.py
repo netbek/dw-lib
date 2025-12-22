@@ -4,7 +4,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
-from sqlmodel import Table
+from sqlmodel import SQLModel, Table
 from typing import Any, Literal, overload
 
 
@@ -142,6 +142,54 @@ class BaseAdapter(ABC):
 
     @abstractmethod
     def make_create_table_statement_from_table(self, *args, **kwargs) -> None: ...
+
+    @overload
+    @abstractmethod
+    def make_create_table_statement_from_model(
+        self,
+        model: type[SQLModel],
+        table: str | None = None,
+        database: str | None = None,
+        sql: str | None = None,
+    ) -> str: ...
+
+    @overload
+    @abstractmethod
+    def make_create_table_statement_from_model(
+        self,
+        model: type[SQLModel],
+        table: str | None = None,
+        database: str | None = None,
+        schema: str | None = None,
+        sql: str | None = None,
+    ) -> str: ...
+
+    @abstractmethod
+    def make_create_table_statement_from_model(self, *args, **kwargs) -> None: ...
+
+    @overload
+    @abstractmethod
+    def make_create_view_statement_from_model(
+        self,
+        model: type[SQLModel],
+        sql: str,
+        table: str | None = None,
+        database: str | None = None,
+    ) -> str: ...
+
+    @overload
+    @abstractmethod
+    def make_create_view_statement_from_model(
+        self,
+        model: type[SQLModel],
+        sql: str,
+        table: str | None = None,
+        database: str | None = None,
+        schema: str | None = None,
+    ) -> str: ...
+
+    @abstractmethod
+    def make_create_view_statement_from_model(self, *args, **kwargs) -> None: ...
 
     @overload
     @abstractmethod

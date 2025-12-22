@@ -224,6 +224,7 @@ class ClickHouseAdapter(BaseAdapter):
         database: str | None = None,
         sql: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str:
         statement = CreateTable(model.__table__).compile(dialect=ClickHouseDialect())
@@ -246,7 +247,7 @@ class ClickHouseAdapter(BaseAdapter):
             query_exp = sqlglot.parse_one(sql, read=self.dialect)
             tree.set("expression", query_exp)
 
-        return tree.sql(dialect=self.dialect, pretty=pretty, indent=indent)
+        return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
     def make_create_view_statement_from_model(
         self,
@@ -255,6 +256,7 @@ class ClickHouseAdapter(BaseAdapter):
         table: str | None = None,
         database: str | None = None,
         pretty: bool = False,
+        pad: int = 2,
         indent: int = 2,
     ) -> str:
         resolved_table = table or model.__tablename__
@@ -265,13 +267,9 @@ class ClickHouseAdapter(BaseAdapter):
             db=exp.Identifier(this=resolved_database) if resolved_database else None,
         )
         query_exp = sqlglot.parse_one(sql, read=self.dialect)
-        create_view = exp.Create(
-            this=table_exp,
-            kind="VIEW",
-            expression=query_exp,
-        )
+        tree = exp.Create(this=table_exp, kind="VIEW", expression=query_exp)
 
-        return create_view.sql(dialect=self.dialect, pretty=pretty, indent=indent)
+        return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
     def drop_table(
         self, table: str, database: str | None = None, if_exists: bool | None = False

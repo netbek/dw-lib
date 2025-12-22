@@ -267,13 +267,9 @@ class ClickHouseAdapter(BaseAdapter):
             db=exp.Identifier(this=resolved_database) if resolved_database else None,
         )
         query_exp = sqlglot.parse_one(sql, read=self.dialect)
-        create_view = exp.Create(
-            this=table_exp,
-            kind="VIEW",
-            expression=query_exp,
-        )
+        tree = exp.Create(this=table_exp, kind="VIEW", expression=query_exp)
 
-        return create_view.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
+        return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
     def drop_table(
         self, table: str, database: str | None = None, if_exists: bool | None = False

@@ -20,9 +20,8 @@ class TestClickHouseAdapter(DatabaseTest):
         self, clickhouse_adapter: ClickHouseAdapter
     ) -> Generator[ClickHouseTableIdentifier, Any, None]:
         table = "test_table"
-        quoted_table = ClickHouseTableIdentifier(table=table).to_string()
         statement = f"""
-        create or replace table {quoted_table}
+        create or replace table {ClickHouseTableIdentifier(table=table)}
         (
             id UInt64,
             updated_at DateTime default now()
@@ -129,9 +128,8 @@ class TestClickHouseAdapter(DatabaseTest):
 
     def test_create_and_drop_table(self, clickhouse_adapter: ClickHouseAdapter):
         table = "test_table"
-        quoted_table = ClickHouseTableIdentifier(table=table).to_string()
         statement = f"""
-        create or replace table {quoted_table}
+        create or replace table {ClickHouseTableIdentifier(table=table)}
         (
             id UInt64,
             updated_at DateTime default now()

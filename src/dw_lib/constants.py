@@ -1,7 +1,3 @@
-# PeerDB
-PEERDB_SOURCE_PEER = "source"
-PEERDB_DESTINATION_PEER = "destination"
-
 PYTHON_KEYWORDS = [
     "false",
     "none",

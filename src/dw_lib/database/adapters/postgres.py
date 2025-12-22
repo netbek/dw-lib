@@ -246,6 +246,8 @@ class PostgresAdapter(BaseAdapter):
         table: str | None = None,
         database: str | None = None,
         sql: str | None = None,
+        pretty: bool = False,
+        indent: int = 2,
     ) -> str:
         raise NotImplementedError()
 
@@ -255,6 +257,8 @@ class PostgresAdapter(BaseAdapter):
         sql: str,
         table: str | None = None,
         database: str | None = None,
+        pretty: bool = False,
+        indent: int = 2,
     ) -> str:
         raise NotImplementedError()
 

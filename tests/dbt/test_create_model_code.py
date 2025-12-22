@@ -3,7 +3,7 @@ from collections.abc import Generator
 from dw_lib.database.adapters import ClickHouseAdapter
 from dw_lib.dbt.types import DbtSource
 from dw_lib.dbt.utils import create_model_code
-from dw_lib.typing import ClickHouseTableIdentifier
+from dw_lib.types import ClickHouseTableIdentifier
 from sqlmodel import Table
 from typing import Any
 

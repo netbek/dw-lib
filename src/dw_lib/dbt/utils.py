@@ -1,5 +1,5 @@
 from ..database.adapters import ClickHouseAdapter
-from ..typing import ClickHouseSettings
+from ..types import ClickHouseSettings
 from ..utils.python_utils import is_python_keyword
 from ..utils.sqlmodel_utils import parse_create_table_statement
 from .types import DbtSource

@@ -7,7 +7,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.typing import PostgresTableIdentifier
+from dw_lib.types import PostgresTableIdentifier
 from sqlmodel import Table, text
 from typing import Any
 

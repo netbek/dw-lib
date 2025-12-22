@@ -3,7 +3,7 @@ from dw_lib.cloud.adapters import S3Adapter
 from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.loader import Loader
 from dw_lib.peerdb import PeerDB
-from dw_lib.typing import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
+from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from typing import Any

@@ -27,12 +27,12 @@ class ClickHouseIdentifier:
         return identifier.strip("`")
 
 
-class ClickHouseRelation(ClickHouseIdentifier, BaseModel):
+class ClickHouseTableIdentifier(ClickHouseIdentifier, BaseModel):
     database: str | None = Field(default=None, serialization_alias="database")
     table: str = Field(serialization_alias="table")
 
     @classmethod
-    def from_string(cls, identifier: str) -> "ClickHouseRelation":
+    def from_string(cls, identifier: str) -> "ClickHouseTableIdentifier":
         parts = [cls.unquote(part) for part in identifier.split(".")]
         parts = [part for part in parts if part]
 
@@ -60,13 +60,13 @@ class PostgresIdentifier:
         return identifier.strip('"')
 
 
-class PostgresRelation(PostgresIdentifier, BaseModel):
+class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
     database: str | None = Field(default=None, serialization_alias="database")
     schema_: str | None = Field(default=None, serialization_alias="schema")
     table: str = Field(serialization_alias="table")
 
     @classmethod
-    def from_string(cls, identifier: str) -> "PostgresRelation":
+    def from_string(cls, identifier: str) -> "PostgresTableIdentifier":
         parts = [cls.unquote(part) for part in identifier.split(".")]
         parts = [part for part in parts if part]
 
@@ -93,7 +93,7 @@ class PostgresRelation(PostgresIdentifier, BaseModel):
         return all([self.database, self.schema_, self.table])
 
 
-class DuckDBRelation(PostgresRelation):
+class DuckDBTableIdentifier(PostgresTableIdentifier):
     pass
 
 

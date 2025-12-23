@@ -13,7 +13,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.types import ClickHouseRelation
+from dw_lib.types import ClickHouseTableIdentifier
 from sqlmodel import Table, text
 from typing import Any
 
@@ -24,10 +24,10 @@ class TestClickHouseAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
     def clickhouse_table(
         self, clickhouse_adapter: ClickHouseAdapter
-    ) -> Generator[ClickHouseRelation, Any, None]:
+    ) -> Generator[ClickHouseTableIdentifier, Any, None]:
         table = "test_table"
         statement = f"""
-        create or replace table {ClickHouseRelation(table=table)}
+        create or replace table {ClickHouseTableIdentifier(table=table)}
         (
             id UInt64,
             updated_at DateTime default now()
@@ -135,7 +135,7 @@ class TestClickHouseAdapter(DatabaseTest):
     def test_create_and_drop_table(self, clickhouse_adapter: ClickHouseAdapter):
         table = "test_table"
         statement = f"""
-        create or replace table {ClickHouseRelation(table=table)}
+        create or replace table {ClickHouseTableIdentifier(table=table)}
         (
             id UInt64,
             updated_at DateTime default now()

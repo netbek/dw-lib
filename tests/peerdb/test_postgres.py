@@ -148,8 +148,8 @@ class TestLoadConfig(DatabaseTest):
                     "synced_at_col_name": "_peerdb_synced_at",
                     "table_mappings": [
                         {
-                            "source_relation": "public.table_1",
-                            "destination_relation": "replica.table_1",
+                            "source_table_identifier": "public.table_1",
+                            "destination_table_identifier": "replica.table_1",
                         },
                     ],
                 },
@@ -169,12 +169,12 @@ class TestLoadConfig(DatabaseTest):
                     "synced_at_col_name": "_peerdb_synced_at",
                     "table_mappings": [
                         {
-                            "source_relation": "public.table_2",
-                            "destination_relation": "replica.table_2",
+                            "source_table_identifier": "public.table_2",
+                            "destination_table_identifier": "replica.table_2",
                         },
                         {
-                            "source_relation": "public.table_3",
-                            "destination_relation": "replica.table_3",
+                            "source_table_identifier": "public.table_3",
+                            "destination_table_identifier": "replica.table_3",
                         },
                     ],
                 },
@@ -182,11 +182,11 @@ class TestLoadConfig(DatabaseTest):
             # "publications": [
             #     {
             #         "name": "publication_1",
-            #         "relations": ["private.table_1", "private.table_2"],
+            #         "table_identifiers": ["private.table_1", "private.table_2"],
             #     },
             #     {
             #         "name": "publication_2",
-            #         "relations": ["private.table_3"],
+            #         "table_identifiers": ["private.table_3"],
             #     },
             # ],
             # "users": {},

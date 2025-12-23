@@ -2,7 +2,7 @@ from .cloud.adapters import S3Adapter
 from .cloud.utils import s3_to_endpoint_uri
 from .database.adapters import PostgresAdapter
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
-from .types import PostgresRelation, PostgresSettings, S3Settings
+from .types import PostgresSettings, PostgresTableIdentifier, S3Settings
 from .utils.filesystem import find_up
 from .utils.yaml_utils import safe_load_file
 from chdb import session
@@ -76,14 +76,14 @@ class BaseStream(BaseModel):
 class DatabaseStream(BaseStream):
     """Database-based stream: schema.table"""
 
-    source: PostgresRelation
+    source: PostgresTableIdentifier
 
     @model_validator(mode="before")
     @classmethod
     def parse_source(cls, values):
         source = values.get("source")
         if isinstance(source, str):
-            values["source"] = PostgresRelation.from_string(source)
+            values["source"] = PostgresTableIdentifier.from_string(source)
 
         return values
 

@@ -42,18 +42,18 @@ mirrors:
     source_name: source
     destination_name: destination
     table_mappings:
-    - source_table_identifier: public.table_1
-      destination_table_identifier: replica.table_1
+    - source_relation: public.table_1
+      destination_relation: replica.table_1
     resync: true
 
   cdc_many:
     source_name: source
     destination_name: destination
     table_mappings:
-    - source_table_identifier: public.table_2
-      destination_table_identifier: replica.table_2
-    - source_table_identifier: public.table_3
-      destination_table_identifier: replica.table_3
+    - source_relation: public.table_2
+      destination_relation: replica.table_2
+    - source_relation: public.table_3
+      destination_relation: replica.table_3
 
 # publications:
 #   publication_1:

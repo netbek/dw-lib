@@ -6,7 +6,7 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import ClickHouseIdentifier, ClickHouseSettings, ClickHouseTableIdentifier
+from ...types import ClickHouseIdentifier, ClickHouseRelation, ClickHouseSettings
 from ...utils.sqlmodel_utils import get_model_schema
 from ..adapters.base import BaseAdapter
 from clickhouse_connect.driver.client import Client
@@ -283,7 +283,7 @@ class ClickHouseAdapter(BaseAdapter):
             else:
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-        statement = f"drop table {ClickHouseTableIdentifier(database=database, table=table)};"
+        statement = f"drop table {ClickHouseRelation(database=database, table=table)};"
 
         with self.create_client() as client:
             client.command(statement)
@@ -295,7 +295,7 @@ class ClickHouseAdapter(BaseAdapter):
         if not self.has_table(table=table, database=database):
             return
 
-        statement = f"truncate table {ClickHouseTableIdentifier(database=database, table=table)};"
+        statement = f"truncate table {ClickHouseRelation(database=database, table=table)};"
 
         with self.create_client() as client:
             client.command(statement)

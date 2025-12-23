@@ -7,7 +7,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.types import PostgresTableIdentifier
+from dw_lib.types import PostgresRelation
 from sqlmodel import Table, text
 from typing import Any
 
@@ -30,7 +30,7 @@ class TestPostgresAdapter(DatabaseTest):
     def postgres_table(self, postgres_adapter: PostgresAdapter) -> Generator[Table, Any, None]:
         table = "test_table"
         statement = f"""
-        create table if not exists {PostgresTableIdentifier(table=table)} (
+        create table if not exists {PostgresRelation(table=table)} (
             id bigint,
             updated_at timestamp default now()
         );
@@ -121,7 +121,7 @@ class TestPostgresAdapter(DatabaseTest):
     def test_create_and_drop_table(self, postgres_adapter: PostgresAdapter):
         table = "test_table"
         statement = f"""
-        create table if not exists {PostgresTableIdentifier(table=table)} (
+        create table if not exists {PostgresRelation(table=table)} (
             id bigint,
             updated_at timestamp default now()
         );

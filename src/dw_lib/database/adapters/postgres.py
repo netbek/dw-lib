@@ -9,8 +9,8 @@ from ...exceptions import (
 from ...types import (
     CreateTableStatementOptions,
     PostgresIdentifier,
+    PostgresRelation,
     PostgresSettings,
-    PostgresTableIdentifier,
 )
 from ..adapters.base import BaseAdapter
 from collections.abc import Generator
@@ -284,7 +284,7 @@ class PostgresAdapter(BaseAdapter):
                 raise TableNotFoundException(f"Table '{table}' not found")
 
         statement = (
-            f"drop table {PostgresTableIdentifier(database=database, schema_=schema, table=table)};"
+            f"drop table {PostgresRelation(database=database, schema_=schema, table=table)};"
         )
 
         with self.create_client() as (conn, cur):
@@ -302,9 +302,9 @@ class PostgresAdapter(BaseAdapter):
         if not self.has_table(table=table, database=database, schema=schema):
             return
 
-        statement = f"truncate table {
-            PostgresTableIdentifier(database=database, schema_=schema, table=table)
-        };"
+        statement = (
+            f"truncate table {PostgresRelation(database=database, schema_=schema, table=table)};"
+        )
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -391,7 +391,7 @@ class PostgresAdapter(BaseAdapter):
         if not self.has_table(table=table, database=database, schema=schema):
             return
 
-        statement = f"alter table {PostgresTableIdentifier(database=database, schema_=schema, table=table)} replica identity {replica_identity};"
+        statement = f"alter table {PostgresRelation(database=database, schema_=schema, table=table)} replica identity {replica_identity};"
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -556,7 +556,7 @@ class PostgresAdapter(BaseAdapter):
                 raise PublicationExistsException(f"Publication '{publication}' exists")
 
         quoted_publication = PostgresIdentifier.quote(publication)
-        tables = [str(PostgresTableIdentifier.from_string(table)) for table in tables]
+        tables = [str(PostgresRelation.from_string(table)) for table in tables]
         statement = f"create publication {quoted_publication} for table {', '.join(tables)};"
 
         with self.create_client() as (conn, cur):

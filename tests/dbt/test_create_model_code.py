@@ -3,7 +3,7 @@ from collections.abc import Generator
 from dw_lib.database.adapters import ClickHouseAdapter
 from dw_lib.dbt.types import DbtSource
 from dw_lib.dbt.utils import create_model_code
-from dw_lib.types import ClickHouseTableIdentifier
+from dw_lib.types import ClickHouseRelation
 from sqlmodel import Table
 from typing import Any
 
@@ -12,19 +12,17 @@ import pytest
 
 class TestCreateModelCode(DatabaseTest):
     @pytest.fixture(scope="function")
-    def table_identifier(
+    def relation(
         self, clickhouse_adapter: ClickHouseAdapter
-    ) -> Generator[ClickHouseTableIdentifier, Any, None]:
-        yield ClickHouseTableIdentifier(
-            database=clickhouse_adapter.settings.database, table="test_table"
-        )
+    ) -> Generator[ClickHouseRelation, Any, None]:
+        yield ClickHouseRelation(database=clickhouse_adapter.settings.database, table="test_table")
 
     @pytest.fixture(scope="function")
     def table(
-        self, clickhouse_adapter: ClickHouseAdapter, table_identifier: ClickHouseTableIdentifier
-    ) -> Generator[ClickHouseTableIdentifier, Any, None]:
+        self, clickhouse_adapter: ClickHouseAdapter, relation: ClickHouseRelation
+    ) -> Generator[ClickHouseRelation, Any, None]:
         create_table_statement = f"""
-create or replace table {table_identifier}
+create or replace table {relation}
 (
     `uint64` UInt64,
     `int64` Int64,
@@ -61,31 +59,31 @@ primary key `uint64`
 order by `uint64`
 """
 
-        clickhouse_adapter.create_table(table_identifier.table, create_table_statement)
+        clickhouse_adapter.create_table(relation.table, create_table_statement)
 
-        yield clickhouse_adapter.get_table(table_identifier.table)
+        yield clickhouse_adapter.get_table(relation.table)
 
-        clickhouse_adapter.drop_table(table_identifier.table)
+        clickhouse_adapter.drop_table(relation.table)
 
     def test_ok(
         self,
         clickhouse_adapter: ClickHouseAdapter,
-        table_identifier: ClickHouseTableIdentifier,
+        relation: ClickHouseRelation,
         table: Table,
     ):
         python_class = "TestTable"
 
         dbt_source = {
-            "name": table_identifier.table,
+            "name": relation.table,
             "resource_type": "source",
             "package_name": "test",
             "original_file_path": "models/sources.yml",
-            "unique_id": f"source.test.{table_identifier.database}.{table_identifier.table}",
-            "source_name": table_identifier.database,
+            "unique_id": f"source.test.{relation.database}.{relation.table}",
+            "source_name": relation.database,
             "tags": [],
             "config": {"enabled": True},
             "original_config": {
-                "name": table_identifier.table,
+                "name": relation.table,
                 "meta": {
                     "python_class": python_class,
                 },
@@ -128,7 +126,7 @@ order by `uint64`
 \"""
 Created from:
 
-CREATE TABLE {table_identifier.database}.{table_identifier.table}
+CREATE TABLE {relation.database}.{relation.table}
 (
     `uint64` UInt64,
     `int64` Int64,
@@ -175,8 +173,8 @@ import datetime
 
 
 class {python_class}(BaseMixin, SQLModel, table=True):
-    __tablename__ = '{table_identifier.table}'
-    __table_args__ = (engines.MergeTree(order_by=('uint64',), primary_key=('uint64',), index_granularity=8192), {{'schema': '{table_identifier.database}'}},)
+    __tablename__ = '{relation.table}'
+    __table_args__ = (engines.MergeTree(order_by=('uint64',), primary_key=('uint64',), index_granularity=8192), {{'schema': '{relation.database}'}},)
 
     uint64: int = Field(sa_column=Column(name='uint64', type_=types.UInt64, primary_key=True))
     int64: int = Field(sa_column=Column(name='int64', type_=types.Int64, nullable=False))
@@ -210,7 +208,7 @@ class {python_class}(BaseMixin, SQLModel, table=True):
 """
 
         expected_factory_code = f"""
-from .{table_identifier.table} import {python_class}
+from .{relation.table} import {python_class}
 from dw_lib.dbt.polyfactory.factories.sqlmodel_factory import SQLModelFactory
 from dw_lib.dbt.polyfactory.mixins import PeerDBFactoryMixin
 import pydash

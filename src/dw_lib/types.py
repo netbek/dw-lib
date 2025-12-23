@@ -27,20 +27,21 @@ class ClickHouseIdentifier:
         return identifier.strip("`")
 
 
-class ClickHouseTableIdentifier(ClickHouseIdentifier, BaseModel):
+class ClickHouseRelation(ClickHouseIdentifier, BaseModel):
     database: str | None = Field(default=None, serialization_alias="database")
     table: str = Field(serialization_alias="table")
 
     @classmethod
-    def from_string(cls, identifier: str) -> "ClickHouseTableIdentifier":
+    def from_string(cls, identifier: str) -> "ClickHouseRelation":
         parts = [cls.unquote(part) for part in identifier.split(".")]
+        parts = [part for part in parts if part]
 
         if len(parts) == 2:
             return cls(database=parts[0], table=parts[1])
         elif len(parts) == 1:
             return cls(table=parts[0])
         else:
-            raise ValueError()
+            raise ValueError(f"Invalid table identifier: {identifier}")
 
     def __str__(self) -> str:
         if self.database is not None:
@@ -59,14 +60,15 @@ class PostgresIdentifier:
         return identifier.strip('"')
 
 
-class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
+class PostgresRelation(PostgresIdentifier, BaseModel):
     database: str | None = Field(default=None, serialization_alias="database")
     schema_: str | None = Field(default=None, serialization_alias="schema")
     table: str = Field(serialization_alias="table")
 
     @classmethod
-    def from_string(cls, identifier: str) -> "PostgresTableIdentifier":
+    def from_string(cls, identifier: str) -> "PostgresRelation":
         parts = [cls.unquote(part) for part in identifier.split(".")]
+        parts = [part for part in parts if part]
 
         if len(parts) == 3:
             return cls(database=parts[0], schema_=parts[1], table=parts[2])
@@ -75,7 +77,7 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
         elif len(parts) == 1:
             return cls(table=parts[0])
         else:
-            raise ValueError()
+            raise ValueError(f"Invalid table identifier: {identifier}")
 
     def __str__(self) -> str:
         if self.database is not None and self.schema_ is not None:
@@ -91,7 +93,7 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
         return all([self.database, self.schema_, self.table])
 
 
-class DuckDBTableIdentifier(PostgresTableIdentifier):
+class DuckDBRelation(PostgresRelation):
     pass
 
 

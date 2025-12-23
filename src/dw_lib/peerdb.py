@@ -9,10 +9,10 @@ from .exceptions import (
     TableNotFoundException,
 )
 from .types import (
+    ClickHouseRelation,
     ClickHouseSettings,
-    ClickHouseTableIdentifier,
+    PostgresRelation,
     PostgresSettings,
-    PostgresTableIdentifier,
 )
 from .utils.filesystem import find_up
 from .utils.template import render_template
@@ -393,12 +393,12 @@ class PeerDB:
 
         # for value in config["publications"].values():
         #     for identifier in value["table_identifiers"]:
-        #         source_table_identifier = PostgresTableIdentifier.from_string(identifier)
+        #         source_table_identifier = PostgresRelation.from_string(identifier)
         #         publication_schemas.append(source_table_identifier.schema_)
 
         # for value in config["mirrors"].values():
         #     for table_mapping in value["table_mappings"]:
-        #         source_table_identifier = PostgresTableIdentifier.from_string(
+        #         source_table_identifier = PostgresRelation.from_string(
         #             table_mapping["source_table_identifier"]
         #         )
         #         publication_schemas.append(source_table_identifier.schema_)
@@ -692,15 +692,10 @@ class PeerDB:
         source_tables = source_adapter.list_tables()
 
         for table_mapping in mirror["table_mappings"]:
-            source_table_identifier = PostgresTableIdentifier.from_string(
-                table_mapping["source_table_identifier"]
-            )
+            source_relation = PostgresRelation.from_string(table_mapping["source_table_identifier"])
             source_table = pydash.find(
                 source_tables,
-                lambda x: (
-                    x.schema == source_table_identifier.schema_
-                    and x.name == source_table_identifier.table
-                ),
+                lambda x: (x.schema == source_relation.schema_ and x.name == source_relation.table),
             )
 
             if source_table is None:
@@ -788,26 +783,24 @@ class PeerDB:
         if destination_peer.adapter.type == Dialects.CLICKHOUSE:
             adapter_class = ClickHouseAdapter
             settings_class = ClickHouseSettings
-            table_identifier_class = ClickHouseTableIdentifier
+            relation_class = ClickHouseRelation
         elif destination_peer.adapter.type == Dialects.POSTGRES:
             adapter_class = PostgresAdapter
             settings_class = PostgresSettings
-            table_identifier_class = PostgresTableIdentifier
+            relation_class = PostgresRelation
         else:
             raise Exception(f"Adapter type '{destination_peer.adapter.type}' is not supported")
 
         destination_adapter = adapter_class(
             settings_class(**destination_peer.adapter.settings.model_dump())
         )
-        destination_table_identifiers = [
-            table_identifier_class.from_string(table_mapping.destination_table_identifier)
+        destination_relations = [
+            relation_class.from_string(table_mapping.destination_table_identifier)
             for table_mapping in mirror.table_mappings
         ]
 
-        for table_identifier in destination_table_identifiers:
-            destination_adapter.drop_table(
-                **table_identifier.model_dump(by_alias=True), if_exists=True
-            )
+        for relation in destination_relations:
+            destination_adapter.drop_table(**relation.model_dump(by_alias=True), if_exists=True)
 
     def list_mirrors(self) -> ListMirrorsResponse:
         url = f"{self.config.api_url}/v1/mirrors/list"

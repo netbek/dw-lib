@@ -3,7 +3,7 @@ from collections.abc import Generator
 from dw_lib.database.adapters import ClickHouseAdapter
 from dw_lib.dbt.types import DbtSource
 from dw_lib.dbt.utils import create_model_code
-from dw_lib.types import ClickHouseTableIdentifier
+from dw_lib.types import ClickHouseRelation
 from sqlmodel import Table
 from typing import Any
 
@@ -14,15 +14,13 @@ class TestCreateModelCode(DatabaseTest):
     @pytest.fixture(scope="function")
     def table_identifier(
         self, clickhouse_adapter: ClickHouseAdapter
-    ) -> Generator[ClickHouseTableIdentifier, Any, None]:
-        yield ClickHouseTableIdentifier(
-            database=clickhouse_adapter.settings.database, table="test_table"
-        )
+    ) -> Generator[ClickHouseRelation, Any, None]:
+        yield ClickHouseRelation(database=clickhouse_adapter.settings.database, table="test_table")
 
     @pytest.fixture(scope="function")
     def table(
-        self, clickhouse_adapter: ClickHouseAdapter, table_identifier: ClickHouseTableIdentifier
-    ) -> Generator[ClickHouseTableIdentifier, Any, None]:
+        self, clickhouse_adapter: ClickHouseAdapter, table_identifier: ClickHouseRelation
+    ) -> Generator[ClickHouseRelation, Any, None]:
         create_table_statement = f"""
 create or replace table {table_identifier}
 (
@@ -70,7 +68,7 @@ order by `uint64`
     def test_ok(
         self,
         clickhouse_adapter: ClickHouseAdapter,
-        table_identifier: ClickHouseTableIdentifier,
+        table_identifier: ClickHouseRelation,
         table: Table,
     ):
         python_class = "TestTable"

@@ -9,10 +9,10 @@ from .exceptions import (
     TableNotFoundException,
 )
 from .types import (
+    ClickHouseRelation,
     ClickHouseSettings,
-    ClickHouseTableIdentifier,
+    PostgresRelation,
     PostgresSettings,
-    PostgresTableIdentifier,
 )
 from .utils.filesystem import find_up
 from .utils.template import render_template
@@ -393,12 +393,12 @@ class PeerDB:
 
         # for value in config["publications"].values():
         #     for identifier in value["table_identifiers"]:
-        #         source_table_identifier = PostgresTableIdentifier.from_string(identifier)
+        #         source_table_identifier = PostgresRelation.from_string(identifier)
         #         publication_schemas.append(source_table_identifier.schema_)
 
         # for value in config["mirrors"].values():
         #     for table_mapping in value["table_mappings"]:
-        #         source_table_identifier = PostgresTableIdentifier.from_string(
+        #         source_table_identifier = PostgresRelation.from_string(
         #             table_mapping["source_table_identifier"]
         #         )
         #         publication_schemas.append(source_table_identifier.schema_)
@@ -692,7 +692,7 @@ class PeerDB:
         source_tables = source_adapter.list_tables()
 
         for table_mapping in mirror["table_mappings"]:
-            source_table_identifier = PostgresTableIdentifier.from_string(
+            source_table_identifier = PostgresRelation.from_string(
                 table_mapping["source_table_identifier"]
             )
             source_table = pydash.find(
@@ -788,11 +788,11 @@ class PeerDB:
         if destination_peer.adapter.type == Dialects.CLICKHOUSE:
             adapter_class = ClickHouseAdapter
             settings_class = ClickHouseSettings
-            table_identifier_class = ClickHouseTableIdentifier
+            table_identifier_class = ClickHouseRelation
         elif destination_peer.adapter.type == Dialects.POSTGRES:
             adapter_class = PostgresAdapter
             settings_class = PostgresSettings
-            table_identifier_class = PostgresTableIdentifier
+            table_identifier_class = PostgresRelation
         else:
             raise Exception(f"Adapter type '{destination_peer.adapter.type}' is not supported")
 

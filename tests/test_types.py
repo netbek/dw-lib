@@ -19,10 +19,9 @@ class TestClickHouseTableIdentifier:
         assert relation.database is None
         assert relation.table == "my_table"
 
-    # def test_from_string_empty_string(self):
-    #     relation = ClickHouseTableIdentifier.from_string("")
-    #     assert relation.database is None
-    #     assert relation.table is None
+    def test_from_string_empty_string(self):
+        with pytest.raises(ValueError):
+            ClickHouseTableIdentifier.from_string("")
 
     def test_to_string_database_and_table(self):
         relation = ClickHouseTableIdentifier(database="my_database", table="my_table")
@@ -48,10 +47,9 @@ class TestPostgresTableIdentifier:
         assert relation.schema_ is None
         assert relation.table == "my_table"
 
-    # def test_from_string_empty_string(self):
-    #     relation = PostgresTableIdentifier.from_string("")
-    #     assert relation.schema_ is None
-    #     assert relation.table is None
+    def test_from_string_empty_string(self):
+        with pytest.raises(ValueError):
+            PostgresTableIdentifier.from_string("")
 
     def test_to_string_schema_and_table(self):
         relation = PostgresTableIdentifier(schema_="my_schema", table="my_table")

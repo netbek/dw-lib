@@ -34,13 +34,14 @@ class ClickHouseTableIdentifier(ClickHouseIdentifier, BaseModel):
     @classmethod
     def from_string(cls, identifier: str) -> "ClickHouseTableIdentifier":
         parts = [cls.unquote(part) for part in identifier.split(".")]
+        parts = [part for part in parts if part]
 
         if len(parts) == 2:
             return cls(database=parts[0], table=parts[1])
         elif len(parts) == 1:
             return cls(table=parts[0])
         else:
-            raise ValueError()
+            raise ValueError(f"Invalid table identifier: {identifier}")
 
     def __str__(self) -> str:
         if self.database is not None:
@@ -67,6 +68,7 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
     @classmethod
     def from_string(cls, identifier: str) -> "PostgresTableIdentifier":
         parts = [cls.unquote(part) for part in identifier.split(".")]
+        parts = [part for part in parts if part]
 
         if len(parts) == 3:
             return cls(database=parts[0], schema_=parts[1], table=parts[2])
@@ -75,7 +77,7 @@ class PostgresTableIdentifier(PostgresIdentifier, BaseModel):
         elif len(parts) == 1:
             return cls(table=parts[0])
         else:
-            raise ValueError()
+            raise ValueError(f"Invalid table identifier: {identifier}")
 
     def __str__(self) -> str:
         if self.database is not None and self.schema_ is not None:

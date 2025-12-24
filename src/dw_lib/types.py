@@ -1,7 +1,9 @@
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
-from typing import TypedDict
+from sqlglot import exp, parse_one
+from sqlglot.dialects.dialect import Dialects
+from typing import ClassVar, TypedDict
 
 import math
 import psutil
@@ -27,29 +29,6 @@ class ClickHouseIdentifier:
         return identifier.strip("`")
 
 
-class ClickHouseRelation(ClickHouseIdentifier, BaseModel):
-    database: str | None = Field(default=None, serialization_alias="database")
-    table: str = Field(serialization_alias="table")
-
-    @classmethod
-    def from_string(cls, identifier: str) -> "ClickHouseRelation":
-        parts = [cls.unquote(part) for part in identifier.split(".")]
-        parts = [part for part in parts if part]
-
-        if len(parts) == 2:
-            return cls(database=parts[0], table=parts[1])
-        elif len(parts) == 1:
-            return cls(table=parts[0])
-        else:
-            raise ValueError(f"Invalid table identifier: {identifier}")
-
-    def __str__(self) -> str:
-        if self.database is not None:
-            return f"{self.quote(self.database)}.{self.quote(self.table)}"
-        else:
-            return self.quote(self.table)
-
-
 class PostgresIdentifier:
     @classmethod
     def quote(cls, identifier: str) -> str:
@@ -60,41 +39,90 @@ class PostgresIdentifier:
         return identifier.strip('"')
 
 
-class PostgresRelation(PostgresIdentifier, BaseModel):
-    database: str | None = Field(default=None, serialization_alias="database")
+class BaseRelation(BaseModel):
+    dialect: ClassVar[str] = ""
+
+    @classmethod
+    def _parse_to_parts(cls, identifier: str) -> list[str]:
+        if identifier:
+            expression = parse_one(identifier, read=cls.dialect, into=exp.Table)
+
+            if isinstance(expression.this, exp.Identifier):
+                parts = [expression.catalog, expression.db, expression.this.name]
+            else:
+                parts = [expression.this]
+
+            return [part for part in parts if part]
+        else:
+            raise ValueError(f"Invalid table identifier: {identifier}")
+
+
+class ClickHouseRelation(BaseRelation):
+    dialect: ClassVar[str] = Dialects.CLICKHOUSE
+    database: str | None = Field(default=None)
+    table: str
+
+    @classmethod
+    def from_string(cls, identifier: str) -> "ClickHouseRelation":
+        parts = cls._parse_to_parts(identifier)
+        if len(parts) == 2:
+            return cls(database=parts[0], table=parts[1])
+        return cls(table=parts[0])
+
+    def __str__(self) -> str:
+        table_expr = exp.Table(
+            this=exp.to_identifier(self.table, quoted=True),
+            db=exp.to_identifier(self.database, quoted=True) if self.database else None,
+        )
+        return table_expr.sql(dialect=self.dialect)
+
+
+class PostgresRelation(BaseRelation):
+    dialect: ClassVar[str] = Dialects.POSTGRES
+    database: str | None = Field(default=None)
     schema_: str | None = Field(default=None, serialization_alias="schema")
-    table: str = Field(serialization_alias="table")
+    table: str
 
     @classmethod
     def from_string(cls, identifier: str) -> "PostgresRelation":
-        parts = [cls.unquote(part) for part in identifier.split(".")]
-        parts = [part for part in parts if part]
-
+        parts = cls._parse_to_parts(identifier)
         if len(parts) == 3:
             return cls(database=parts[0], schema_=parts[1], table=parts[2])
         elif len(parts) == 2:
             return cls(schema_=parts[0], table=parts[1])
-        elif len(parts) == 1:
-            return cls(table=parts[0])
-        else:
-            raise ValueError(f"Invalid table identifier: {identifier}")
+        return cls(table=parts[0])
 
     def __str__(self) -> str:
-        if self.database is not None and self.schema_ is not None:
-            return (
-                f"{self.quote(self.database)}.{self.quote(self.schema_)}.{self.quote(self.table)}"
-            )
-        elif self.schema_ is not None:
-            return f"{self.quote(self.schema_)}.{self.quote(self.table)}"
-        else:
-            return self.quote(self.table)
-
-    def is_fully_qualified(self) -> bool:
-        return all([self.database, self.schema_, self.table])
+        table_expr = exp.Table(
+            this=exp.to_identifier(self.table, quoted=True),
+            db=exp.to_identifier(self.schema_, quoted=True) if self.schema_ else None,
+            catalog=exp.to_identifier(self.database, quoted=True) if self.database else None,
+        )
+        return table_expr.sql(dialect=self.dialect)
 
 
-class DuckDBRelation(PostgresRelation):
-    pass
+class DuckDBRelation(BaseRelation):
+    dialect: ClassVar[str] = Dialects.DUCKDB
+    database: str | None = Field(default=None)
+    schema_: str | None = Field(default=None, serialization_alias="schema")
+    table: str
+
+    @classmethod
+    def from_string(cls, identifier: str) -> "DuckDBRelation":
+        parts = cls._parse_to_parts(identifier)
+        if len(parts) == 3:
+            return cls(database=parts[0], schema_=parts[1], table=parts[2])
+        elif len(parts) == 2:
+            return cls(schema_=parts[0], table=parts[1])
+        return cls(table=parts[0])
+
+    def __str__(self) -> str:
+        table_expr = exp.Table(
+            this=exp.to_identifier(self.table, quoted=True),
+            db=exp.to_identifier(self.schema_, quoted=True) if self.schema_ else None,
+            catalog=exp.to_identifier(self.database, quoted=True) if self.database else None,
+        )
+        return table_expr.sql(dialect=self.dialect)
 
 
 def calculate_memory_limit(percent) -> str:

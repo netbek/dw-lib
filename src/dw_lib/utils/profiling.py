@@ -1,7 +1,11 @@
+from contextlib import contextmanager
+from dataclasses import dataclass
+
 import contextlib
 import cProfile
 import io
 import pstats
+import time
 
 
 @contextlib.contextmanager
@@ -19,3 +23,22 @@ def profiled():
     # uncomment this to see who's calling what
     # ps.print_callers()
     print(s.getvalue())
+
+
+@dataclass
+class TimeResult:
+    elapsed: float = 0.0
+    elapsed_formatted: str = ""
+
+
+@contextmanager
+def timed():
+    start = time.perf_counter()
+    result = TimeResult()
+    try:
+        yield result
+    finally:
+        result.elapsed = time.perf_counter() - start
+        result.elapsed_formatted = (
+            f"{result.elapsed:.2f} {'second' if int(result.elapsed) == 1 else 'seconds'}"
+        )

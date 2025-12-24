@@ -27,8 +27,19 @@ def profiled():
 
 @dataclass
 class TimeResult:
-    elapsed: float = 0.0
-    elapsed_formatted: str = ""
+    elapsed_seconds: float = 0.0
+
+    @property
+    def elapsed_ms(self) -> int:
+        return int(self.elapsed_seconds * 1000)
+
+    @property
+    def elapsed_seconds_formatted(self) -> str:
+        return f"{self.elapsed_seconds:.2f} s"
+
+    @property
+    def elapsed_ms_formatted(self) -> str:
+        return f"{self.elapsed_ms} ms"
 
 
 @contextmanager
@@ -38,7 +49,4 @@ def timed():
     try:
         yield result
     finally:
-        result.elapsed = time.perf_counter() - start
-        result.elapsed_formatted = (
-            f"{result.elapsed:.2f} {'second' if int(result.elapsed) == 1 else 'seconds'}"
-        )
+        result.elapsed_seconds = time.perf_counter() - start

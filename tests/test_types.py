@@ -25,11 +25,11 @@ class TestClickHouseRelation:
 
     def test_to_string_database_and_table(self):
         relation = ClickHouseRelation(database="my_database", table="my_table")
-        assert str(relation) == "`my_database`.`my_table`"
+        assert str(relation) == '"my_database"."my_table"'
 
     def test_to_string_table(self):
         relation = ClickHouseRelation(table="my_table")
-        assert str(relation) == "`my_table`"
+        assert str(relation) == '"my_table"'
 
 
 class TestPostgresRelation:

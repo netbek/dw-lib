@@ -1,4 +1,6 @@
 from jinja2 import Environment, StrictUndefined
+from sqlglot import exp
+from sqlglot.dialects.dialect import DialectType
 from typing import Any
 
 import re
@@ -9,6 +11,10 @@ RE_HAS_JINJA = re.compile(r"({[{%#]|[#}%]})")
 jinja_env = Environment(
     extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"], undefined=StrictUndefined
 )
+
+
+def quote_identifier(identifier: str, dialect: DialectType) -> str:
+    return exp.Identifier(this=identifier, quoted=True).sql(dialect=dialect)
 
 
 def render_statement(

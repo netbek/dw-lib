@@ -6,13 +6,9 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import (
-    CreateTableStatementOptions,
-    PostgresIdentifier,
-    PostgresRelation,
-    PostgresSettings,
-)
+from ...types import CreateTableStatementOptions, PostgresRelation, PostgresSettings
 from ..adapters.base import BaseAdapter
+from ..utils import quote_identifier
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import URL
@@ -452,7 +448,7 @@ class PostgresAdapter(BaseAdapter):
             else:
                 raise UserExistsException(f"User '{username}' exists")
 
-        quoted_username = PostgresIdentifier.quote(username)
+        quoted_username = quote_identifier(username, dialect=self.dialect)
 
         computed_options = []
         if options:
@@ -476,7 +472,7 @@ class PostgresAdapter(BaseAdapter):
             else:
                 raise UserNotFoundException(f"User '{username}' not found")
 
-        quoted_username = PostgresIdentifier.quote(username)
+        quoted_username = quote_identifier(username, dialect=self.dialect)
         statement = f"""
         drop owned by {quoted_username} cascade;
         drop user {quoted_username};
@@ -489,8 +485,8 @@ class PostgresAdapter(BaseAdapter):
         if not self.has_user(username):
             raise Exception()
 
-        quoted_username = PostgresIdentifier.quote(username)
-        quoted_schema = PostgresIdentifier.quote(schema)
+        quoted_username = quote_identifier(username, dialect=self.dialect)
+        quoted_schema = quote_identifier(schema, dialect=self.dialect)
         statement = f"""
         grant usage on schema {quoted_schema} to {quoted_username};
         grant select on all tables in schema {quoted_schema} to {quoted_username};
@@ -504,8 +500,8 @@ class PostgresAdapter(BaseAdapter):
         if not self.has_user(username):
             return
 
-        quoted_username = PostgresIdentifier.quote(username)
-        quoted_schema = PostgresIdentifier.quote(schema)
+        quoted_username = quote_identifier(username, dialect=self.dialect)
+        quoted_schema = quote_identifier(schema, dialect=self.dialect)
         statement = f"""
         alter default privileges for user {quoted_username} in schema {quoted_schema} revoke select on tables from {quoted_username};
         revoke select on all tables in schema {quoted_schema} from {quoted_username};
@@ -555,7 +551,7 @@ class PostgresAdapter(BaseAdapter):
             else:
                 raise PublicationExistsException(f"Publication '{publication}' exists")
 
-        quoted_publication = PostgresIdentifier.quote(publication)
+        quoted_publication = quote_identifier(publication, dialect=self.dialect)
         tables = [str(PostgresRelation.from_string(table)) for table in tables]
         statement = f"create publication {quoted_publication} for table {', '.join(tables)};"
 
@@ -569,7 +565,7 @@ class PostgresAdapter(BaseAdapter):
             else:
                 raise PublicationNotFoundException(f"Publication '{publication}' not found")
 
-        quoted_publication = PostgresIdentifier.quote(publication)
+        quoted_publication = quote_identifier(publication, dialect=self.dialect)
         statement = f"drop publication {quoted_publication};"
 
         with self.create_client() as (conn, cur):

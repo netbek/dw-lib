@@ -19,26 +19,6 @@ class CreateTableStatementOptions(TypedDict):
     include_unique_constraint: bool | None = False
 
 
-class ClickHouseIdentifier:
-    @classmethod
-    def quote(cls, identifier: str) -> str:
-        return f"`{identifier}`"
-
-    @classmethod
-    def unquote(cls, identifier: str) -> str:
-        return identifier.strip("`")
-
-
-class PostgresIdentifier:
-    @classmethod
-    def quote(cls, identifier: str) -> str:
-        return f'"{identifier}"'
-
-    @classmethod
-    def unquote(cls, identifier: str) -> str:
-        return identifier.strip('"')
-
-
 class BaseRelation(BaseModel):
     dialect: ClassVar[str] = ""
 

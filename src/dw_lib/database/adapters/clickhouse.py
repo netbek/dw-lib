@@ -6,9 +6,10 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import ClickHouseIdentifier, ClickHouseRelation, ClickHouseSettings
+from ...types import ClickHouseRelation, ClickHouseSettings
 from ...utils.sqlmodel_utils import get_model_schema
 from ..adapters.base import BaseAdapter
+from ..utils import quote_identifier
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
@@ -365,7 +366,7 @@ class ClickHouseAdapter(BaseAdapter):
             else:
                 raise UserExistsException(f"User '{username}' exists")
 
-        quoted_username = ClickHouseIdentifier.quote(username)
+        quoted_username = quote_identifier(username, dialect=self.dialect)
         statement = f"create user {quoted_username} identified by %(password)s;"
 
         with self.create_client() as client:
@@ -378,7 +379,7 @@ class ClickHouseAdapter(BaseAdapter):
             else:
                 raise UserNotFoundException(f"User '{username}' not found")
 
-        quoted_username = ClickHouseIdentifier.quote(username)
+        quoted_username = quote_identifier(username, dialect=self.dialect)
         statement = f"drop user {quoted_username};"
 
         with self.create_client() as client:

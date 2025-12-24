@@ -2,7 +2,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 from sqlglot import exp, parse_one
-from sqlglot.dialects.dialect import Dialects
+from sqlglot.dialects.dialect import Dialects, DialectType
 from typing import ClassVar, TypedDict
 
 import math
@@ -20,7 +20,7 @@ class CreateTableStatementOptions(TypedDict):
 
 
 class BaseRelation(BaseModel):
-    dialect: ClassVar[str] = ""
+    dialect: ClassVar[DialectType] = ""
 
     @classmethod
     def _parse_to_parts(cls, identifier: str) -> list[str]:
@@ -38,7 +38,7 @@ class BaseRelation(BaseModel):
 
 
 class ClickHouseRelation(BaseRelation):
-    dialect: ClassVar[str] = Dialects.CLICKHOUSE
+    dialect: ClassVar[DialectType] = Dialects.CLICKHOUSE
     database: str | None = Field(default=None)
     table: str
 
@@ -58,7 +58,7 @@ class ClickHouseRelation(BaseRelation):
 
 
 class PostgresRelation(BaseRelation):
-    dialect: ClassVar[str] = Dialects.POSTGRES
+    dialect: ClassVar[DialectType] = Dialects.POSTGRES
     database: str | None = Field(default=None)
     schema_: str | None = Field(default=None, serialization_alias="schema")
     table: str
@@ -82,7 +82,7 @@ class PostgresRelation(BaseRelation):
 
 
 class DuckDBRelation(BaseRelation):
-    dialect: ClassVar[str] = Dialects.DUCKDB
+    dialect: ClassVar[DialectType] = Dialects.DUCKDB
     database: str | None = Field(default=None)
     schema_: str | None = Field(default=None, serialization_alias="schema")
     table: str

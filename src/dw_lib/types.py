@@ -51,8 +51,8 @@ class ClickHouseRelation(BaseRelation):
 
     def __str__(self) -> str:
         table_expr = exp.Table(
-            this=exp.to_identifier(self.table, quoted=True),
-            db=exp.to_identifier(self.database, quoted=True) if self.database else None,
+            this=exp.to_identifier(self.table),
+            db=exp.to_identifier(self.database) if self.database else None,
         )
         return table_expr.sql(dialect=self.dialect)
 
@@ -74,9 +74,9 @@ class PostgresRelation(BaseRelation):
 
     def __str__(self) -> str:
         table_expr = exp.Table(
-            this=exp.to_identifier(self.table, quoted=True),
-            db=exp.to_identifier(self.schema_, quoted=True) if self.schema_ else None,
-            catalog=exp.to_identifier(self.database, quoted=True) if self.database else None,
+            this=exp.to_identifier(self.table),
+            db=exp.to_identifier(self.schema_) if self.schema_ else None,
+            catalog=exp.to_identifier(self.database) if self.database else None,
         )
         return table_expr.sql(dialect=self.dialect)
 
@@ -98,9 +98,9 @@ class DuckDBRelation(BaseRelation):
 
     def __str__(self) -> str:
         table_expr = exp.Table(
-            this=exp.to_identifier(self.table, quoted=True),
-            db=exp.to_identifier(self.schema_, quoted=True) if self.schema_ else None,
-            catalog=exp.to_identifier(self.database, quoted=True) if self.database else None,
+            this=exp.to_identifier(self.table),
+            db=exp.to_identifier(self.schema_) if self.schema_ else None,
+            catalog=exp.to_identifier(self.database) if self.database else None,
         )
         return table_expr.sql(dialect=self.dialect)
 

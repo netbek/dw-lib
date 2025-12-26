@@ -241,6 +241,24 @@ class TestTableWithoutSchema(DatabaseTest):
         """
         assert_sql_equal(actual, expected)
 
+    def test_replace(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_table_statement_from_model(model, replace=True)
+        expected = """
+        CREATE OR REPLACE TABLE table_without_schema (
+            id Int32
+        )
+        ENGINE=MergeTree()
+        ORDER BY id
+        SETTINGS index_granularity = 8192
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_if_not_exists_and_replace(self, clickhouse_adapter: ClickHouseAdapter, model):
+        with pytest.raises(ValueError):
+            clickhouse_adapter.make_create_table_statement_from_model(
+                model, if_not_exists=True, replace=True
+            )
+
     def test_sql_query(self, clickhouse_adapter: ClickHouseAdapter, model):
         actual = clickhouse_adapter.make_create_table_statement_from_model(
             model, sql="SELECT 42 AS id"
@@ -329,20 +347,6 @@ class TestTableWithSchema(DatabaseTest):
         """
         assert_sql_equal(actual, expected)
 
-    def test_if_not_exists(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_table_statement_from_model(
-            model, if_not_exists=True
-        )
-        expected = """
-        CREATE TABLE IF NOT EXISTS analytics.table_with_schema (
-            id Int32
-        )
-        ENGINE=MergeTree()
-        ORDER BY id
-        SETTINGS index_granularity = 8192
-        """
-        assert_sql_equal(actual, expected)
-
     def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
         actual = clickhouse_adapter.make_create_table_statement_from_model(model, table="my_table")
         expected = """
@@ -407,6 +411,22 @@ class TestViewWithoutSchema(DatabaseTest):
         """
         assert_sql_equal(actual, expected)
 
+    def test_replace(self, clickhouse_adapter: ClickHouseAdapter, model):
+        actual = clickhouse_adapter.make_create_view_statement_from_model(
+            model, model.__sql__, replace=True
+        )
+        expected = """
+        CREATE OR REPLACE VIEW view_without_schema
+        AS SELECT 42 AS id
+        """
+        assert_sql_equal(actual, expected)
+
+    def test_if_not_exists_and_replace(self, clickhouse_adapter: ClickHouseAdapter, model):
+        with pytest.raises(ValueError):
+            clickhouse_adapter.make_create_view_statement_from_model(
+                model, model.__sql__, if_not_exists=True, replace=True
+            )
+
     def test_sql_cte(self, clickhouse_adapter: ClickHouseAdapter, model):
         actual = clickhouse_adapter.make_create_view_statement_from_model(
             model, "WITH final AS (SELECT 42 AS id) SELECT * FROM final"
@@ -457,16 +477,6 @@ class TestViewWithSchema(DatabaseTest):
         actual = clickhouse_adapter.make_create_view_statement_from_model(model, model.__sql__)
         expected = """
         CREATE VIEW analytics.view_with_schema
-        AS SELECT 42 AS id
-        """
-        assert_sql_equal(actual, expected)
-
-    def test_if_not_exists(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
-            model, model.__sql__, if_not_exists=True
-        )
-        expected = """
-        CREATE VIEW IF NOT EXISTS analytics.view_with_schema
         AS SELECT 42 AS id
         """
         assert_sql_equal(actual, expected)

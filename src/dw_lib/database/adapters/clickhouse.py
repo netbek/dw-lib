@@ -225,15 +225,22 @@ class ClickHouseAdapter(BaseAdapter):
         database: str | None = None,
         sql: str | None = None,
         if_not_exists: bool | None = False,
+        replace: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
     ) -> str:
+        if if_not_exists and replace:
+            raise ValueError("if_not_exists and replace are mutually exclusive")
+
         statement = CreateTable(model.__table__, if_not_exists=if_not_exists).compile(
             dialect=ClickHouseDialect()
         )
         statement = str(statement)
         tree = sqlglot.parse_one(statement, read=self.dialect)
+
+        if replace:
+            tree.set("replace", True)
 
         if table is not None or database is not None:
             table_exp = tree.find(exp.Table)
@@ -260,10 +267,14 @@ class ClickHouseAdapter(BaseAdapter):
         table: str | None = None,
         database: str | None = None,
         if_not_exists: bool | None = False,
+        replace: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
     ) -> str:
+        if if_not_exists and replace:
+            raise ValueError("if_not_exists and replace are mutually exclusive")
+
         resolved_table = table or model.__tablename__
         resolved_database = database or get_model_schema(model)
 
@@ -272,7 +283,9 @@ class ClickHouseAdapter(BaseAdapter):
             db=exp.Identifier(this=resolved_database) if resolved_database else None,
         )
         query_exp = sqlglot.parse_one(sql, read=self.dialect)
-        tree = exp.Create(this=table_exp, kind="VIEW", expression=query_exp, exists=if_not_exists)
+        tree = exp.Create(
+            this=table_exp, kind="VIEW", expression=query_exp, exists=if_not_exists, replace=replace
+        )
 
         return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 

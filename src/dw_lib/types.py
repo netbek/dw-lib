@@ -3,20 +3,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
-from typing import ClassVar, TypedDict
+from typing import ClassVar
 
 import math
 import psutil
-
-
-class CreateTableStatementOptions(TypedDict):
-    schema: str | None = None
-    if_not_exists: bool | None = False
-    include_autoincrement: bool | None = False
-    include_index: bool | None = False
-    include_primary_key_constraint: bool | None = False
-    include_foreign_key_constraint: bool | None = False
-    include_unique_constraint: bool | None = False
 
 
 class BaseRelation(BaseModel):

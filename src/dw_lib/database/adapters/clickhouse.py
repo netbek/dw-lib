@@ -224,11 +224,14 @@ class ClickHouseAdapter(BaseAdapter):
         table: str | None = None,
         database: str | None = None,
         sql: str | None = None,
+        if_not_exists: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
     ) -> str:
-        statement = CreateTable(model.__table__).compile(dialect=ClickHouseDialect())
+        statement = CreateTable(model.__table__, if_not_exists=if_not_exists).compile(
+            dialect=ClickHouseDialect()
+        )
         statement = str(statement)
         tree = sqlglot.parse_one(statement, read=self.dialect)
 
@@ -256,6 +259,7 @@ class ClickHouseAdapter(BaseAdapter):
         sql: str,
         table: str | None = None,
         database: str | None = None,
+        if_not_exists: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
@@ -268,7 +272,7 @@ class ClickHouseAdapter(BaseAdapter):
             db=exp.Identifier(this=resolved_database) if resolved_database else None,
         )
         query_exp = sqlglot.parse_one(sql, read=self.dialect)
-        tree = exp.Create(this=table_exp, kind="VIEW", expression=query_exp)
+        tree = exp.Create(this=table_exp, kind="VIEW", expression=query_exp, exists=if_not_exists)
 
         return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 

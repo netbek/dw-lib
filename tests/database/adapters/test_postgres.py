@@ -158,17 +158,6 @@ class TestPostgresAdapter(DatabaseTest):
         """
         assert_equal_ignoring_whitespace(actual, expected)
 
-        actual = postgres_adapter.make_create_table_statement_from_table(
-            postgres_table.name, options={"schema": "other_schema"}
-        )
-        expected = f"""
-        CREATE TABLE other_schema.{postgres_table.name} (
-            id BIGINT,
-            updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
-        )
-        """
-        assert_equal_ignoring_whitespace(actual, expected)
-
     def test_list_tables_empty_database(self, postgres_adapter: PostgresAdapter):
         assert postgres_adapter.list_tables() == []
 

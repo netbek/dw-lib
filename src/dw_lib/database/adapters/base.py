@@ -1,9 +1,9 @@
-from ...types import CreateTableStatementOptions
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
+from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlmodel import SQLModel, Table
 from typing import Any, Literal, overload
 
@@ -137,7 +137,12 @@ class BaseAdapter(ABC):
         table: str,
         database: str | None = None,
         schema: str | None = None,
-        options: CreateTableStatementOptions | None = None,
+        if_not_exists: bool | None = False,
+        include_autoincrement: bool | None = False,
+        include_index: bool | None = False,
+        include_primary_key_constraint: bool | None = False,
+        include_foreign_key_constraints: Sequence[ForeignKeyConstraint] | None = None,
+        include_unique_constraint: bool | None = False,
     ) -> None: ...
 
     @abstractmethod
@@ -151,6 +156,7 @@ class BaseAdapter(ABC):
         table: str | None = None,
         database: str | None = None,
         sql: str | None = None,
+        if_not_exists: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
@@ -165,6 +171,7 @@ class BaseAdapter(ABC):
         database: str | None = None,
         schema: str | None = None,
         sql: str | None = None,
+        if_not_exists: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
@@ -181,6 +188,7 @@ class BaseAdapter(ABC):
         sql: str,
         table: str | None = None,
         database: str | None = None,
+        if_not_exists: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,
@@ -195,6 +203,7 @@ class BaseAdapter(ABC):
         table: str | None = None,
         database: str | None = None,
         schema: str | None = None,
+        if_not_exists: bool | None = False,
         pretty: bool = False,
         pad: int = 2,
         indent: int = 2,

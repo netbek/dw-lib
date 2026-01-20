@@ -19,7 +19,7 @@ dependencies = [
     "pydash>=8.0.5",
     "pyyaml>=6.0.3",
     "sqlalchemy>=2.0.44",
-    "sqlglot>=28.0.0",
+    "sqlglot>=28.0.0,<28.6.0", # TODO Unpin after fixing breaking changes
     "sqlmodel>=0.0.27",
     "sqlparse>=0.5.3",
 ]
@@ -52,7 +52,7 @@ peerdb = [
     "pyyaml>=6.0.3",
     "rich>=14.2.0",
     "sqlalchemy>=2.0.44",
-    "sqlglot>=28.0.0",
+    "sqlglot>=28.0.0,<28.6.0", # TODO Unpin after fixing breaking changes
     "sqlmodel>=0.0.27",
 ]
 

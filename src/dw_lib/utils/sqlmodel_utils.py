@@ -135,9 +135,8 @@ def parse_create_table_statement(statement: str) -> dict:
             # Primary key
             elif isinstance(prop, sqlglot.exp.PrimaryKey):
                 for primary_key_expr in prop.expressions:
-                    identifier = primary_key_expr.this.this
-                    if isinstance(identifier, sqlglot.exp.Identifier):
-                        result["primary_key"].append(identifier.name)
+                    if isinstance(primary_key_expr, sqlglot.exp.Identifier):
+                        result["primary_key"].append(primary_key_expr.name)
 
             # Order by
             elif isinstance(prop, sqlglot.exp.Order):

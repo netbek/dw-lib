@@ -49,7 +49,7 @@ services:
 
   clickhouse:
     container_name: clickhouse
-    image: clickhouse/clickhouse-server:25.11.2.24-alpine
+    image: clickhouse/clickhouse-server:25.12.4.35-alpine
     environment:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: default
@@ -159,7 +159,7 @@ services:
 
   temporal-ui:
     container_name: temporal-ui
-    image: temporalio/ui:2.43.3
+    image: temporalio/ui:2.44.1
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
@@ -175,7 +175,7 @@ services:
 
   flow-api:
     container_name: flow_api
-    image: ghcr.io/peerdb-io/flow-api:stable-v0.35.5
+    image: ghcr.io/peerdb-io/flow-api:stable-v0.36.3
     environment:
       <<: [*peerdb-postgres-env, *flow-worker-env, *peerdb-minio-env]
       PEERDB_ALLOWED_TARGETS:
@@ -195,7 +195,7 @@ services:
 
   flow-snapshot-worker:
     container_name: flow-snapshot-worker
-    image: ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.35.5
+    image: ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.3
     environment:
       <<: [*peerdb-postgres-env, *flow-worker-env, *peerdb-minio-env]
     extra_hosts:
@@ -211,7 +211,7 @@ services:
 
   flow-worker:
     container_name: flow-worker
-    image: ghcr.io/peerdb-io/flow-worker:stable-v0.35.5
+    image: ghcr.io/peerdb-io/flow-worker:stable-v0.36.3
     environment:
       <<: [*peerdb-postgres-env, *flow-worker-env, *peerdb-minio-env]
     extra_hosts:
@@ -227,7 +227,7 @@ services:
 
   peerdb:
     container_name: peerdb-server
-    image: ghcr.io/peerdb-io/peerdb-server:stable-v0.35.5
+    image: ghcr.io/peerdb-io/peerdb-server:stable-v0.36.3
     environment:
       <<: *peerdb-postgres-env
       PEERDB_FLOW_SERVER_ADDRESS: grpc://flow_api:8112
@@ -246,7 +246,7 @@ services:
 
   peerdb-ui:
     container_name: peerdb-ui
-    image: ghcr.io/peerdb-io/peerdb-ui:stable-v0.35.5
+    image: ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.3
     environment:
       <<: *peerdb-postgres-env
       DATABASE_URL: postgres://peerdb:peerdb@postgres:5432/peerdb

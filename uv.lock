@@ -442,7 +442,7 @@ wheels = [
 
 [[package]]
 name = "dw-lib"
-version = "1.6.6"
+version = "1.6.7"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },

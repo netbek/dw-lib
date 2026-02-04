@@ -275,6 +275,7 @@ class ConfigMirror(BaseModel):
     idle_timeout_seconds: int | None = 60
     initial_snapshot_only: bool | None = False
     max_batch_size: int | None = 1000000
+    publication_name: str | None = ""
     resync: bool | None = False
     snapshot_max_parallel_workers: int | None = 4
     snapshot_num_rows_per_partition: int | None = 1000000

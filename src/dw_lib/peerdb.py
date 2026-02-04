@@ -38,6 +38,8 @@ DIALECT_TO_PEERDB_TYPE_MAP = {
     Dialects.CLICKHOUSE: 8,
 }
 
+TIMEOUT = 10  # Seconds
+
 
 # https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/flow.proto#L409
 class FlowStatus:
@@ -161,9 +163,18 @@ class DropMirrorResponse(BaseModel):
     message: str
 
 
+class PauseMirrorResponse(BaseModel):
+    message: str
+
+
+class ResumeMirrorResponse(BaseModel):
+    message: str
+
+
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L280
 class MirrorStatusResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
+    # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/flow.proto#L377
     current_flow_state: Literal[
         "STATUS_UNKNOWN",
         "STATUS_RUNNING",
@@ -174,9 +185,7 @@ class MirrorStatusResponse(BaseModel):
         "STATUS_TERMINATING",
         "STATUS_TERMINATED",
         "STATUS_COMPLETED",
-    ] = Field(
-        alias="currentFlowState"
-    )  # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/flow.proto#L377
+    ] = Field(alias="currentFlowState")
     flow_job_name: str = Field(alias="flowJobName")
 
 
@@ -756,16 +765,86 @@ class PeerDB:
                 f"Failed to drop mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-        # If the mirror hasn't finished terminating, then wait
-        for _ in range(10):
+        # Check whether the mirror has been dropped
+        for _ in range(TIMEOUT):
             if not self.has_mirror(flow_job_name):
                 break
             time.sleep(1)
+        else:
+            raise Exception(f"Failed to drop mirror '{flow_job_name}' after {TIMEOUT}s")
 
         if drop_destination_tables:
             self.drop_destination_tables_of_mirror(flow_job_name)
 
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
+
+    def pause_mirror(self, flow_job_name: str) -> PauseMirrorResponse:
+        self._console.print(f"Pausing mirror '{flow_job_name}'")
+
+        if not self.has_mirror(flow_job_name):
+            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
+        current_flow_state = self.get_mirror_status(flow_job_name).current_flow_state
+        if current_flow_state not in {"STATUS_RUNNING"}:
+            return PauseMirrorResponse(
+                message=f"Not pausing mirror '{flow_job_name}' because its status is '{current_flow_state}'"
+            )
+
+        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        data = {
+            "flowJobName": flow_job_name,
+            "requestedFlowState": FlowStatus.STATUS_PAUSED,
+        }
+        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to pause mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
+            )
+
+        # Check whether the mirror has been paused
+        for _ in range(TIMEOUT):
+            if self.get_mirror_status(flow_job_name).current_flow_state == "STATUS_PAUSED":
+                break
+            time.sleep(1)
+        else:
+            raise Exception(f"Failed to pause mirror '{flow_job_name}' after {TIMEOUT}s")
+
+        return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
+
+    def resume_mirror(self, flow_job_name: str) -> ResumeMirrorResponse:
+        self._console.print(f"Resuming mirror '{flow_job_name}'")
+
+        if not self.has_mirror(flow_job_name):
+            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
+        current_flow_state = self.get_mirror_status(flow_job_name).current_flow_state
+        if current_flow_state not in {"STATUS_PAUSED", "STATUS_PAUSING"}:
+            return ResumeMirrorResponse(
+                message=f"Not resuming mirror '{flow_job_name}' because its status is '{current_flow_state}'"
+            )
+
+        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        data = {
+            "flowJobName": flow_job_name,
+            "requestedFlowState": FlowStatus.STATUS_RUNNING,
+        }
+        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to resume mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
+            )
+
+        # Check whether the mirror has been resumed
+        for _ in range(TIMEOUT):
+            if self.get_mirror_status(flow_job_name).current_flow_state == "STATUS_RUNNING":
+                break
+            time.sleep(1)
+        else:
+            raise Exception(f"Failed to resume mirror '{flow_job_name}' after {TIMEOUT}s")
+
+        return ResumeMirrorResponse(message=f"Resumed mirror '{flow_job_name}'")
 
     def drop_destination_tables_of_mirror(self, flow_job_name):
         mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)

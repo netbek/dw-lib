@@ -794,7 +794,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/mirrors/state_change"
         data = {
             "flowJobName": flow_job_name,
-            "requestedFlowState": FlowStatus.STATUS_PAUSED,
+            "requestedFlowState": "STATUS_PAUSED",
         }
         response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
@@ -828,7 +828,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/mirrors/state_change"
         data = {
             "flowJobName": flow_job_name,
-            "requestedFlowState": FlowStatus.STATUS_RUNNING,
+            "requestedFlowState": "STATUS_RUNNING",
         }
         response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 

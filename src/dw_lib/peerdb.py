@@ -651,7 +651,7 @@ class PeerDB:
 
         if deserialized.status != "CREATED":
             raise Exception(
-                f"Failed to create peer '{peer['name']}' (status {deserialized.status})"
+                f"Failed to create peer '{peer['name']}' (status: {deserialized.status})"
             )
 
         if has_peer:
@@ -732,6 +732,27 @@ class PeerDB:
         else:
             raise Exception(
                 f"Failed to get status of mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
+            )
+
+    def wait_for_mirror_status(
+        self,
+        flow_job_name: str,
+        target_statuses: set[str],
+        timeout: int = 10,
+        polling_interval: int = 1,
+    ) -> str:
+        current_status = "UNKNOWN"
+
+        for _ in range(timeout):
+            current_status = self.get_mirror_status(flow_job_name).current_flow_state
+
+            if current_status in target_statuses:
+                return current_status
+
+            time.sleep(polling_interval)
+        else:
+            raise Exception(
+                f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
             )
 
     def create_mirror(
@@ -829,14 +850,15 @@ class PeerDB:
                 f"Failed to drop mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-        # Check whether the mirror has been dropped
         for _ in range(timeout):
             if not self.has_mirror(flow_job_name):
                 break
             time.sleep(1)
         else:
-            # TODO Add mirror status to exception, e.g. to show that it's terminating
-            raise Exception(f"Failed to drop mirror '{flow_job_name}' after {timeout}s")
+            current_status = self.get_mirror_status(flow_job_name).current_flow_state
+            raise Exception(
+                f"Failed to drop mirror '{flow_job_name}' after {timeout}s (current status: {current_status})"
+            )
 
         if drop_destination_tables:
             self.drop_destination_tables_of_mirror(flow_job_name)
@@ -867,14 +889,7 @@ class PeerDB:
                 f"Failed to pause mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-        # Check whether the mirror has been paused
-        for _ in range(timeout):
-            if self.get_mirror_status(flow_job_name).current_flow_state == "STATUS_PAUSED":
-                break
-            time.sleep(1)
-        else:
-            # TODO Add mirror status to exception, e.g. to show that it's pausing
-            raise Exception(f"Failed to pause mirror '{flow_job_name}' after {timeout}s")
+        self.wait_for_mirror_status(flow_job_name, {"STATUS_PAUSED"}, timeout=timeout)
 
         return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
 
@@ -902,14 +917,7 @@ class PeerDB:
                 f"Failed to resume mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
             )
 
-        # Check whether the mirror has been resumed
-        for _ in range(timeout):
-            if self.get_mirror_status(flow_job_name).current_flow_state == "STATUS_RUNNING":
-                break
-            time.sleep(1)
-        else:
-            # TODO Add mirror status to exception
-            raise Exception(f"Failed to resume mirror '{flow_job_name}' after {timeout}s")
+        self.wait_for_mirror_status(flow_job_name, {"STATUS_RUNNING"}, timeout=timeout)
 
         return ResumeMirrorResponse(message=f"Resumed mirror '{flow_job_name}'")
 

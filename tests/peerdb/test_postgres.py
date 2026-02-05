@@ -232,17 +232,15 @@ class TestListPeers(PeerDBPostgresTest):
         assert_count_equal(actual, expected)
 
 
-class TestCreateAndDropMirror(PeerDBPostgresTest):
+class TestCreateMirror(PeerDBPostgresTest):
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
-
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
         peerdb.create_mirror(mirror.model_dump())
         assert peerdb.has_mirror(mirror.flow_job_name) is True
 
+        # Tear down
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
     def test_non_existant_source_table_raises_exception(
         self, some_postgres_tables: list[Table], peerdb: PeerDB, peers: None
@@ -255,6 +253,17 @@ class TestCreateAndDropMirror(PeerDBPostgresTest):
         assert (
             str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
         )
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+
+class TestDropMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
+
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):

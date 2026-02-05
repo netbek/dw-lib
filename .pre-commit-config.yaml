@@ -22,7 +22,7 @@ repos:
         stages: [manual]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: [--py313-plus]
@@ -34,13 +34,11 @@ repos:
         args: [--settings-path, pyproject.toml]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.15.0
     hooks:
-      - id: ruff
-        alias: ruff-lint
+      - id: ruff-check
         args: [--config, pyproject.toml]
         stages: [manual]
 
       - id: ruff-format
-        alias: ruff
         args: [--config, pyproject.toml]

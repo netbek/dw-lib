@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
 jobs:
@@ -17,12 +16,16 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: "0.9.18"
           enable-cache: true
           cache-dependency-glob: uv.lock
 
       - name: Install dependencies
         run: uv sync --all-extras --dev
+
+      - name: Run linter
+        run: |
+          . .venv/bin/activate
+          ruff check --config pyproject.toml
 
       - name: Run tests
         run: uv run --frozen pytest

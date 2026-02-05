@@ -60,6 +60,7 @@ peerdb = [
 dev = [
     "pytest>=8.4.2",
     "pytest-docker>=3.2.3",
+    "ruff>=0.15.0",
 ]
 
 [build-system]

@@ -212,7 +212,7 @@ class PeerDBIntegrationTest(PeerDBTest):
         return [
             {
                 "table": "table_1",
-                "statement": """
+                "create_statement": """
                     create table table_1 (
                         id bigint,
                         username text,
@@ -221,19 +221,10 @@ class PeerDBIntegrationTest(PeerDBTest):
                         modified_at timestamp(6)
                     );
                 """,
-                "data": [
-                    (
-                        492038475,
-                        "silver_fox_88",
-                        "pbkdf2_sha256$260000$wf8Sj3h9a2x1",
-                        34,
-                        "2026-02-05 14:22:01.482",
-                    ),
-                ],
             },
             {
                 "table": "table_2",
-                "statement": """
+                "create_statement": """
                     create table table_2 (
                         id bigint,
                         longitude double precision,
@@ -242,22 +233,16 @@ class PeerDBIntegrationTest(PeerDBTest):
                         modified_at timestamp(6)
                     );
                 """,
-                "data": [
-                    (882100349, -122.4194, 37.7749, False, "2026-01-30 09:15:33.000"),
-                ],
             },
             {
                 "table": "table_3",
-                "statement": """
+                "create_statement": """
                     create table table_3 (
                         id bigint,
                         ts timestamp(6),
                         modified_at timestamp(6)
                     );
                 """,
-                "data": [
-                    (100293847, "2026-02-05 21:40:12.111", "2026-02-05 21:42:54.000"),
-                ],
             },
         ]
 
@@ -267,7 +252,7 @@ class PeerDBIntegrationTest(PeerDBTest):
     ) -> Generator[list[Table], Any, None]:
         for table_def in table_defs[:1]:
             postgres_adapter.create_table(
-                table=table_def["table"], statement=table_def["statement"]
+                table=table_def["table"], statement=table_def["create_statement"]
             )
 
         # Create some tables
@@ -285,7 +270,7 @@ class PeerDBIntegrationTest(PeerDBTest):
     ) -> Generator[list[Table], Any, None]:
         for table_def in table_defs:
             postgres_adapter.create_table(
-                table=table_def["table"], statement=table_def["statement"]
+                table=table_def["table"], statement=table_def["create_statement"]
             )
 
         # Create all tables

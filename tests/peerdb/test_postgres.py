@@ -1,6 +1,12 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
-from dw_lib.exceptions import EmptyConfigException, MirrorNotFoundException, TableNotFoundException
+from dw_lib.exceptions import (
+    EmptyConfigException,
+    MirrorNotFoundException,
+    PeerExistsException,
+    PeerNotFoundException,
+    TableNotFoundException,
+)
 from dw_lib.peerdb import PeerDB
 from pathlib import Path
 from sqlmodel import Table
@@ -172,17 +178,48 @@ class TestDebug(PeerDBPostgresTest):
         assert actual == expected
 
 
-class TestCreateAndDropPeer(PeerDBPostgresTest):
+class TestCreatePeer(PeerDBPostgresTest):
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB):
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
-        assert peerdb.has_peer(peer.name) is False
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+        assert peerdb.has_peer(peer.name) is True
+
+        # Tear down
+        peerdb.drop_peer(peer.name)
+
+    def test_existant_peer_raises_exception(self, peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
+
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+        assert peerdb.has_peer(peer.name) is True
+
+        with pytest.raises(PeerExistsException) as exc:
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+
+        assert str(exc.value) == "Peer 'source' exists"
+
+        # Tear down
+        peerdb.drop_peer(peer.name)
+
+
+class TestDropPeer(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
         assert peerdb.has_peer(peer.name) is True
 
         peerdb.drop_peer(peer.name)
         assert peerdb.has_peer(peer.name) is False
+
+    def test_non_existant_peer_raises_exception(self, peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
+
+        with pytest.raises(PeerNotFoundException) as exc:
+            peerdb.drop_peer(peer.name)
+
+        assert str(exc.value) == "Peer 'source' not found"
 
 
 class TestListPeers(PeerDBPostgresTest):
@@ -212,8 +249,6 @@ class TestCreateAndDropMirror(PeerDBPostgresTest):
     ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
 
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
-
         with pytest.raises(TableNotFoundException) as exc:
             peerdb.create_mirror(mirror.model_dump())
 
@@ -224,8 +259,6 @@ class TestCreateAndDropMirror(PeerDBPostgresTest):
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
-
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
         with pytest.raises(MirrorNotFoundException) as exc:
             peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
@@ -265,10 +298,8 @@ class TestPauseMirror(PeerDBPostgresTest):
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
-
         with pytest.raises(MirrorNotFoundException) as exc:
-            peerdb.pause_mirror(mirror.flow_job_name, drop_destination_tables=True)
+            peerdb.pause_mirror(mirror.flow_job_name)
 
         assert str(exc.value) == "Mirror 'cdc_one' not found"
 
@@ -294,10 +325,8 @@ class TestResumeMirror(PeerDBPostgresTest):
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
-
         with pytest.raises(MirrorNotFoundException) as exc:
-            peerdb.resume_mirror(mirror.flow_job_name, drop_destination_tables=True)
+            peerdb.resume_mirror(mirror.flow_job_name)
 
         assert str(exc.value) == "Mirror 'cdc_one' not found"
 

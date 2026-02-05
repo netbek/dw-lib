@@ -39,8 +39,6 @@ DIALECT_TO_PEERDB_TYPE_MAP = {
     Dialects.CLICKHOUSE: 8,
 }
 
-TIMEOUT = 10  # Seconds
-
 
 # https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/flow.proto#L409
 class FlowStatus:
@@ -805,6 +803,7 @@ class PeerDB:
         flow_job_name: str,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
+        timeout: int = 10,
     ) -> DropMirrorResponse:
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
@@ -831,19 +830,20 @@ class PeerDB:
             )
 
         # Check whether the mirror has been dropped
-        for _ in range(TIMEOUT):
+        for _ in range(timeout):
             if not self.has_mirror(flow_job_name):
                 break
             time.sleep(1)
         else:
-            raise Exception(f"Failed to drop mirror '{flow_job_name}' after {TIMEOUT}s")
+            # TODO Add mirror status to exception, e.g. to show that it's terminating
+            raise Exception(f"Failed to drop mirror '{flow_job_name}' after {timeout}s")
 
         if drop_destination_tables:
             self.drop_destination_tables_of_mirror(flow_job_name)
 
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
 
-    def pause_mirror(self, flow_job_name: str) -> PauseMirrorResponse:
+    def pause_mirror(self, flow_job_name: str, timeout: int = 10) -> PauseMirrorResponse:
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):
@@ -868,16 +868,17 @@ class PeerDB:
             )
 
         # Check whether the mirror has been paused
-        for _ in range(TIMEOUT):
+        for _ in range(timeout):
             if self.get_mirror_status(flow_job_name).current_flow_state == "STATUS_PAUSED":
                 break
             time.sleep(1)
         else:
-            raise Exception(f"Failed to pause mirror '{flow_job_name}' after {TIMEOUT}s")
+            # TODO Add mirror status to exception, e.g. to show that it's pausing
+            raise Exception(f"Failed to pause mirror '{flow_job_name}' after {timeout}s")
 
         return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
 
-    def resume_mirror(self, flow_job_name: str) -> ResumeMirrorResponse:
+    def resume_mirror(self, flow_job_name: str, timeout: int = 10) -> ResumeMirrorResponse:
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):
@@ -902,16 +903,17 @@ class PeerDB:
             )
 
         # Check whether the mirror has been resumed
-        for _ in range(TIMEOUT):
+        for _ in range(timeout):
             if self.get_mirror_status(flow_job_name).current_flow_state == "STATUS_RUNNING":
                 break
             time.sleep(1)
         else:
-            raise Exception(f"Failed to resume mirror '{flow_job_name}' after {TIMEOUT}s")
+            # TODO Add mirror status to exception
+            raise Exception(f"Failed to resume mirror '{flow_job_name}' after {timeout}s")
 
         return ResumeMirrorResponse(message=f"Resumed mirror '{flow_job_name}'")
 
-    def drop_destination_tables_of_mirror(self, flow_job_name):
+    def drop_destination_tables_of_mirror(self, flow_job_name: str) -> None:
         mirror = pydash.find(self.config.mirrors, lambda x: x.flow_job_name == flow_job_name)
 
         if mirror is None:
@@ -955,6 +957,7 @@ class PeerDB:
                 f"Failed to list mirrors (error {response.status_code}: {response.text})"
             )
 
+        # TODO Sort by mirror name
         return ListMirrorsResponse(**response.json())
 
     def list_expected_publications(self) -> list[ListPublicationsItem]:

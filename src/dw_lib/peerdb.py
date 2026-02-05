@@ -965,8 +965,7 @@ class PeerDB:
                 f"Failed to list mirrors (error {response.status_code}: {response.text})"
             )
 
-        # TODO Sort by mirror name
-        return ListMirrorsResponse(**response.json())
+        return ListMirrorsResponse(mirrors=pydash.sort_by(response.json()["mirrors"], "name"))
 
     def list_expected_publications(self) -> list[ListPublicationsItem]:
         data = []

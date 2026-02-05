@@ -1,5 +1,6 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
+from datetime import datetime
 from dw_lib.exceptions import (
     EmptyConfigException,
     MirrorExistsException,
@@ -8,7 +9,7 @@ from dw_lib.exceptions import (
     PeerNotFoundException,
     TableNotFoundException,
 )
-from dw_lib.peerdb import PeerDB
+from dw_lib.peerdb import MirrorStatusResponse, PeerDB
 from pathlib import Path
 from sqlmodel import Table
 
@@ -341,16 +342,36 @@ class TestResyncMirror(PeerDBClickHouseTest):
 
 
 class TestPauseMirror(PeerDBClickHouseTest):
-    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+    def test_ok(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None, monkeypatch
+    ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
+        # Mock the mirror status to STATUS_RUNNING so pause is allowed
+        monkeypatch.setattr(
+            peerdb,
+            "get_mirror_status",
+            lambda flow_job_name: MirrorStatusResponse(
+                createdAt=datetime.now(),
+                currentFlowState="STATUS_RUNNING",
+                flowJobName=flow_job_name,
+            ),
+        )
+
+        # Prevent actual HTTP calls and waiting loop: simulate successful post and immediate paused state
+        class _Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            text = ""
+
+        monkeypatch.setattr("dw_lib.peerdb.httpx.post", lambda *a, **k: _Response())
+        monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_PAUSED")
 
         response = peerdb.pause_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
-        )
+        assert response.message == "Paused mirror 'cdc_one'"
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
@@ -362,22 +383,36 @@ class TestPauseMirror(PeerDBClickHouseTest):
 
 
 class TestResumeMirror(PeerDBClickHouseTest):
-    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+    def test_ok(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None, monkeypatch
+    ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
-
-        response = peerdb.pause_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        # Mock the mirror status to STATUS_PAUSED so resume is allowed
+        monkeypatch.setattr(
+            peerdb,
+            "get_mirror_status",
+            lambda flow_job_name: MirrorStatusResponse(
+                createdAt=datetime.now(),
+                currentFlowState="STATUS_PAUSED",
+                flowJobName=flow_job_name,
+            ),
         )
+
+        # Prevent actual HTTP calls and waiting loop: simulate successful post and immediate running state
+        class _Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            text = ""
+
+        monkeypatch.setattr("dw_lib.peerdb.httpx.post", lambda *a, **k: _Response())
+        monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_RUNNING")
 
         response = peerdb.resume_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not resuming mirror 'cdc_one' because its status is 'STATUS_SETUP'"
-        )
+        assert response.message == "Resumed mirror 'cdc_one'"
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")

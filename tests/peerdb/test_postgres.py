@@ -189,16 +189,30 @@ class TestCreatePeer(PeerDBPostgresTest):
         # Tear down
         peerdb.drop_peer(peer.name)
 
-    def test_existant_peer_raises_exception(self, peerdb: PeerDB):
+    def test_existant_peer_raises_exception_if_exists_fail(self, peerdb: PeerDB):
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
         assert peerdb.has_peer(peer.name) is True
 
         with pytest.raises(PeerExistsException) as exc:
-            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()}, if_exists="fail")
 
         assert str(exc.value) == "Peer 'source' exists"
+
+        # Tear down
+        peerdb.drop_peer(peer.name)
+
+    def test_existant_peer_if_exists_keep(self, peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
+
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+        assert peerdb.has_peer(peer.name) is True
+
+        response = peerdb.create_peer(
+            {"name": peer.name, **peer.peerdb.model_dump()}, if_exists="keep"
+        )
+        assert response.message == "Kept peer 'source'"
 
         # Tear down
         peerdb.drop_peer(peer.name)

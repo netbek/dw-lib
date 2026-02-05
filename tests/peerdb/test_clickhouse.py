@@ -332,6 +332,15 @@ class TestIntegration(PeerDBTest):
         )
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
+    def test_resync_mirror(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        response = peerdb.resync_mirror(mirror.flow_job_name)
+
+        assert response.message == "Resync of mirror 'cdc_one' has been initiated"
+
     def test_pause_and_resume_mirror(
         self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
     ):

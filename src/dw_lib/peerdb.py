@@ -33,14 +33,14 @@ import yaml
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
 
-# https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/peers.proto#L261
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/peers.proto#L261
 DIALECT_TO_PEERDB_TYPE_MAP = {
     Dialects.POSTGRES: 3,
     Dialects.CLICKHOUSE: 8,
 }
 
 
-# https://github.com/PeerDB-io/peerdb/blob/3df973fb18cb665ea556385dbd5f7c8110547579/protos/flow.proto#L409
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/flow.proto#L460
 class FlowStatus:
     STATUS_UNKNOWN = 0
     STATUS_RUNNING = 1
@@ -56,7 +56,7 @@ class FlowStatus:
     STATUS_MODIFYING = 11
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L48
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L39
 class DynamicSetting(BaseModel):
     name: str
     default_value: str = Field(alias="defaultValue")
@@ -75,7 +75,7 @@ class GetDynamicSettingsResponse(BaseModel):
     settings: list[DynamicSetting]
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/peers.proto#L111
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/peers.proto#L170
 class ClickHouseConfig(BaseModel):
     host: str
     port: int
@@ -95,7 +95,7 @@ class ClickHousePeer(BaseModel):
     clickhouse_config: ClickHouseConfig = Field(alias="clickhouseConfig")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/peers.proto#L73
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/peers.proto#L117
 class PostgresConfig(BaseModel):
     host: str
     port: int
@@ -110,31 +110,31 @@ class PostgresPeer(BaseModel):
     postgres_config: PostgresConfig = Field(alias="postgresConfig")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L197
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L216
 class PeerInfoResponse(BaseModel):
     peer: ClickHousePeer | PostgresPeer
     version: str
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L202
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L221
 class PeerTypeResponse(BaseModel):
     peer_type: str = Field(alias="peerType")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L206
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L225
 class PeerListItem(BaseModel):
     name: str
     type: str
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L211
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L230
 class ListPeersResponse(BaseModel):
     destination_items: list[PeerListItem] = Field(alias="destinationItems")
     items: list[PeerListItem]
     source_items: list[PeerListItem] = Field(alias="sourceItems")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L106
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L98
 class RawCreatePeerResponse(BaseModel):
     message: str
     status: Literal["VALIDATION_UNKNOWN", "CREATED", "FAILED"]
@@ -170,10 +170,10 @@ class ResumeMirrorResponse(BaseModel):
     message: str
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L280
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L313
 class MirrorStatusResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
-    # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/flow.proto#L377
+    # https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/flow.proto#L460
     current_flow_state: Literal[
         "STATUS_UNKNOWN",
         "STATUS_RUNNING",
@@ -184,11 +184,14 @@ class MirrorStatusResponse(BaseModel):
         "STATUS_TERMINATING",
         "STATUS_TERMINATED",
         "STATUS_COMPLETED",
+        "STATUS_RESYNC",
+        "STATUS_FAILED",
+        "STATUS_MODIFYING",
     ] = Field(alias="currentFlowState")
     flow_job_name: str = Field(alias="flowJobName")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L345
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L398
 class ListMirrorsItem(BaseModel):
     id: str
     workflow_id: str = Field(alias="workflowId")
@@ -201,7 +204,7 @@ class ListMirrorsItem(BaseModel):
     is_cdc: bool = Field(alias="isCdc")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L357
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L410
 class ListMirrorsResponse(BaseModel):
     mirrors: list[ListMirrorsItem]
 

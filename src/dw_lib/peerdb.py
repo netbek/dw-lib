@@ -858,10 +858,7 @@ class PeerDB:
                 break
             time.sleep(1)
         else:
-            current_status = self.get_mirror_status(flow_job_name).current_flow_state
-            raise Exception(
-                f"Failed to drop mirror '{flow_job_name}' after {timeout}s (current status: {current_status})"
-            )
+            raise Exception(f"Failed to drop mirror '{flow_job_name}' after {timeout}s")
 
         if drop_destination_tables:
             self.drop_destination_tables_of_mirror(flow_job_name)

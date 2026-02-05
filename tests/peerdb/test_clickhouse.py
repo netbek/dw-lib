@@ -10,7 +10,6 @@ from typing import Any
 
 import pydash
 import pytest
-import time
 
 table_defs = [
     (

@@ -60,6 +60,7 @@ peerdb = [
 dev = [
     "pytest>=8.4.2",
     "pytest-docker>=3.2.3",
+    "ruff>=0.15.0",
 ]
 
 [build-system]
@@ -75,6 +76,7 @@ py_version = 313
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+extend-exclude = ["./vendor"]
 
 [tool.ruff.lint]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]

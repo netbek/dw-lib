@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from pydantic import BaseModel, Field
 from sqlglot.dialects.dialect import Dialects
+from sqlmodel import text
 from typing import Literal
 
 import httpx
@@ -205,6 +206,17 @@ class ListMirrorsItem(BaseModel):
 # https://github.com/PeerDB-io/peerdb/blob/0890e1ea0151c45533cced93bdcb37d25dde66a5/protos/route.proto#L357
 class ListMirrorsResponse(BaseModel):
     mirrors: list[ListMirrorsItem]
+
+
+class ListPublicationsItem(BaseModel):
+    publication_name: str
+    relation: PostgresRelation
+
+
+class ListReplicationSlotsItem(BaseModel):
+    slot_name: str
+    slot_type: str
+    active: bool
 
 
 class ConfigSetting(BaseModel):
@@ -423,7 +435,44 @@ class PeerDB:
         )
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:
+        # TODO Add to result: missing publications, unused publications, replication slots
         # TODO Table mappings: check whether the source schema and table exists, check whether the destination schema exists
+
+        def create_message(condition: bool) -> str:
+            if condition:
+                if echo:
+                    return "[green]OK[/green]"
+                else:
+                    return "OK"
+            else:
+                if echo:
+                    return "[red]Not OK[/red]"
+                else:
+                    return "Not OK"
+
+        def render_publications_table(
+            data: list[ListPublicationsItem], title: str | None = None
+        ) -> rich.table.Table:
+            table = rich.table.Table(title=title, show_header=True)
+            table.add_column("Publication")
+            table.add_column("Schema")
+            table.add_column("Table")
+            for item in data:
+                table.add_row(item.publication_name, item.relation.schema_, item.relation.table)
+
+            return table
+
+        def render_replication_slots_table(
+            data: list[ListReplicationSlotsItem], title: str | None = None
+        ) -> rich.table.Table:
+            table = rich.table.Table(title=title, show_header=True)
+            table.add_column("Name")
+            table.add_column("Type")
+            table.add_column("Active")
+            for item in data:
+                table.add_row(item.slot_name, item.slot_type, str(item.active))
+
+            return table
 
         try:
             self.get_settings()
@@ -456,18 +505,6 @@ class PeerDB:
             max_wal_senders_is_valid = None
             wal_level_is_valid = None
 
-        def create_message(condition: bool) -> str:
-            if condition:
-                if echo:
-                    return "[green]OK[/green]"
-                else:
-                    return "OK"
-            else:
-                if echo:
-                    return "[red]Not OK[/red]"
-                else:
-                    return "Not OK"
-
         result = {
             "API": {
                 "URL": self.config.api_url,
@@ -492,6 +529,33 @@ class PeerDB:
                 self._console.print(f"{'\n' if i > 0 else ''}{k1}:")
                 for k2, v2 in v1.items():
                     self._console.print(f"  {k2}: {v2}")
+
+            self._console.print()
+            missing_publications = self.list_missing_publications()
+            if missing_publications:
+                self._console.print(
+                    render_publications_table(missing_publications, title="Missing publications")
+                )
+            else:
+                self._console.print("Missing publications: None")
+
+            self._console.print()
+            unused_publications = self.list_unused_publications()
+            if unused_publications:
+                self._console.print(
+                    render_publications_table(unused_publications, title="Unused publications")
+                )
+            else:
+                self._console.print("Unused publications: None")
+
+            self._console.print()
+            replication_slots = self.list_replication_slots()
+            if replication_slots:
+                self._console.print(
+                    render_replication_slots_table(replication_slots, title="Replication slots")
+                )
+            else:
+                self._console.print("Replication slots: None")
 
         return result
 
@@ -705,7 +769,7 @@ class PeerDB:
             source_relation = PostgresRelation.from_string(table_mapping["source_table_identifier"])
             source_table = pydash.find(
                 source_tables,
-                lambda x: (x.schema == source_relation.schema_ and x.name == source_relation.table),
+                lambda x: x.schema == source_relation.schema_ and x.name == source_relation.table,
             )
 
             if source_table is None:
@@ -892,6 +956,76 @@ class PeerDB:
             )
 
         return ListMirrorsResponse(**response.json())
+
+    def list_expected_publications(self) -> list[ListPublicationsItem]:
+        data = []
+        for mirror in self.config.mirrors:
+            for table_mapping in mirror.table_mappings:
+                relation = PostgresRelation.from_string(table_mapping.source_table_identifier)
+                data.append(
+                    ListPublicationsItem(
+                        publication_name=mirror.publication_name, relation=relation
+                    )
+                )
+
+        return data
+
+    def list_actual_publications(self) -> list[ListPublicationsItem]:
+        source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
+        data = []
+        with source_adapter.create_session() as session:
+            query = """
+            SELECT pubname, schemaname, tablename
+            FROM pg_publication_tables
+            ORDER BY pubname, schemaname, tablename
+            """
+            result = session.exec(text(query))
+            for row in result.fetchall():
+                relation = PostgresRelation(schema_=row.schemaname, table=row.tablename)
+                data.append(ListPublicationsItem(publication_name=row.pubname, relation=relation))
+
+        return data
+
+    def list_missing_publications(self) -> list[ListPublicationsItem]:
+        """List the publications in the configuration that are not in the source database."""
+        actual = self.list_actual_publications()
+        expected = self.list_expected_publications()
+        # Exclude items that have no publication name because PeerDB will manage those publications
+        expected = pydash.filter_(expected, lambda x: bool(x.publication_name))
+        missing = pydash.difference(expected, actual)
+
+        return missing
+
+    def list_unused_publications(self) -> list[ListPublicationsItem]:
+        """List the publications in the source database that are not in the configuration."""
+        actual = self.list_actual_publications()
+        expected = self.list_expected_publications()
+        unused = pydash.difference(actual, expected)
+
+        return unused
+
+    def list_replication_slots(self) -> list[ListReplicationSlotsItem]:
+        source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
+        database = source_adapter.settings.database
+        data = []
+        with source_adapter.create_session() as session:
+            query = """
+            SELECT slot_name, slot_type, active
+            FROM pg_replication_slots
+            WHERE database = :database
+            ORDER BY slot_name
+            """
+            result = session.exec(text(query), params={"database": database})
+            for row in result.fetchall():
+                data.append(
+                    ListReplicationSlotsItem(
+                        slot_name=row.slot_name,
+                        slot_type=row.slot_type,
+                        active=row.active,
+                    )
+                )
+
+        return data
 
 
 def find_config_file(filename: str = "peerdb.yaml") -> Path:

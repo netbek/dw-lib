@@ -738,7 +738,7 @@ class PeerDB:
         self,
         flow_job_name: str,
         target_statuses: set[str],
-        timeout: int = 10,
+        timeout: int = 15,
         polling_interval: int = 1,
     ) -> str:
         current_status = "UNKNOWN"
@@ -824,7 +824,7 @@ class PeerDB:
         flow_job_name: str,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
-        timeout: int = 10,
+        timeout: int = 15,
     ) -> DropMirrorResponse:
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
@@ -865,7 +865,7 @@ class PeerDB:
 
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
 
-    def pause_mirror(self, flow_job_name: str, timeout: int = 10) -> PauseMirrorResponse:
+    def pause_mirror(self, flow_job_name: str, timeout: int = 15) -> PauseMirrorResponse:
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):
@@ -893,7 +893,7 @@ class PeerDB:
 
         return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
 
-    def resume_mirror(self, flow_job_name: str, timeout: int = 10) -> ResumeMirrorResponse:
+    def resume_mirror(self, flow_job_name: str, timeout: int = 15) -> ResumeMirrorResponse:
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):

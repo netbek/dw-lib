@@ -8,7 +8,7 @@ from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from sqlalchemy import Column
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Table
 from typing import Any
 
 import httpx
@@ -204,6 +204,102 @@ class PeerDBTest:
         peerdb = PeerDB(peerdb_config_path)
 
         yield peerdb
+
+
+class PeerDBIntegrationTest(PeerDBTest):
+    @pytest.fixture(scope="function")
+    def table_defs(self) -> list[tuple[str, str]]:
+        return [
+            (
+                "table_1",
+                """
+                create table table_1 (
+                    id bigint,
+                    username text,
+                    password text,
+                    age smallint,
+                    modified_at timestamp(6)
+                );
+                """,
+            ),
+            (
+                "table_2",
+                """
+                create table table_2 (
+                    id bigint,
+                    longitude double precision,
+                    latitude double precision,
+                    is_secret boolean,
+                    modified_at timestamp(6)
+                );
+                """,
+            ),
+            (
+                "table_3",
+                """
+                create table table_3 (
+                    id bigint,
+                    ts timestamp(6),
+                    modified_at timestamp(6)
+                );
+                """,
+            ),
+        ]
+
+    @pytest.fixture(scope="function")
+    def some_postgres_tables(
+        self, postgres_adapter: PostgresAdapter, table_defs: list[tuple[str, str]]
+    ) -> Generator[list[Table], Any, None]:
+        for table_def in table_defs[:1]:
+            postgres_adapter.create_table(*table_def)
+
+        # Create some tables
+        table_names = [table_def[0] for table_def in table_defs[:1]]
+        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
+
+        yield tables
+
+        for table_name in table_names:
+            postgres_adapter.drop_table(table_name)
+
+    @pytest.fixture(scope="function")
+    def all_postgres_tables(
+        self, postgres_adapter: PostgresAdapter, table_defs: list[tuple[str, str]]
+    ) -> Generator[list[Table], Any, None]:
+        for table_def in table_defs:
+            postgres_adapter.create_table(*table_def)
+
+        # Create all tables
+        table_names = [table_def[0] for table_def in table_defs]
+        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
+
+        yield tables
+
+        for table_name in table_names:
+            postgres_adapter.drop_table(table_name)
+
+    @pytest.fixture(scope="function")
+    def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
+        for peer in peerdb.config.peers:
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+
+        yield None
+
+        for peer in peerdb.config.peers:
+            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
+
+    @pytest.fixture(scope="function")
+    def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
+        for peer in peerdb.config.peers:
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+
+        for mirror in peerdb.config.mirrors:
+            peerdb.create_mirror(mirror.model_dump())
+
+        yield None
+
+        for peer in peerdb.config.peers:
+            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
 
 class LoaderTest:

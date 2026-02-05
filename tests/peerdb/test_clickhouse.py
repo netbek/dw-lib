@@ -1,71 +1,15 @@
 from ..asserts import assert_count_equal
-from ..conftest import DatabaseTest, PeerDBTest
-from collections.abc import Generator
-from dw_lib.database.adapters import PostgresAdapter
+from ..conftest import PeerDBIntegrationTest
 from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
 from dw_lib.peerdb import PeerDB
 from pathlib import Path
 from sqlmodel import Table
-from typing import Any
 
 import pydash
 import pytest
 
-table_defs = [
-    (
-        "table_1",
-        """
-        create table table_1 (
-            id bigint,
-            username text,
-            password text,
-            age smallint,
-            modified_at timestamp(6)
-        );
-        """,
-    ),
-    (
-        "table_2",
-        """
-        create table table_2 (
-            id bigint,
-            longitude double precision,
-            latitude double precision,
-            is_secret boolean,
-            modified_at timestamp(6)
-        );
-        """,
-    ),
-    (
-        "table_3",
-        """
-        create table table_3 (
-            id bigint,
-            ts timestamp(6),
-            modified_at timestamp(6)
-        );
-        """,
-    ),
-]
 
-
-class TestLoadConfig(DatabaseTest):
-    @pytest.fixture(scope="function")
-    def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs:
-            postgres_adapter.create_table(*table_def)
-
-        # Create all tables
-        table_names = [table_def[0] for table_def in table_defs]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
+class TestLoadConfig(PeerDBIntegrationTest):
     def test_empty_config(self, monkeypatch):
         monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
 
@@ -202,65 +146,10 @@ class TestLoadConfig(DatabaseTest):
         assert PeerDB(config_file).config.model_dump(by_alias=True) == expected
 
 
-class TestIntegration(PeerDBTest):
+class TestPeerDB(PeerDBIntegrationTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         return Path(__file__).parent / "data" / "peerdb.clickhouse.yaml"
-
-    @pytest.fixture(scope="function")
-    def some_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs[:1]:
-            postgres_adapter.create_table(*table_def)
-
-        # Create some tables
-        table_names = [table_def[0] for table_def in table_defs[:1]]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
-    @pytest.fixture(scope="function")
-    def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs:
-            postgres_adapter.create_table(*table_def)
-
-        # Create all tables
-        table_names = [table_def[0] for table_def in table_defs]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
-    @pytest.fixture(scope="function")
-    def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
-        for peer in peerdb.config.peers:
-            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
-
-        yield None
-
-        for peer in peerdb.config.peers:
-            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
-
-    @pytest.fixture(scope="function")
-    def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
-        for peer in peerdb.config.peers:
-            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
-
-        for mirror in peerdb.config.mirrors:
-            peerdb.create_mirror(mirror.model_dump())
-
-        yield None
-
-        for peer in peerdb.config.peers:
-            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
     def test_debug(self, peerdb: PeerDB):
         actual = peerdb.debug()

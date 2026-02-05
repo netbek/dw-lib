@@ -82,7 +82,7 @@ extend-exclude = ["./vendor"]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.pytest.ini_options]
-addopts = "--no-header --container-scope=module"
+addopts = "-x --no-header --container-scope=module"
 filterwarnings = [
     "ignore::DeprecationWarning:dbt_common.invocation", # https://github.com/dbt-labs/dbt-core/issues/9791
     "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038

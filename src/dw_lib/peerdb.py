@@ -162,6 +162,10 @@ class DropMirrorResponse(BaseModel):
     message: str
 
 
+class ResyncMirrorResponse(BaseModel):
+    message: str
+
+
 class PauseMirrorResponse(BaseModel):
     message: str
 
@@ -864,6 +868,38 @@ class PeerDB:
             self.drop_destination_tables_of_mirror(flow_job_name)
 
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
+
+    def resync_mirror(
+        self, flow_job_name: str, if_exists: bool | None = False, timeout: int = 15
+    ) -> ResyncMirrorResponse:
+        self._console.print(f"Resyncing mirror '{flow_job_name}'")
+
+        if not self.has_mirror(flow_job_name):
+            if if_exists:
+                return ResyncMirrorResponse(
+                    f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
+                )
+            else:
+                raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
+        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        data = {
+            "flowJobName": flow_job_name,
+            "requestedFlowState": FlowStatus.STATUS_RESYNC,
+            "dropMirrorStats": True,
+        }
+        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to resync mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
+            )
+
+        self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
+
+        return ResyncMirrorResponse(
+            message=f"Resync of mirror '{flow_job_name}' has been initiated"
+        )
 
     def pause_mirror(self, flow_job_name: str, timeout: int = 15) -> PauseMirrorResponse:
         self._console.print(f"Pausing mirror '{flow_job_name}'")

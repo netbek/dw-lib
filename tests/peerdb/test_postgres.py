@@ -1,71 +1,22 @@
 from ..asserts import assert_count_equal
-from ..conftest import DatabaseTest, PeerDBTest
-from collections.abc import Generator
-from dw_lib.database.adapters import PostgresAdapter
-from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
+from ..conftest import PeerDBIntegrationTest
+from dw_lib.exceptions import (
+    EmptyConfigException,
+    MirrorExistsException,
+    MirrorNotFoundException,
+    PeerExistsException,
+    PeerNotFoundException,
+    TableNotFoundException,
+)
 from dw_lib.peerdb import PeerDB
 from pathlib import Path
 from sqlmodel import Table
-from typing import Any
 
 import pydash
 import pytest
 
-table_defs = [
-    (
-        "table_1",
-        """
-        create table table_1 (
-            id bigint,
-            username text,
-            password text,
-            age smallint,
-            modified_at timestamp(6)
-        );
-        """,
-    ),
-    (
-        "table_2",
-        """
-        create table table_2 (
-            id bigint,
-            longitude double precision,
-            latitude double precision,
-            is_secret boolean,
-            modified_at timestamp(6)
-        );
-        """,
-    ),
-    (
-        "table_3",
-        """
-        create table table_3 (
-            id bigint,
-            ts timestamp(6),
-            modified_at timestamp(6)
-        );
-        """,
-    ),
-]
 
-
-class TestLoadConfig(DatabaseTest):
-    @pytest.fixture(scope="function")
-    def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs:
-            postgres_adapter.create_table(*table_def)
-
-        # Create all tables
-        table_names = [table_def[0] for table_def in table_defs]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
+class TestLoadConfig(PeerDBIntegrationTest):
     def test_empty_config(self, monkeypatch):
         monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
 
@@ -199,67 +150,14 @@ class TestLoadConfig(DatabaseTest):
         assert PeerDB(config_file).config.model_dump(by_alias=True) == expected
 
 
-class TestIntegration(PeerDBTest):
+class PeerDBPostgresTest(PeerDBIntegrationTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
 
-    @pytest.fixture(scope="function")
-    def some_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs[:1]:
-            postgres_adapter.create_table(*table_def)
 
-        # Create some tables
-        table_names = [table_def[0] for table_def in table_defs[:1]]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
-    @pytest.fixture(scope="function")
-    def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs:
-            postgres_adapter.create_table(*table_def)
-
-        # Create all tables
-        table_names = [table_def[0] for table_def in table_defs]
-        tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
-
-        yield tables
-
-        for table_name in table_names:
-            postgres_adapter.drop_table(table_name)
-
-    @pytest.fixture(scope="function")
-    def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
-        for peer in peerdb.config.peers:
-            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
-
-        yield None
-
-        for peer in peerdb.config.peers:
-            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
-
-    @pytest.fixture(scope="function")
-    def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
-        for peer in peerdb.config.peers:
-            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
-
-        for mirror in peerdb.config.mirrors:
-            peerdb.create_mirror(mirror.model_dump())
-
-        yield None
-
-        for peer in peerdb.config.peers:
-            peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
-
-    def test_debug(self, peerdb: PeerDB):
+class TestDebug(PeerDBPostgresTest):
+    def test_ok(self, peerdb: PeerDB):
         actual = peerdb.debug()
         expected = {
             "API": {
@@ -280,10 +178,49 @@ class TestIntegration(PeerDBTest):
         }
         assert actual == expected
 
-    def test_create_and_drop_peer(self, all_postgres_tables: list[Table], peerdb: PeerDB):
+
+class TestCreatePeer(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB):
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
-        assert peerdb.has_peer(peer.name) is False
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+        assert peerdb.has_peer(peer.name) is True
+
+        # Tear down
+        peerdb.drop_peer(peer.name)
+
+    def test_existant_peer_raises_exception_if_exists_fail(self, peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
+
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+        assert peerdb.has_peer(peer.name) is True
+
+        with pytest.raises(PeerExistsException) as exc:
+            peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()}, if_exists="fail")
+
+        assert str(exc.value) == "Peer 'source' exists"
+
+        # Tear down
+        peerdb.drop_peer(peer.name)
+
+    def test_existant_peer_if_exists_keep(self, peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
+
+        peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
+        assert peerdb.has_peer(peer.name) is True
+
+        response = peerdb.create_peer(
+            {"name": peer.name, **peer.peerdb.model_dump()}, if_exists="keep"
+        )
+        assert response.message == "Kept peer 'source'"
+
+        # Tear down
+        peerdb.drop_peer(peer.name)
+
+
+class TestDropPeer(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
         assert peerdb.has_peer(peer.name) is True
@@ -291,9 +228,17 @@ class TestIntegration(PeerDBTest):
         peerdb.drop_peer(peer.name)
         assert peerdb.has_peer(peer.name) is False
 
-    def test_list_peers(
-        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
-    ):
+    def test_non_existant_peer_raises_exception(self, peerdb: PeerDB):
+        peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
+
+        with pytest.raises(PeerNotFoundException) as exc:
+            peerdb.drop_peer(peer.name)
+
+        assert str(exc.value) == "Peer 'source' not found"
+
+
+class TestListPeers(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
         actual = [peer.model_dump() for peer in peerdb.list_peers().items]
         expected = [
             {"name": "source", "type": "POSTGRES"},
@@ -301,25 +246,21 @@ class TestIntegration(PeerDBTest):
         ]
         assert_count_equal(actual, expected)
 
-    def test_create_and_drop_mirror(
-        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
-    ):
-        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
+class TestCreateMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         peerdb.create_mirror(mirror.model_dump())
         assert peerdb.has_mirror(mirror.flow_job_name) is True
 
+        # Tear down
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
-    def test_create_mirror_missing_table(
+    def test_non_existant_source_table_raises_exception(
         self, some_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
-
-        assert peerdb.has_mirror(mirror.flow_job_name) is False
 
         with pytest.raises(TableNotFoundException) as exc:
             peerdb.create_mirror(mirror.model_dump())
@@ -329,9 +270,123 @@ class TestIntegration(PeerDBTest):
         )
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
-    def test_list_mirrors(
-        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
+    def test_existant_mirror_raises_exception_if_exists_fail(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
+
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
+
+        with pytest.raises(MirrorExistsException) as exc:
+            peerdb.create_mirror(mirror.model_dump(), if_exists="fail")
+
+        assert str(exc.value) == "Mirror 'cdc_many' exists"
+
+        # Tear down
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+    def test_existant_mirror_kept_if_exists_keep(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
+
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
+
+        response = peerdb.create_mirror(mirror.model_dump(), if_exists="keep")
+        assert response.message == "Kept mirror 'cdc_many'"
+
+        # Tear down
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+
+class TestDropMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
+
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
+
+class TestResyncMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        response = peerdb.resync_mirror(mirror.flow_job_name)
+
+        assert response.message == "Resync of mirror 'cdc_one' has been initiated"
+
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.resync_mirror(mirror.flow_job_name)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
+
+class TestPauseMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
+
+        response = peerdb.pause_mirror(mirror.flow_job_name)
+
+        assert (
+            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        )
+
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.pause_mirror(mirror.flow_job_name)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
+
+class TestResumeMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
+
+        response = peerdb.pause_mirror(mirror.flow_job_name)
+
+        assert (
+            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        )
+
+        response = peerdb.resume_mirror(mirror.flow_job_name)
+
+        assert (
+            response.message == "Not resuming mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        )
+
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.resume_mirror(mirror.flow_job_name)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
+
+class TestListMirrors(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
         actual = [
             mirror.model_dump(
                 include=[
@@ -361,22 +416,3 @@ class TestIntegration(PeerDBTest):
             },
         ]
         assert_count_equal(actual, expected)
-
-    def test_pause_and_resume_mirror(
-        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
-    ):
-        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
-
-        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
-
-        response = peerdb.pause_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
-        )
-
-        response = peerdb.resume_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not resuming mirror 'cdc_one' because its status is 'STATUS_SETUP'"
-        )

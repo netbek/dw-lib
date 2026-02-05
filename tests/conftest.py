@@ -210,40 +210,55 @@ class PeerDBIntegrationTest(PeerDBTest):
     @pytest.fixture(scope="function")
     def table_defs(self) -> list[tuple[str, str]]:
         return [
-            (
-                "table_1",
-                """
-                create table table_1 (
-                    id bigint,
-                    username text,
-                    password text,
-                    age smallint,
-                    modified_at timestamp(6)
-                );
+            {
+                "table": "table_1",
+                "statement": """
+                    create table table_1 (
+                        id bigint,
+                        username text,
+                        password text,
+                        age smallint,
+                        modified_at timestamp(6)
+                    );
                 """,
-            ),
-            (
-                "table_2",
-                """
-                create table table_2 (
-                    id bigint,
-                    longitude double precision,
-                    latitude double precision,
-                    is_secret boolean,
-                    modified_at timestamp(6)
-                );
+                "data": [
+                    (
+                        492038475,
+                        "silver_fox_88",
+                        "pbkdf2_sha256$260000$wf8Sj3h9a2x1",
+                        34,
+                        "2026-02-05 14:22:01.482",
+                    ),
+                ],
+            },
+            {
+                "table": "table_2",
+                "statement": """
+                    create table table_2 (
+                        id bigint,
+                        longitude double precision,
+                        latitude double precision,
+                        is_secret boolean,
+                        modified_at timestamp(6)
+                    );
                 """,
-            ),
-            (
-                "table_3",
-                """
-                create table table_3 (
-                    id bigint,
-                    ts timestamp(6),
-                    modified_at timestamp(6)
-                );
+                "data": [
+                    (882100349, -122.4194, 37.7749, False, "2026-01-30 09:15:33.000"),
+                ],
+            },
+            {
+                "table": "table_3",
+                "statement": """
+                    create table table_3 (
+                        id bigint,
+                        ts timestamp(6),
+                        modified_at timestamp(6)
+                    );
                 """,
-            ),
+                "data": [
+                    (100293847, "2026-02-05 21:40:12.111", "2026-02-05 21:42:54.000"),
+                ],
+            },
         ]
 
     @pytest.fixture(scope="function")
@@ -251,10 +266,12 @@ class PeerDBIntegrationTest(PeerDBTest):
         self, postgres_adapter: PostgresAdapter, table_defs: list[tuple[str, str]]
     ) -> Generator[list[Table], Any, None]:
         for table_def in table_defs[:1]:
-            postgres_adapter.create_table(*table_def)
+            postgres_adapter.create_table(
+                table=table_def["table"], statement=table_def["statement"]
+            )
 
         # Create some tables
-        table_names = [table_def[0] for table_def in table_defs[:1]]
+        table_names = [table_def["table"] for table_def in table_defs[:1]]
         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
 
         yield tables
@@ -267,10 +284,12 @@ class PeerDBIntegrationTest(PeerDBTest):
         self, postgres_adapter: PostgresAdapter, table_defs: list[tuple[str, str]]
     ) -> Generator[list[Table], Any, None]:
         for table_def in table_defs:
-            postgres_adapter.create_table(*table_def)
+            postgres_adapter.create_table(
+                table=table_def["table"], statement=table_def["statement"]
+            )
 
         # Create all tables
-        table_names = [table_def[0] for table_def in table_defs]
+        table_names = [table_def["table"] for table_def in table_defs]
         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
 
         yield tables

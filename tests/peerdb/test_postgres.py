@@ -1,6 +1,6 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
-from dw_lib.exceptions import EmptyConfigException, TableNotFoundException
+from dw_lib.exceptions import EmptyConfigException, MirrorNotFoundException, TableNotFoundException
 from dw_lib.peerdb import PeerDB
 from pathlib import Path
 from sqlmodel import Table
@@ -207,7 +207,7 @@ class TestCreateAndDropMirror(PeerDBPostgresTest):
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
-    def test_missing_source_table_raises_exception(
+    def test_non_existant_source_table_raises_exception(
         self, some_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
@@ -222,6 +222,16 @@ class TestCreateAndDropMirror(PeerDBPostgresTest):
         )
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
 
 class TestResyncMirror(PeerDBPostgresTest):
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
@@ -231,8 +241,39 @@ class TestResyncMirror(PeerDBPostgresTest):
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
 
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-class TestPauseAndResumeMirror(PeerDBPostgresTest):
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.resync_mirror(mirror.flow_job_name)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
+
+class TestPauseMirror(PeerDBPostgresTest):
+    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
+
+        response = peerdb.pause_mirror(mirror.flow_job_name)
+
+        assert (
+            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        )
+
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.pause_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
+
+
+class TestResumeMirror(PeerDBPostgresTest):
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
@@ -249,6 +290,16 @@ class TestPauseAndResumeMirror(PeerDBPostgresTest):
         assert (
             response.message == "Not resuming mirror 'cdc_one' because its status is 'STATUS_SETUP'"
         )
+
+    def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+        with pytest.raises(MirrorNotFoundException) as exc:
+            peerdb.resume_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+        assert str(exc.value) == "Mirror 'cdc_one' not found"
 
 
 class TestListMirrors(PeerDBPostgresTest):

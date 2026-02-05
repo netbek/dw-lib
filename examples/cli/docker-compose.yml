@@ -49,7 +49,7 @@ services:
 
   clickhouse:
     container_name: clickhouse
-    image: clickhouse/clickhouse-server:25.12.4.35-alpine
+    image: clickhouse/clickhouse-server:25.8.15.35-alpine
     environment:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: default

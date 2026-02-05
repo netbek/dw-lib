@@ -2,6 +2,7 @@ from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
 from dw_lib.exceptions import (
     EmptyConfigException,
+    MirrorExistsException,
     MirrorNotFoundException,
     PeerExistsException,
     PeerNotFoundException,
@@ -257,6 +258,36 @@ class TestCreateMirror(PeerDBClickHouseTest):
             str(exc.value) == "Source table 'public.table_2' not found in database of peer 'source'"
         )
         assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+    def test_existant_mirror_raises_exception_if_exists_fail(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
+
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
+
+        with pytest.raises(MirrorExistsException) as exc:
+            peerdb.create_mirror(mirror.model_dump(), if_exists="fail")
+
+        assert str(exc.value) == "Mirror 'cdc_many' exists"
+
+        # Tear down
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
+    def test_existant_mirror_kept_if_exists_keep(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
+
+        peerdb.create_mirror(mirror.model_dump())
+        assert peerdb.has_mirror(mirror.flow_job_name) is True
+
+        response = peerdb.create_mirror(mirror.model_dump(), if_exists="keep")
+        assert response.message == "Kept mirror 'cdc_many'"
+
+        # Tear down
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
 
 
 class TestDropMirror(PeerDBClickHouseTest):

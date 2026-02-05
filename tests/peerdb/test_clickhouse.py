@@ -332,6 +332,25 @@ class TestIntegration(PeerDBTest):
         )
         assert peerdb.has_mirror(mirror.flow_job_name) is False
 
+    def test_pause_and_resume_mirror(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
+
+        response = peerdb.pause_mirror(mirror.flow_job_name)
+
+        assert (
+            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        )
+
+        response = peerdb.resume_mirror(mirror.flow_job_name)
+
+        assert (
+            response.message == "Not resuming mirror 'cdc_one' because its status is 'STATUS_SETUP'"
+        )
+
     def test_list_mirrors(
         self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
     ):
@@ -364,22 +383,3 @@ class TestIntegration(PeerDBTest):
             },
         ]
         assert_count_equal(actual, expected)
-
-    def test_pause_and_resume_mirror(
-        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
-    ):
-        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
-
-        assert peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state == "STATUS_SETUP"
-
-        response = peerdb.pause_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not pausing mirror 'cdc_one' because its status is 'STATUS_SETUP'"
-        )
-
-        response = peerdb.resume_mirror(mirror.flow_job_name)
-
-        assert (
-            response.message == "Not resuming mirror 'cdc_one' because its status is 'STATUS_SETUP'"
-        )

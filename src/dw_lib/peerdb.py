@@ -1005,6 +1005,7 @@ class PeerDB:
         return unused
 
     def list_replication_slots(self) -> list[ListReplicationSlotsItem]:
+        """List the replication slots in the source database."""
         source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
         database = source_adapter.settings.database
         data = []

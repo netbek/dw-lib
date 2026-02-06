@@ -455,27 +455,15 @@ class PeerDB:
                 else:
                     return "Not OK"
 
-        def render_publications_table(
-            data: list[ListPublicationsItem], title: str | None = None
-        ) -> rich.table.Table:
-            table = rich.table.Table(title=title, show_header=True)
-            table.add_column("Publication")
-            table.add_column("Schema")
-            table.add_column("Table")
-            for item in data:
-                table.add_row(item.publication_name, item.relation.schema_, item.relation.table)
+        def render_table(data, title: str | None = None) -> rich.table.Table:
+            table = rich.table.Table(title=title, show_header=True, min_width=80)
 
-            return table
+            headers = data[0].keys()
+            for header in headers:
+                table.add_column(header)
 
-        def render_replication_slots_table(
-            data: list[ListReplicationSlotsItem], title: str | None = None
-        ) -> rich.table.Table:
-            table = rich.table.Table(title=title, show_header=True)
-            table.add_column("Name")
-            table.add_column("Type")
-            table.add_column("Active")
             for item in data:
-                table.add_row(item.slot_name, item.slot_type, str(item.active))
+                table.add_row(*[str(value) for value in item.values()])
 
             return table
 
@@ -535,30 +523,66 @@ class PeerDB:
                 for k2, v2 in v1.items():
                     self._console.print(f"  {k2}: {v2}")
 
+            # Missing publications
             self._console.print()
-            missing_publications = self.list_missing_publications()
-            if missing_publications:
-                self._console.print(
-                    render_publications_table(missing_publications, title="Missing publications")
-                )
+            data = [
+                {
+                    "publication": publication.publication_name,
+                    "schema": publication.relation.schema_,
+                    "table": publication.relation.table,
+                }
+                for publication in self.list_missing_publications()
+            ]
+            if data:
+                self._console.print(render_table(data, title="Missing publications"))
             else:
                 self._console.print("Missing publications: None")
 
+            # Unused publications
             self._console.print()
-            unused_publications = self.list_unused_publications()
-            if unused_publications:
-                self._console.print(
-                    render_publications_table(unused_publications, title="Unused publications")
-                )
+            data = [
+                {
+                    "publication": publication.publication_name,
+                    "schema": publication.relation.schema_,
+                    "table": publication.relation.table,
+                }
+                for publication in self.list_unused_publications()
+            ]
+            if data:
+                self._console.print(render_table(data, title="Unused publications"))
             else:
                 self._console.print("Unused publications: None")
 
+            # Peers
             self._console.print()
-            replication_slots = self.list_replication_slots()
-            if replication_slots:
-                self._console.print(
-                    render_replication_slots_table(replication_slots, title="Replication slots")
+            data = [peer.model_dump() for peer in self.list_peers().items]
+            if data:
+                self._console.print(render_table(data, title="Peers"))
+            else:
+                self._console.print("Peers: None")
+
+            # Mirrors
+            self._console.print()
+            data = []
+            for mirror in self.list_mirrors().mirrors:
+                status_response = self.get_mirror_status(mirror.name)
+                data.append(
+                    pydash.pick(
+                        {**mirror.model_dump(), "status": status_response.current_flow_state},
+                        *["name", "created_at", "status"],
+                    )
                 )
+            data = pydash.order_by(data, ["name"])
+            if data:
+                self._console.print(render_table(data, title="Mirrors"))
+            else:
+                self._console.print("Mirrors: None")
+
+            # Replication slots
+            self._console.print()
+            data = [slot.model_dump() for slot in self.list_replication_slots()]
+            if data:
+                self._console.print(render_table(data, title="Replication slots"))
             else:
                 self._console.print("Replication slots: None")
 

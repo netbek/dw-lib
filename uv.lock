@@ -78,30 +78,30 @@ wheels = [
 
 [[package]]
 name = "boto3"
-version = "1.42.41"
+version = "1.42.43"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/b0/f2a371146877b4d60cd2a6f51c440503cbf77a73c85347ad282eebe90269/boto3-1.42.41.tar.gz", hash = "sha256:86dd2bc577e33da5cd9f10e21b22cdda01a24f83f31ca1bb5ac1f5f8b8e9e67e", size = 112806, upload-time = "2026-02-03T20:38:58.004Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/47/29afb754de7df0a0ebceaa9d83e209136ef7b62744259a6c09862fef4765/boto3-1.42.43.tar.gz", hash = "sha256:01fc5501209b23849fb30b01c6c086583ac91c40842a76083662fbfb84a82491", size = 112844, upload-time = "2026-02-05T20:31:44.974Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/e8/e671b9aed3e8f6bb5f85aed7fd9dd4e79074798b2a14391fab6b6da04ff7/boto3-1.42.41-py3-none-any.whl", hash = "sha256:32470b1d32208e03b47cf6ce4a7adb337b8a1730aaefb97c336cfd4e2be2577f", size = 140602, upload-time = "2026-02-03T20:38:56.352Z" },
+    { url = "https://files.pythonhosted.org/packages/80/92/584447b14ae70f57f133a4bc64393902a72a3087486a7c09ce1bab25263c/boto3-1.42.43-py3-none-any.whl", hash = "sha256:44ddcaa37c350333c5a4799f533e786a595a97f1ee2fd7fc3e394cdebeb15e44", size = 140603, upload-time = "2026-02-05T20:31:43.698Z" },
 ]
 
 [[package]]
 name = "botocore"
-version = "1.42.41"
+version = "1.42.43"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/1d/5fd43319250a5a484bcbde334da2e2297956cdae40de8eb0808759538a7c/botocore-1.42.41.tar.gz", hash = "sha256:0698967741d873d819134bea1ffe9c35decc00c741f49a42885dbd7ad8198fbc", size = 14923189, upload-time = "2026-02-03T20:38:47.957Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/af/d6/def916ad1d13de5d511074afcde538a958e2e8a7c7020fb698d1f392f63b/botocore-1.42.43.tar.gz", hash = "sha256:41d04ead0b0862eec21f841811fb5764fe370a2df9b319e0d5297325c50fba1b", size = 14934077, upload-time = "2026-02-05T20:31:35.15Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/84/df765c7942f52eab12540ef1880b9489d45b364b777fad522fa84435ed11/botocore-1.42.41-py3-none-any.whl", hash = "sha256:567530f7d4da668af891c1259fb80c01578ab8d9f1098127cc250451a46fb54f", size = 14597792, upload-time = "2026-02-03T20:38:45.058Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/a8/95656f91b795eb47b73a00d36c51c7a5729eafa632c7348caa068ff63e50/botocore-1.42.43-py3-none-any.whl", hash = "sha256:1c0e30f62e274978ac3bcab253e3a859febea634b72b5e343589db7d17f83cd6", size = 14610179, upload-time = "2026-02-05T20:31:32.727Z" },
 ]
 
 [[package]]
@@ -369,14 +369,14 @@ wheels = [
 
 [[package]]
 name = "dbt-protos"
-version = "1.0.427"
+version = "1.0.429"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "protobuf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/18/282adfc26410b43ee8e220116a62ecadd5ee83e4370952a4ca67fd1047dd/dbt_protos-1.0.427.tar.gz", hash = "sha256:a4a932a4c1e188df5943450fec991506d9214f208f4aebe4868916a166807c7d", size = 122002, upload-time = "2026-01-28T17:18:41.746Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/33/db84b7c8c147b4f51b9231f5598600ab7b6b2e6bb8fb3bcfa5ee85a3ce53/dbt_protos-1.0.429.tar.gz", hash = "sha256:ad318381f9edfcf34d63d8b78789761bd3fa9757aa3a643345bd8fddc85fa78d", size = 122003, upload-time = "2026-02-06T15:49:14.882Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/e0/c777dee71502195a6925e28df36e6447c9cfe2c5557e4b260a0101184c9d/dbt_protos-1.0.427-py3-none-any.whl", hash = "sha256:5a180edc84a37051077eceebed568d2db88dde5c20b56f894c9d6b61dbfc622f", size = 174609, upload-time = "2026-01-28T17:18:40.098Z" },
+    { url = "https://files.pythonhosted.org/packages/99/c3/38085b250ad0e5c94b049d2be1bd23e27691adb531ac0920103dbc2ce3da/dbt_protos-1.0.429-py3-none-any.whl", hash = "sha256:08fab6cb24d5ca003dc0890d4c0fc0ce214a1fa541de904a52a5ae7e117fd1b6", size = 174643, upload-time = "2026-02-06T15:49:13.062Z" },
 ]
 
 [[package]]
@@ -1403,11 +1403,11 @@ wheels = [
 
 [[package]]
 name = "sqlglot"
-version = "28.9.0"
+version = "28.10.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/36/72/cc50543a479a65f4ec24bef0e71529254686a1334c57cb1daebadfc29672/sqlglot-28.9.0.tar.gz", hash = "sha256:5648eaa2d038b5a0bc345f223f375315cfc6a27b2852d4eeaa1b8aaaabccdd2c", size = 5736988, upload-time = "2026-02-02T16:04:45.794Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/7d/1479ac3543caada917c3781893d3f846c810aec6355eb7b2f58df68f999b/sqlglot-28.10.0.tar.gz", hash = "sha256:f3d4759164ad854176980b3a47eb0c7ef699118dfa80beeb93e010885637b211", size = 5739594, upload-time = "2026-02-04T14:22:18.26Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/21/ee7d2798ff1f59cd5ca53063a728022da53552cbc0c63d05e120e9c9b794/sqlglot-28.9.0-py3-none-any.whl", hash = "sha256:044fbe85fd2dc0a9d8ea4adb2beefa7ff26fa2320849b08f5c5f3859d7973260", size = 595704, upload-time = "2026-02-02T16:04:43.531Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/34/c5de8f3c110bd066ebfa31b2d948dd33b691c7ccea39065e37f97f3f30a1/sqlglot-28.10.0-py3-none-any.whl", hash = "sha256:d442473bfd2340776dfc88382de3df456b9c5b66974623e554c6ad6426ba365e", size = 597042, upload-time = "2026-02-04T14:22:16.534Z" },
 ]
 
 [[package]]

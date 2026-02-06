@@ -536,7 +536,7 @@ class PeerDB:
             if data:
                 self._console.print(render_table(data, title="Missing publications"))
             else:
-                self._console.print("Missing publications: None")
+                self._console.print("Missing publications: [green]OK (None)[/green]")
 
             # Unused publications
             self._console.print()
@@ -551,7 +551,7 @@ class PeerDB:
             if data:
                 self._console.print(render_table(data, title="Unused publications"))
             else:
-                self._console.print("Unused publications: None")
+                self._console.print("Unused publications: [green]OK (None)[/green]")
 
             # Peers
             self._console.print()

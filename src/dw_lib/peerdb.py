@@ -553,13 +553,13 @@ class PeerDB:
             else:
                 self._console.print("Unused publications: None")
 
-            # Peers
-            self._console.print()
-            data = [peer.model_dump() for peer in self.list_peers().items]
-            if data:
-                self._console.print(render_table(data, title="Peers"))
-            else:
-                self._console.print("Peers: None")
+            # # Peers
+            # self._console.print()
+            # data = [peer.model_dump() for peer in self.list_peers().items]
+            # if data:
+            #     self._console.print(render_table(data, title="Peers"))
+            # else:
+            #     self._console.print("Peers: None")
 
             # Mirrors
             self._console.print()

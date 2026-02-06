@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = "==3.13.*"
 dependencies = [
     "dw-lib",
+    "pydash>=8.0.6",
     "rich>=14.2.0",
     "typer>=0.19.2",
 ]

@@ -224,8 +224,9 @@ class ListReplicationSlotsItem(BaseModel):
     active: bool
     inactive_since: datetime | None = None
     restart_lsn: str | None = None
+    restart_lag: str | None = None
     confirmed_flush_lsn: str | None = None
-    lag: str | None = None
+    confirmed_flush_lag: str | None = None
 
 
 class ConfigSetting(BaseModel):
@@ -1091,8 +1092,9 @@ class PeerDB:
                 active,
                 inactive_since,
                 restart_lsn,
+                pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS restart_lag,
                 confirmed_flush_lsn,
-                pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) AS lag
+                pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) AS confirmed_flush_lag
             FROM pg_replication_slots
             WHERE database = :database
             ORDER BY slot_name

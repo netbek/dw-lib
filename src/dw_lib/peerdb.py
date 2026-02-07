@@ -222,6 +222,9 @@ class ListReplicationSlotsItem(BaseModel):
     slot_name: str
     slot_type: str
     active: bool
+    inactive_since: datetime | None = None
+    restart_lsn: str | None = None
+    confirmed_flush_lsn: str | None = None
 
 
 class ConfigSetting(BaseModel):
@@ -1088,13 +1091,7 @@ class PeerDB:
             """
             result = session.exec(text(query), params={"database": database})
             for row in result.fetchall():
-                data.append(
-                    ListReplicationSlotsItem(
-                        slot_name=row.slot_name,
-                        slot_type=row.slot_type,
-                        active=row.active,
-                    )
-                )
+                data.append(ListReplicationSlotsItem(**row._asdict()))
 
         return data
 

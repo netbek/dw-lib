@@ -220,7 +220,6 @@ class ListPublicationsItem(BaseModel):
 
 class ListReplicationSlotsItem(BaseModel):
     name: str
-    type: str
     active: bool
     inactive_since: datetime | None = None
     restart_lsn: str | None = None
@@ -1088,7 +1087,6 @@ class PeerDB:
             query = """
             SELECT
                 slot_name AS name,
-                slot_type AS type,
                 active,
                 inactive_since,
                 restart_lsn,

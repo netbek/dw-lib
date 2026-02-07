@@ -226,6 +226,8 @@ class ListReplicationSlotsItem(BaseModel):
     restart_lag: str | None = None
     confirmed_flush_lsn: str | None = None
     confirmed_flush_lag: str | None = None
+    failover: bool
+    synced: bool
 
 
 class ConfigSetting(BaseModel):
@@ -1084,15 +1086,30 @@ class PeerDB:
         database = source_adapter.settings.database
         data = []
         with source_adapter.create_session() as session:
+            # TODO Check whether `database` is not null in a read replica deployment
             query = """
             SELECT
                 slot_name AS name,
                 active,
                 inactive_since,
                 restart_lsn,
-                pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS restart_lag,
+                pg_size_pretty(pg_wal_lsn_diff(
+                    CASE
+                        WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn()
+                        ELSE pg_current_wal_lsn()
+                    END,
+                    restart_lsn
+                )) AS restart_lag,
                 confirmed_flush_lsn,
-                pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) AS confirmed_flush_lag
+                pg_size_pretty(pg_wal_lsn_diff(
+                    CASE
+                        WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn()
+                        ELSE pg_current_wal_lsn()
+                    END,
+                    confirmed_flush_lsn
+                )) AS confirmed_flush_lag,
+                failover,
+                synced
             FROM pg_replication_slots
             WHERE database = :database
             ORDER BY slot_name

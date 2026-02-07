@@ -1081,7 +1081,7 @@ class PeerDB:
         data = []
         with source_adapter.create_session() as session:
             query = """
-            SELECT slot_name, slot_type, active
+            SELECT slot_name, slot_type, active, inactive_since, restart_lsn, confirmed_flush_lsn
             FROM pg_replication_slots
             WHERE database = :database
             ORDER BY slot_name

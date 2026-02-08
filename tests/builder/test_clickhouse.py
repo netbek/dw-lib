@@ -32,9 +32,9 @@ class TestBaseTable(DatabaseTest):
 
 class TestBaseView(DatabaseTest):
     def test_make_create_statement(self, clickhouse_adapter: ClickHouseAdapter):
-        actual = models.AggregatedMeasurement.make_create_statement(clickhouse_adapter)
+        actual = models.DeviceMeasurement.make_create_statement(clickhouse_adapter)
         expected = """
-        CREATE VIEW analytics.aggregated_measurement AS
+        CREATE VIEW analytics.device_measurement AS
         SELECT
             m.device_id AS device_id,
             m.temperature AS temperature
@@ -54,7 +54,7 @@ class TestGraph(DatabaseTest):
             models.raw.raw_measurement.RawMeasurement,
             models.analytics.clean_measurement.CleanMeasurement,
             models.analytics.measurement.Measurement,
-            models.analytics.aggregated_measurement.AggregatedMeasurement,
+            models.analytics.device_measurement.DeviceMeasurement,
         )
 
     def test_select_given_models_only(self):
@@ -65,12 +65,12 @@ class TestGraph(DatabaseTest):
         )
 
     def test_select_given_model_and_ancestors(self):
-        graph = Graph(module=models, select=["+AggregatedMeasurement"])
+        graph = Graph(module=models, select=["+DeviceMeasurement"])
         assert graph.models == (
             models.analytics.device.Device,
             models.raw.raw_measurement.RawMeasurement,
             models.analytics.measurement.Measurement,
-            models.analytics.aggregated_measurement.AggregatedMeasurement,
+            models.analytics.device_measurement.DeviceMeasurement,
         )
 
     def test_select_given_model_and_descendants(self):
@@ -79,7 +79,7 @@ class TestGraph(DatabaseTest):
             models.raw.raw_measurement.RawMeasurement,
             models.analytics.clean_measurement.CleanMeasurement,
             models.analytics.measurement.Measurement,
-            models.analytics.aggregated_measurement.AggregatedMeasurement,
+            models.analytics.device_measurement.DeviceMeasurement,
         )
 
     def test_select_given_model_and_ancestors_and_descendants(self):
@@ -87,7 +87,7 @@ class TestGraph(DatabaseTest):
         assert graph.models == (
             models.raw.raw_measurement.RawMeasurement,
             models.analytics.measurement.Measurement,
-            models.analytics.aggregated_measurement.AggregatedMeasurement,
+            models.analytics.device_measurement.DeviceMeasurement,
         )
 
     def test_select_is_not_list(self):

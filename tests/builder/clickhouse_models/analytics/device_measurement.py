@@ -3,8 +3,8 @@ from .measurement import Measurement
 from dw_lib.builder.clickhouse import BaseView
 
 
-class AggregatedMeasurement(BaseView):
-    __tablename__ = "aggregated_measurement"
+class DeviceMeasurement(BaseView):
+    __tablename__ = "device_measurement"
     __table_args__ = {"schema": "analytics"}
     __sql__ = f"""
     SELECT

@@ -1,8 +1,11 @@
-from ..asserts import assert_sql_equal
+from ..asserts import assert_equal_ignoring_whitespace, assert_sql_equal
 from ..conftest import DatabaseTest
 from . import clickhouse_models as models
 from dw_lib.builder.clickhouse import Graph
 from dw_lib.database.adapters import ClickHouseAdapter
+from pydantic import ValidationError
+
+import pytest
 
 
 class TestBaseTable(DatabaseTest):
@@ -78,3 +81,36 @@ class TestGraph(DatabaseTest):
             models.analytics.measurement.Measurement,
             models.analytics.aggregated_measurement.AggregatedMeasurement,
         )
+
+    def test_select_is_not_list(self):
+        with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select="Measurement")
+        expected = """
+        1 validation error for Graph
+        select
+          Input should be a valid list [type=list_type, input_value='Measurement', input_type=str]
+            For further information visit https://errors.pydantic.dev/2.12/v/list_type
+        """
+        assert_equal_ignoring_whitespace(str(exc.value), expected)
+
+    def test_select_item_is_not_string(self):
+        with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select=[None])
+        expected = """
+        1 validation error for Graph
+        select.0
+          Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+            For further information visit https://errors.pydantic.dev/2.12/v/string_type
+        """
+        assert_equal_ignoring_whitespace(str(exc.value), expected)
+
+    def test_select_item_is_malformed(self):
+        with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select=["++Measurement"])
+        expected = """
+        1 validation error for Graph
+        select
+          Value error, Invalid select '++Measurement'. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=['++Measurement'], input_type=list]
+            For further information visit https://errors.pydantic.dev/2.12/v/value_error
+        """
+        assert_equal_ignoring_whitespace(str(exc.value), expected)

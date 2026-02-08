@@ -13,10 +13,17 @@ class Measurement(BaseTable, table=True):
         {"schema": "analytics"},
     )
 
-    device_id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-    timestamp: str = Field(sa_column=Column(types.DateTime64(6), primary_key=True))
+    device_id: int = Field(
+        sa_column=Column(types.Int32, primary_key=True),
+        description="Unique identifier of device",
+    )
+    timestamp: str = Field(
+        sa_column=Column(types.DateTime64(6), primary_key=True),
+    )
     temperature: Decimal | None = Field(
-        sa_column=Column(types.Nullable(types.Decimal)), default=None
+        sa_column=Column(types.Nullable(types.Decimal)),
+        default=None,
+        description="Ambient temperature in Celsius",
     )
 
     __depends_on__ = [RawMeasurement]

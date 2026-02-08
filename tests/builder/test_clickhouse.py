@@ -20,9 +20,9 @@ class TestBaseTable(DatabaseTest):
         actual = models.Measurement.make_create_statement(clickhouse_adapter)
         expected = """
         CREATE TABLE analytics.measurement (
-            device_id Int32,
+            device_id Int32 COMMENT 'Unique identifier of device',
             timestamp DateTime64(6),
-            temperature Nullable(Decimal(NONE, NONE))
+            temperature Nullable(Decimal(NONE, NONE)) COMMENT 'Ambient temperature in Celsius'
         )
         ENGINE=MergeTree()
         ORDER BY (device_id, timestamp)

@@ -238,6 +238,23 @@ class ClickHouseAdapter(BaseAdapter):
         )
         statement = str(statement)
         tree = sqlglot.parse_one(statement, read=self.dialect)
+        model_fields = getattr(model, "model_fields", {})
+
+        # Set column description
+        for column_def in tree.find_all(exp.ColumnDef):
+            field_info = model_fields.get(column_def.name)
+
+            if field_info and field_info.description:
+                comment_kind = exp.CommentColumnConstraint(
+                    this=exp.Literal.string(field_info.description)
+                )
+                constraint = exp.ColumnConstraint(kind=comment_kind)
+
+                # Append to existing constraints or create a new list
+                if "constraints" not in column_def.args:
+                    column_def.set("constraints", [])
+
+                column_def.args["constraints"].append(constraint)
 
         if replace:
             tree.set("replace", True)

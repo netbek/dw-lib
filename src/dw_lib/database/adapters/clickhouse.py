@@ -240,7 +240,7 @@ class ClickHouseAdapter(BaseAdapter):
         tree = sqlglot.parse_one(statement, read=self.dialect)
         model_fields = getattr(model, "model_fields", {})
 
-        # Set column description
+        # Add column comment clause
         for column_def in tree.find_all(exp.ColumnDef):
             field_info = model_fields.get(column_def.name)
 

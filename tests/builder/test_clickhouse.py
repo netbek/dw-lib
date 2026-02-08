@@ -1,4 +1,4 @@
-from ..asserts import assert_sql_equal
+from ..asserts import assert_equal_ignoring_whitespace, assert_sql_equal
 from ..conftest import DatabaseTest
 from . import clickhouse_models as models
 from dw_lib.builder.clickhouse import Graph
@@ -143,3 +143,29 @@ class TestGraph(DatabaseTest):
             "Value error, Invalid select '++Measurement++'. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=['++Measurement++'], input_type=list]"
             in str(exc.value)
         )
+
+    def test_render_markdown(self):
+        graph = Graph(module=models)
+        actual = graph.render_markdown()
+        expected = """
+        ```mermaid
+        ---
+        config:
+          layout: dagre
+          look: neo
+          theme: neutral
+        ---
+        graph LR
+        A(Device)
+        B(DeviceMeasurement)
+        C(Measurement)
+        D(CleanMeasurement)
+        E(ModelRun)
+        F(RawMeasurement)
+        A --> B
+        C --> B
+        F --> C
+        F --> D
+        ```
+        """
+        assert_equal_ignoring_whitespace(actual, expected)

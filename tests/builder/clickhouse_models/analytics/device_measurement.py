@@ -12,4 +12,5 @@ class DeviceMeasurement(BaseView):
         m.temperature AS temperature
     FROM {Measurement} AS m
     INNER JOIN {Device} AS d ON d.id = m.device_id
+    WHERE m.id = {{device_id:Int32}}
     """

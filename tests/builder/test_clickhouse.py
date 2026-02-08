@@ -33,7 +33,7 @@ class TestBaseTable(DatabaseTest):
 class TestBaseView(DatabaseTest):
     def test_make_create_statement(self, clickhouse_adapter: ClickHouseAdapter):
         actual = models.DeviceMeasurement.make_create_statement(clickhouse_adapter)
-        expected = """
+        expected = r"""
         CREATE VIEW analytics.device_measurement AS
         SELECT
             m.device_id AS device_id,
@@ -41,6 +41,8 @@ class TestBaseView(DatabaseTest):
         FROM analytics.measurement AS m
         INNER JOIN analytics.device AS d
             ON d.id = m.device_id
+        WHERE
+            m.id = {device_id: Int32}
         """
         assert_sql_equal(actual, expected)
 

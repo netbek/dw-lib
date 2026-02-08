@@ -82,6 +82,14 @@ class TestGraph(DatabaseTest):
             models.analytics.aggregated_measurement.AggregatedMeasurement,
         )
 
+    def test_select_given_model_and_ancestors_and_descendants(self):
+        graph = Graph(module=models, select=["+Measurement+"])
+        assert graph.models == (
+            models.raw.raw_measurement.RawMeasurement,
+            models.analytics.measurement.Measurement,
+            models.analytics.aggregated_measurement.AggregatedMeasurement,
+        )
+
     def test_select_is_not_list(self):
         with pytest.raises(ValidationError) as exc:
             Graph(module=models, select="Measurement")
@@ -100,8 +108,36 @@ class TestGraph(DatabaseTest):
 
     def test_select_item_is_malformed(self):
         with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select=[""])
+        assert (
+            "Value error, Invalid select ''. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=[''], input_type=list]"
+            in str(exc.value)
+        )
+
+        with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select=["+"])
+        assert (
+            "Value error, Invalid select '+'. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=['+'], input_type=list]"
+            in str(exc.value)
+        )
+
+        with pytest.raises(ValidationError) as exc:
             Graph(module=models, select=["++Measurement"])
         assert (
             "Value error, Invalid select '++Measurement'. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=['++Measurement'], input_type=list]"
+            in str(exc.value)
+        )
+
+        with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select=["Measurement++"])
+        assert (
+            "Value error, Invalid select 'Measurement++'. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=['Measurement++'], input_type=list]"
+            in str(exc.value)
+        )
+
+        with pytest.raises(ValidationError) as exc:
+            Graph(module=models, select=["++Measurement++"])
+        assert (
+            "Value error, Invalid select '++Measurement++'. Expected formats: Model, +Model, Model+, +Model+ [type=value_error, input_value=['++Measurement++'], input_type=list]"
             in str(exc.value)
         )

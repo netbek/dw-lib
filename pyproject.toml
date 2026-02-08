@@ -25,6 +25,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+builder = [
+    "networkx>=3.6.1",
+    "networkx-mermaid>=0.3.0",
+]
 dbt = [
     "dbt-clickhouse",
     "dbt-core>=1.10.0,<1.11", # Pinned because of dbt-clickhouse

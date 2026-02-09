@@ -307,7 +307,7 @@ class Runner(BaseModel):
     adapter: ClickHouseAdapter
     # builder_schema: str | None = "builder"
 
-    def run(self, dry_run: bool = False) -> None:
+    def run(self, use_alembic: bool = True, dry_run: bool = False) -> None:
         skipped_models = set()
         models = pydash.filter_(
             self.graph.models,
@@ -364,11 +364,21 @@ class Runner(BaseModel):
                     try:
                         if dry_run:
                             model_statements = self._run_model(
-                                self.adapter, session, model, dry_run=True
+                                self.adapter,
+                                session,
+                                model,
+                                use_alembic=use_alembic,
+                                dry_run=dry_run,
                             )
                             statements.extend(model_statements)
                         else:
-                            self._run_model(self.adapter, session, model)
+                            self._run_model(
+                                self.adapter,
+                                session,
+                                model,
+                                use_alembic=use_alembic,
+                                dry_run=dry_run,
+                            )
                         message = None
                         status = ModelRunStatus.SUCCESS
                     except Exception as exc_info:

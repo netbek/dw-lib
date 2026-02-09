@@ -184,7 +184,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["Device"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -210,7 +210,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["Device"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -249,7 +249,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["Device"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -276,7 +276,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["Device"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -322,7 +322,10 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(Device, "__materialization__", Materialization.EXTERNAL)
 
         graph = Graph(module=models, select=["Device"])
-        assert Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True) == []
+        assert (
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
+            == []
+        )
 
         assert len(caplog.records) == 2
         assert "Started run" in caplog.records[0].message
@@ -336,7 +339,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["CleanMeasurement"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -362,7 +365,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["CleanMeasurement"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -388,7 +391,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["CleanMeasurement"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -415,7 +418,7 @@ class TestRunner(DatabaseTest):
 
         graph = Graph(module=models, select=["CleanMeasurement"])
         actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True)
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
         )
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
@@ -444,7 +447,10 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(CleanMeasurement, "__materialization__", Materialization.EXTERNAL)
 
         graph = Graph(module=models, select=["CleanMeasurement"])
-        assert Runner(graph=graph, adapter=clickhouse_adapter).run(dry_run=True) == []
+        assert (
+            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
+            == []
+        )
 
         assert len(caplog.records) == 2
         assert "Started run" in caplog.records[0].message

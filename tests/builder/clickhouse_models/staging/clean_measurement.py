@@ -4,7 +4,7 @@ from dw_lib.builder.clickhouse import BaseView
 
 class CleanMeasurement(BaseView):
     __tablename__ = "clean_measurement"
-    __table_args__ = {"schema": "analytics"}
+    __table_args__ = {"schema": "staging"}
     __sql__ = f"""
     SELECT
         device_id,

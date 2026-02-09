@@ -10,12 +10,12 @@ class Measurement(BaseTable, table=True):
     __tablename__ = "measurement"
     __table_args__ = (
         engines.MergeTree(order_by=("device_id", "timestamp")),
-        {"schema": "analytics"},
+        {"schema": "staging"},
     )
 
     device_id: int = Field(
         sa_column=Column(types.Int32, primary_key=True),
-        description="Unique identifier of device",
+        description="Unique identifier of device.",
     )
     timestamp: str = Field(
         sa_column=Column(types.DateTime64(6), primary_key=True),
@@ -23,7 +23,7 @@ class Measurement(BaseTable, table=True):
     temperature: Decimal | None = Field(
         sa_column=Column(types.Nullable(types.Decimal)),
         default=None,
-        description="Ambient temperature in Celsius",
+        description="Ambient temperature in Celsius.",
     )
 
     __depends_on__ = [RawMeasurement]

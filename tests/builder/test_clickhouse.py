@@ -2,7 +2,7 @@ from ..asserts import assert_equal_ignoring_whitespace, assert_sql_equal
 from ..conftest import DatabaseTest
 from . import clickhouse_models as models
 from .clickhouse_models import CleanMeasurement, Device
-from dw_lib.builder.clickhouse import Graph, Materialization, Runner
+from dw_lib.builder.clickhouse import Graph, Materialization, Runner, Statement
 from dw_lib.database.adapters import ClickHouseAdapter
 from pydantic import ValidationError
 
@@ -171,11 +171,112 @@ class TestGraph(DatabaseTest):
         assert_equal_ignoring_whitespace(actual, expected)
 
 
-def join_sql_statements(statements: list[str]) -> str:
-    return "\n\n".join([statement.strip() + ";" for statement in statements])
+def join_sql_statements(statements: list[Statement]) -> str:
+    return "\n\n".join([statement.sql.strip() + ";" for statement in statements])
 
 
+# TODO Add test for aborting a graph run after first error (fail_fast = True)
+# TODO Add test for skipping downstream models because upstream model has error (fail_fast = False)
 class TestRunner(DatabaseTest):
+    @pytest.fixture(scope="function")
+    def clickhouse_databases(self, clickhouse_adapter: ClickHouseAdapter):
+        clickhouse_adapter.create_database("builder")
+        clickhouse_adapter.create_database("raw")
+        clickhouse_adapter.create_database("staging")
+
+        clickhouse_adapter.create_table(
+            "model_run",
+            """
+            CREATE TABLE builder.model_run (
+                id UUID,
+                invocation_id UUID,
+                model_name LowCardinality(String),
+                started_at DateTime64(6) DEFAULT now64(6),
+                duration UInt64 COMMENT 'Duration in milliseconds.',
+                status LowCardinality(String),
+                message String
+            )
+            ENGINE=MergeTree()
+            ORDER BY id
+            SETTINGS
+                enable_block_number_column = 1,
+                enable_block_offset_column = 1
+            """,
+            database="builder",
+        )
+
+        yield
+
+        clickhouse_adapter.drop_database("builder")
+        clickhouse_adapter.drop_database("raw")
+        clickhouse_adapter.drop_database("staging")
+
+    def test_skip_downstream_models(
+        self, clickhouse_adapter: ClickHouseAdapter, caplog, monkeypatch, clickhouse_databases
+    ):
+        caplog.set_level(logging.INFO)
+        monkeypatch.setattr(Device, "__materialization__", Materialization.DELETE_INSERT)
+        # monkeypatch.setattr(Device, "__sql__", "SELECT foo")  # Broken statement that fails run
+
+        graph = Graph(module=models, select=["Device+", "Measurement"])
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=False))
+        # print(actual)
+        # expected = """
+        # INSERT INTO builder.model_run (id, invocation_id, model_name)
+        # VALUES (:id, :invocation_id, :model_name);
+
+        # DROP TABLE IF EXISTS staging.device__tmp;
+
+        # CREATE TABLE staging.device__tmp AS staging.device;
+
+        # UPDATE builder.model_run
+        # SET status = :status, message = :message, duration = :duration
+        # WHERE id = :id;
+
+        # INSERT INTO builder.model_run (id, invocation_id, model_name, status)
+        # VALUES (:id, :invocation_id, :model_name, :status);
+        # """
+        expected = """
+        INSERT INTO builder.model_run (id, invocation_id, model_name)
+        VALUES (:id, :invocation_id, :model_name);
+
+        DROP TABLE IF EXISTS staging.device__tmp;
+
+        CREATE TABLE staging.device__tmp AS staging.device;
+
+        UPDATE builder.model_run
+        SET status = :status, message = :message, duration = :duration
+        WHERE id = :id;
+
+        INSERT INTO builder.model_run (id, invocation_id, model_name)
+        VALUES (:id, :invocation_id, :model_name);
+
+        DROP TABLE IF EXISTS staging.measurement__tmp;
+
+        CREATE TABLE staging.measurement__tmp AS staging.measurement;
+
+        UPDATE builder.model_run
+        SET status = :status, message = :message, duration = :duration
+        WHERE id = :id;
+
+        INSERT INTO builder.model_run (id, invocation_id, model_name, status)
+        VALUES (:id, :invocation_id, :model_name, :status);
+        """
+        assert_sql_equal(actual, expected)
+
+        for record in caplog.records:
+            print(record)
+
+        assert len(caplog.records) == 6
+        assert "Started run" in caplog.records[0].message
+        assert "Started running model 'Device'" in caplog.records[1].message
+        assert "DB::Exception: Table `device` doesn't exist." in caplog.records[2].message
+        assert "Finished running model 'Device'" in caplog.records[3].message
+        assert "Result: Error" in caplog.records[3].message
+        assert "Skipped running model 'DeviceMeasurement'" in caplog.records[4].message
+        assert "Finished run" in caplog.records[5].message
+
     def test_table_create_materialization(
         self, clickhouse_adapter: ClickHouseAdapter, caplog, monkeypatch
     ):
@@ -183,9 +284,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(Device, "__materialization__", Materialization.CREATE)
 
         graph = Graph(module=models, select=["Device"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -209,9 +309,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(Device, "__materialization__", Materialization.CREATE_REPLACE)
 
         graph = Graph(module=models, select=["Device"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -248,9 +347,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(Device, "__materialization__", Materialization.APPEND)
 
         graph = Graph(module=models, select=["Device"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -275,9 +373,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(Device, "__materialization__", Materialization.DELETE_INSERT)
 
         graph = Graph(module=models, select=["Device"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -322,10 +419,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(Device, "__materialization__", Materialization.EXTERNAL)
 
         graph = Graph(module=models, select=["Device"])
-        assert (
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-            == []
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        assert runner.run(use_alembic=True, dry_run=True) == []
 
         assert len(caplog.records) == 2
         assert "Started run" in caplog.records[0].message
@@ -338,9 +433,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(CleanMeasurement, "__materialization__", Materialization.CREATE)
 
         graph = Graph(module=models, select=["CleanMeasurement"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -364,9 +458,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(CleanMeasurement, "__materialization__", Materialization.CREATE_REPLACE)
 
         graph = Graph(module=models, select=["CleanMeasurement"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -390,9 +483,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(CleanMeasurement, "__materialization__", Materialization.APPEND)
 
         graph = Graph(module=models, select=["CleanMeasurement"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -417,9 +509,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(CleanMeasurement, "__materialization__", Materialization.DELETE_INSERT)
 
         graph = Graph(module=models, select=["CleanMeasurement"])
-        actual = join_sql_statements(
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        actual = join_sql_statements(runner.run(use_alembic=True, dry_run=True))
         expected = """
         INSERT INTO builder.model_run (id, invocation_id, model_name)
         VALUES (:id, :invocation_id, :model_name);
@@ -447,10 +538,8 @@ class TestRunner(DatabaseTest):
         monkeypatch.setattr(CleanMeasurement, "__materialization__", Materialization.EXTERNAL)
 
         graph = Graph(module=models, select=["CleanMeasurement"])
-        assert (
-            Runner(graph=graph, adapter=clickhouse_adapter).run(use_alembic=True, dry_run=True)
-            == []
-        )
+        runner = Runner(graph=graph, adapter=clickhouse_adapter)
+        assert runner.run(use_alembic=True, dry_run=True) == []
 
         assert len(caplog.records) == 2
         assert "Started run" in caplog.records[0].message

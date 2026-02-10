@@ -6,6 +6,7 @@ from dw_lib.builder.common import (
     Materialization,
     ModelRunStatus,
     RE_SELECT,
+    Statement,
 )
 from dw_lib.database import ClickHouseAdapter
 from dw_lib.types import ClickHouseRelation
@@ -14,7 +15,7 @@ from dw_lib.utils.sqlmodel_utils import get_model_schema
 from pydantic import BaseModel, ConfigDict, field_validator, PrivateAttr
 from rich.table import Table
 from sqlalchemy import Column
-from sqlmodel import Field, Session, SQLModel, text
+from sqlmodel import Field, SQLModel, text
 from types import ModuleType
 from typing import Any, ClassVar, TypeAlias
 
@@ -305,16 +306,23 @@ class Runner(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
     graph: Graph
     adapter: ClickHouseAdapter
-    # builder_schema: str | None = "builder"
 
-    def run(self, use_alembic: bool = True, dry_run: bool = False) -> list[str]:
+    def run(
+        self, use_alembic: bool = True, fail_fast: bool = False, dry_run: bool = False
+    ) -> list[Statement]:
+        """
+        Run all models in the graph.
+
+        * If an audit model (ModelRun) run fails, then the graph run will be aborted.
+        * If a non-audit model run fails, then:
+          a) if fail_fast = False, then its descendants will be skipped and the graph run will continue.
+          b) if fail_fast = True, then the graph run will be aborted.
+        """
+        aborted_run = False
         skipped_models = set()
         models = pydash.filter_(
             self.graph.models,
-            lambda model: (
-                model.__materialization__ != Materialization.EXTERNAL
-                # and get_model_schema(model) != self.builder_schema
-            ),
+            lambda model: model.__materialization__ != Materialization.EXTERNAL,
         )
         statements = []
         invocation_id = uuid.uuid4()
@@ -327,45 +335,54 @@ class Runner(BaseModel):
                 # Skip this model because its upstream dependency failed
                 if model in skipped_models:
                     logger.info(f"Skipped running model '{model.__name__}'")
-                    statement = f"""
+                    statement = Statement(
+                        sql=f"""
                         INSERT INTO {ModelRun} (id, invocation_id, model_name, status)
                         VALUES (:id, :invocation_id, :model_name, :status)
-                        """
-                    parameters = {
-                        "id": model_run_id,
-                        "invocation_id": invocation_id,
-                        "model_name": model.__name__,
-                        "status": ModelRunStatus.SKIPPED,
-                    }
+                        """,
+                        parameters={
+                            "id": model_run_id,
+                            "invocation_id": invocation_id,
+                            "model_name": model.__name__,
+                            "status": ModelRunStatus.SKIPPED,
+                        },
+                    )
                     statements.append(statement)
                     if not dry_run:
-                        execute_statement(session, statement, parameters=parameters)
+                        execute_statement(session, statement)
                     continue
 
                 logger.info(f"Started running model '{model.__name__}'")
-                statement = f"""
+                statement = Statement(
+                    sql=f"""
                     INSERT INTO {ModelRun} (id, invocation_id, model_name)
                     VALUES (:id, :invocation_id, :model_name)
-                    """
-                parameters = {
-                    "id": model_run_id,
-                    "invocation_id": invocation_id,
-                    "model_name": model.__name__,
-                }
+                    """,
+                    parameters={
+                        "id": model_run_id,
+                        "invocation_id": invocation_id,
+                        "model_name": model.__name__,
+                    },
+                )
                 statements.append(statement)
                 if not dry_run:
-                    execute_statement(session, statement, parameters=parameters)
+                    execute_statement(session, statement)
 
                 with timed() as model_run_timing:
                     try:
-                        model_statements = self._run_model(
-                            self.adapter,
-                            session,
-                            model,
-                            use_alembic=use_alembic,
-                            dry_run=dry_run,
+                        # This can raise an exception
+                        model_statements = self._make_model_statements(
+                            self.adapter, model, use_alembic=use_alembic
                         )
-                        statements.extend(model_statements)
+
+                        if dry_run:
+                            statements.extend(model_statements)
+                        else:
+                            for statement in model_statements:
+                                statements.append(statement)
+                                # This can raise an exception
+                                execute_statement(session, statement)
+
                         message = None
                         status = ModelRunStatus.SUCCESS
                     except Exception as exc_info:
@@ -382,28 +399,39 @@ class Runner(BaseModel):
                     f"Finished running model '{model.__name__}' after {model_run_timing.elapsed_seconds_formatted}. "
                     f"Result: {result}"
                 )
-                statement = f"""
+                statement = Statement(
+                    sql=f"""
                     UPDATE {ModelRun}
                     SET status = :status, message = :message, duration = :duration
                     WHERE id = :id
-                    """
-                parameters = {
-                    "id": model_run_id,
-                    "status": status,
-                    "message": message if message else "",
-                    "duration": model_run_timing.elapsed_ms,
-                }
+                    """,
+                    parameters={
+                        "id": model_run_id,
+                        "status": status,
+                        "message": message if message else "",
+                        "duration": model_run_timing.elapsed_ms,
+                    },
+                )
                 statements.append(statement)
                 if not dry_run:
-                    execute_statement(session, statement, parameters=parameters)
+                    execute_statement(session, statement)
 
                 if status == ModelRunStatus.ERROR:
-                    # Flag the models that must be skipped because their upstream dependency failed
-                    skipped_models.update(nx.descendants(self.graph.graph, model))
+                    if fail_fast:
+                        # Abort the graph run
+                        aborted_run = True
+                        logger.warning(
+                            f"Aborted run {invocation_id} due to error in model '{model.__name__}'"
+                        )
+                        break
+                    else:
+                        # Continue the graph run but skip downstream models
+                        skipped_models.update(nx.descendants(self.graph.graph, model))
 
-        logger.info(
-            f"Finished run {invocation_id} after {invocation_timing.elapsed_seconds_formatted}"
-        )
+        if not aborted_run:
+            logger.info(
+                f"Finished run {invocation_id} after {invocation_timing.elapsed_seconds_formatted}"
+            )
 
         return statements
 
@@ -412,14 +440,9 @@ class Runner(BaseModel):
     ) -> ClickHouseRelation:
         return ClickHouseRelation(table=f"{table}__tmp", database=database)
 
-    def _run_model(
-        self,
-        adapter: ClickHouseAdapter,
-        session: Session,
-        model: ModelType,
-        use_alembic: bool = True,
-        dry_run: bool = False,
-    ) -> list[str]:
+    def _make_model_statements(
+        self, adapter: ClickHouseAdapter, model: ModelType, use_alembic: bool = True
+    ) -> list[Statement]:
         statements = []
         target_relation = ClickHouseRelation(
             table=model.__tablename__, database=get_model_schema(model)
@@ -438,15 +461,16 @@ class Runner(BaseModel):
                         table=target_relation.table, database=target_relation.database
                     ):
                         # Create target table
-                        statement = adapter.make_create_table_statement_from_model(
-                            model,
-                            table=target_relation.table,
-                            database=target_relation.database,
-                            sql=sql,
+                        statements.append(
+                            Statement(
+                                sql=adapter.make_create_table_statement_from_model(
+                                    model,
+                                    table=target_relation.table,
+                                    database=target_relation.database,
+                                    sql=sql,
+                                )
+                            )
                         )
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
 
             elif materialization == Materialization.CREATE_REPLACE:
                 if use_alembic:
@@ -455,34 +479,29 @@ class Runner(BaseModel):
                     )
 
                     # Drop intermediate table if it exists
-                    statement = f"DROP TABLE IF EXISTS {intermediate_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(sql=f"DROP TABLE IF EXISTS {intermediate_relation}")
+                    )
 
                     # Create intermediate table
-                    statement = f"CREATE TABLE {intermediate_relation} AS {target_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(sql=f"CREATE TABLE {intermediate_relation} AS {target_relation}")
+                    )
 
                     if sql is not None:
-                        statement = f"INSERT INTO {intermediate_relation} ({sql})"
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(
+                            Statement(sql=f"INSERT INTO {intermediate_relation} ({sql})")
+                        )
 
                     # Do atomic swap of intermediate and target tables
-                    statement = f"EXCHANGE TABLES {target_relation} AND {intermediate_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(
+                            sql=f"EXCHANGE TABLES {target_relation} AND {intermediate_relation}"
+                        )
+                    )
 
                     # Drop intermediate table
-                    statement = f"DROP TABLE {intermediate_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(Statement(sql=f"DROP TABLE {intermediate_relation}"))
 
                 else:
                     if adapter.has_table(
@@ -493,44 +512,44 @@ class Runner(BaseModel):
                         )
 
                         # Drop intermediate table if it exists
-                        statement = f"DROP TABLE IF EXISTS {intermediate_relation}"
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(
+                            Statement(sql=f"DROP TABLE IF EXISTS {intermediate_relation}")
+                        )
 
                         # Create intermediate table
-                        statement = adapter.make_create_table_statement_from_model(
-                            model,
-                            table=intermediate_relation.table,
-                            database=intermediate_relation.database,
-                            sql=sql,
+                        statements.append(
+                            Statement(
+                                sql=adapter.make_create_table_statement_from_model(
+                                    model,
+                                    table=intermediate_relation.table,
+                                    database=intermediate_relation.database,
+                                    sql=sql,
+                                )
+                            )
                         )
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
 
                         # Do atomic swap of intermediate and target tables
-                        statement = f"EXCHANGE TABLES {target_relation} AND {intermediate_relation}"
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(
+                            Statement(
+                                sql=f"EXCHANGE TABLES {target_relation} AND {intermediate_relation}"
+                            )
+                        )
 
                         # Drop intermediate table
-                        statement = f"DROP TABLE {intermediate_relation}"
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(Statement(sql=f"DROP TABLE {intermediate_relation}"))
+
                     else:
                         # Create target table
-                        statement = adapter.make_create_table_statement_from_model(
-                            model,
-                            table=target_relation.table,
-                            database=target_relation.database,
-                            sql=sql,
+                        statements.append(
+                            Statement(
+                                sql=adapter.make_create_table_statement_from_model(
+                                    model,
+                                    table=target_relation.table,
+                                    database=target_relation.database,
+                                    sql=sql,
+                                )
+                            )
                         )
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
 
             elif materialization == Materialization.DELETE_INSERT:
                 if not unique_key:
@@ -551,21 +570,16 @@ class Runner(BaseModel):
                     )
 
                     # Drop intermediate table if it exists
-                    statement = f"DROP TABLE IF EXISTS {intermediate_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(sql=f"DROP TABLE IF EXISTS {intermediate_relation}")
+                    )
 
                     # Create intermediate table
-                    statement = f"CREATE TABLE {intermediate_relation} AS {target_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(sql=f"CREATE TABLE {intermediate_relation} AS {target_relation}")
+                    )
 
-                    statement = f"INSERT INTO {intermediate_relation} ({sql})"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(Statement(sql=f"INSERT INTO {intermediate_relation} ({sql})"))
 
                     # Delete matching rows from target table
                     if isinstance(unique_key, str):
@@ -575,38 +589,39 @@ class Runner(BaseModel):
 
                     if len(unique_keys) == 1:
                         key = unique_keys[0]
-                        statement = f"""
+                        statement = Statement(
+                            sql=f"""
                             DELETE FROM {target_relation}
                             WHERE {key} IN (
                                 SELECT {key} FROM {intermediate_relation}
                             )
                             """
+                        )
                     else:
                         keys_csv = ", ".join(unique_keys)
-                        statement = f"""
+                        statement = Statement(
+                            sql=f"""
                             DELETE FROM {target_relation}
                             WHERE ({keys_csv}) IN (
                                 SELECT {keys_csv} FROM {intermediate_relation}
                             )
                             """
+                        )
                     statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
 
                     # Insert new data into target table
-                    statement = f"""
-                        INSERT INTO {target_relation}
-                        SELECT * FROM {intermediate_relation}
-                        """
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(
+                            sql=f"""
+                            INSERT INTO {target_relation}
+                            SELECT * FROM {intermediate_relation}
+                            """
+                        )
+                    )
 
                     # Drop intermediate table
-                    statement = f"DROP TABLE {intermediate_relation}"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(Statement(sql=f"DROP TABLE {intermediate_relation}"))
+
                 else:
                     if adapter.has_table(
                         table=target_relation.table, database=target_relation.database
@@ -616,21 +631,21 @@ class Runner(BaseModel):
                         )
 
                         # Drop intermediate table if it exists
-                        statement = f"DROP TABLE IF EXISTS {intermediate_relation}"
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(
+                            Statement(sql=f"DROP TABLE IF EXISTS {intermediate_relation}")
+                        )
 
                         # Create intermediate table
-                        statement = adapter.make_create_table_statement_from_model(
-                            model,
-                            table=intermediate_relation.table,
-                            database=intermediate_relation.database,
-                            sql=sql,
+                        statements.append(
+                            Statement(
+                                sql=adapter.make_create_table_statement_from_model(
+                                    model,
+                                    table=intermediate_relation.table,
+                                    database=intermediate_relation.database,
+                                    sql=sql,
+                                )
+                            )
                         )
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
 
                         # Delete matching rows from target table
                         if isinstance(unique_key, str):
@@ -640,39 +655,41 @@ class Runner(BaseModel):
 
                         if len(unique_keys) == 1:
                             key = unique_keys[0]
-                            statement = f"""
+                            statement = Statement(
+                                sql=f"""
                                 DELETE FROM {target_relation}
                                 WHERE {key} IN (
                                     SELECT {key} FROM {intermediate_relation}
                                 )
                                 """
+                            )
                         else:
                             keys_csv = ", ".join(unique_keys)
-                            statement = f"""
+                            statement = Statement(
+                                sql=f"""
                                 DELETE FROM {target_relation}
                                 WHERE ({keys_csv}) IN (
                                     SELECT {keys_csv} FROM {intermediate_relation}
                                 )
                                 """
+                            )
                         statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
 
                         # Insert new data into target table
-                        statement = f"""
-                            INSERT INTO {target_relation}
-                            SELECT * FROM {intermediate_relation}
-                            """
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(
+                            Statement(
+                                sql=f"""
+                                INSERT INTO {target_relation}
+                                SELECT * FROM {intermediate_relation}
+                                """
+                            )
+                        )
 
                         # Drop intermediate table
-                        statement = f"DROP TABLE {intermediate_relation}"
-                        statements.append(statement)
-                        if not dry_run:
-                            execute_statement(session, statement)
+                        statements.append(Statement(sql=f"DROP TABLE {intermediate_relation}"))
+
                     else:
+                        # TODO Must this be implemented?
                         pass
 
             else:
@@ -685,19 +702,17 @@ class Runner(BaseModel):
                 if use_alembic:
                     pass
                 else:
-                    statement = f"CREATE VIEW IF NOT EXISTS {target_relation} AS ({sql})"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(sql=f"CREATE VIEW IF NOT EXISTS {target_relation} AS ({sql})")
+                    )
 
             elif materialization == Materialization.CREATE_REPLACE:
                 if use_alembic:
                     pass
                 else:
-                    statement = f"CREATE OR REPLACE VIEW {target_relation} AS ({sql})"
-                    statements.append(statement)
-                    if not dry_run:
-                        execute_statement(session, statement)
+                    statements.append(
+                        Statement(sql=f"CREATE OR REPLACE VIEW {target_relation} AS ({sql})")
+                    )
 
             else:
                 raise AttributeError(

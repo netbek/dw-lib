@@ -1,5 +1,6 @@
 from dw_lib.utils.profiling import timed
 from enum import StrEnum
+from pydantic import BaseModel
 from sqlalchemy.engine.cursor import CursorResult
 from sqlmodel import Session, text
 from typing import Any
@@ -49,13 +50,16 @@ class ModelRunStatus(StrEnum):
     SKIPPED = "skipped"  # Model run was skipped because upstream dependency failed
 
 
-def execute_statement(
-    session: Session, statement: str, parameters: dict[str, Any] | None = None
-) -> CursorResult[Any]:
+class Statement(BaseModel):
+    sql: str
+    parameters: dict[str, Any] | None = None
+
+
+def execute_statement(session: Session, statement: Statement) -> CursorResult[Any]:
     logger.debug(statement)
 
     with timed() as timing:
-        result = session.exec(text(statement), params=parameters)
+        result = session.exec(text(statement.sql), params=statement.parameters)
 
     logger.debug(f"Done in {timing.elapsed_seconds_formatted}")
 

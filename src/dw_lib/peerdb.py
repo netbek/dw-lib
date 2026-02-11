@@ -256,17 +256,15 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
     def validate_tls_fields(self) -> "ConfigPeerPeerDBClickHouseConfig":
         tls_fields = [self.certificate, self.private_key, self.root_ca]
 
-        if not self.disable_tls:
-            if not all(tls_fields):
-                raise ValueError(
-                    "When TLS is enabled (disable_tls=False), certificate, "
-                    "private_key, and root_ca must all be provided."
-                )
-        else:
+        if self.disable_tls:
             if any(tls_fields):
                 raise ValueError(
-                    "When TLS is disabled (disable_tls=True), certificate, "
-                    "private_key, and root_ca must not be provided."
+                    "certificate, private_key and root_ca must not be provided because disable_tls=True"
+                )
+        else:
+            if not all(tls_fields):
+                raise ValueError(
+                    "certificate, private_key and root_ca must be provided because disable_tls=False"
                 )
 
         return self

@@ -412,6 +412,7 @@ class PeerDB:
                 }
 
                 if value["type"] == Dialects.CLICKHOUSE:
+                    disable_tls = value["settings"].get("disable_tls", True)
                     peerdb_config = {
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "clickhouse_config": {
@@ -420,20 +421,23 @@ class PeerDB:
                             "user": value["settings"]["username"],
                             "password": value["settings"]["password"],
                             "database": value["settings"]["database"],
-                            "disable_tls": value["settings"]["disable_tls"],
+                            "disable_tls": disable_tls,
                         },
                     }
 
-                    if not value["settings"]["disable_tls"]:
+                    if not disable_tls:
                         peerdb_config["clickhouse_config"].update(
-                            {
-                                "certificate": value["settings"]["certificate"],
-                                "private_key": value["settings"]["private_key"],
-                                "root_ca": value["settings"]["root_ca"],
-                            }
+                            pydash.pick(value["settings"], "certificate", "private_key", "root_ca")
                         )
 
                 elif value["type"] == Dialects.POSTGRES:
+                    if "ssh_config" in value["settings"]:
+                        ssh_config = pydash.pick(
+                            value["settings"]["ssh_config"], "host", "port", "user", "private_key"
+                        )
+                    else:
+                        ssh_config = None
+
                     peerdb_config = {
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "postgres_config": {
@@ -442,11 +446,10 @@ class PeerDB:
                             "user": value["settings"]["username"],
                             "password": value["settings"]["password"],
                             "database": value["settings"]["database"],
+                            "ssh_config": ssh_config,
                         },
                     }
 
-                    if value["settings"]["ssh_config"]:
-                        peerdb_config["postgres_config"]["ssh_config"] = {}
                 else:
                     raise Exception(f"Adapter type '{value['type']}' is not supported")
 
@@ -619,7 +622,9 @@ class PeerDB:
                 data.append(
                     pydash.pick(
                         {**mirror.model_dump(), "status": status_response.current_flow_state},
-                        *["name", "created_at", "status"],
+                        "name",
+                        "created_at",
+                        "status",
                     )
                 )
             data = pydash.order_by(data, ["name"])

@@ -18,7 +18,7 @@ from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
-from pydantic import BaseModel, Field, model_validator, SecretStr
+from pydantic import BaseModel, Field, model_validator
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
 from typing import Literal
@@ -80,10 +80,10 @@ class ClickHouseConfig(BaseModel):
     host: str
     port: int
     user: str
-    password: SecretStr
+    password: str
     database: str
     access_key_id: str = Field(alias="accessKeyId")
-    secret_access_key: SecretStr = Field(alias="secretAccessKey")
+    secret_access_key: str = Field(alias="secretAccessKey")
     region: str
     s3_path: str = Field(alias="s3Path")
     disable_tls: bool = Field(alias="disableTls")
@@ -102,7 +102,7 @@ class PostgresConfig(BaseModel):
     port: int
     database: str
     user: str
-    password: SecretStr
+    password: str
 
 
 class PostgresPeer(BaseModel):
@@ -245,11 +245,11 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
     host: str
     port: int
     user: str
-    password: SecretStr
+    password: str
     database: str
     disable_tls: bool = True
     certificate: str | None = None
-    private_key: SecretStr | None = None
+    private_key: str | None = None
     root_ca: str | None = None
 
     @model_validator(mode="after")
@@ -292,7 +292,7 @@ class SSHConfig(BaseModel):
     host: str
     port: int
     user: str
-    private_key: SecretStr
+    private_key: str
 
 
 class ConfigPeerPeerDBPostgresConfig(BaseModel):
@@ -300,7 +300,7 @@ class ConfigPeerPeerDBPostgresConfig(BaseModel):
     port: int
     database: str
     user: str
-    password: SecretStr
+    password: str
     ssh_config: SSHConfig | None = None
 
 

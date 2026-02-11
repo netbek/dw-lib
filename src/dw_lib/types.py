@@ -1,5 +1,5 @@
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict, Field, field_validator, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
@@ -139,7 +139,7 @@ class ClickHouseSettings(BaseSettings):
     http_port: int
     tcp_port: int
     username: str
-    password: SecretStr
+    password: str
     database: str
     driver: str | None = Field(default=None)
 
@@ -155,14 +155,14 @@ class PostgresSettings(BaseSettings):
     host: str
     port: int
     username: str
-    password: SecretStr
+    password: str
     database: str
     schema_: str = Field(default="public", serialization_alias="schema")
 
 
 class S3Settings(BaseSettings):
     key_id: str
-    secret: SecretStr
+    secret: str
     region: str
     endpoint: str
     use_ssl: bool

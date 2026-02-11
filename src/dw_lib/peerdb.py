@@ -18,7 +18,7 @@ from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
 from typing import Literal
@@ -87,6 +87,7 @@ class ClickHouseConfig(BaseModel):
     region: str
     s3_path: str = Field(alias="s3Path")
     disable_tls: bool = Field(alias="disableTls")
+    # TODO Must the TLS fields (certificate, private_key, root_ca) be added?
 
 
 class ClickHousePeer(BaseModel):
@@ -246,7 +247,27 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
     user: str
     password: str
     database: str
-    disable_tls: bool
+    disable_tls: bool = True
+    certificate: str | None = None
+    private_key: str | None = None
+    root_ca: str | None = None
+
+    @model_validator(mode="after")
+    def validate_tls_fields(self) -> "ConfigPeerPeerDBClickHouseConfig":
+        tls_fields = [self.certificate, self.private_key, self.root_ca]
+
+        if self.disable_tls:
+            if any(tls_fields):
+                raise ValueError(
+                    "certificate, private_key and root_ca must not be provided because disable_tls=True"
+                )
+        else:
+            if not all(tls_fields):
+                raise ValueError(
+                    "certificate, private_key and root_ca must be provided because disable_tls=False"
+                )
+
+        return self
 
 
 class ConfigPeerPeerDBClickHouse(BaseModel):
@@ -265,12 +286,20 @@ class ConfigPeerAdapterPostgres(BaseModel):
     settings: PostgresSettings
 
 
+class SSHConfig(BaseModel):
+    host: str
+    port: int
+    user: str
+    private_key: str
+
+
 class ConfigPeerPeerDBPostgresConfig(BaseModel):
     host: str
     port: int
     database: str
     user: str
     password: str
+    ssh_config: SSHConfig | None = None
 
 
 class ConfigPeerPeerDBPostgres(BaseModel):
@@ -381,6 +410,7 @@ class PeerDB:
                 }
 
                 if value["type"] == Dialects.CLICKHOUSE:
+                    disable_tls = value["settings"].get("disable_tls", True)
                     peerdb_config = {
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "clickhouse_config": {
@@ -389,10 +419,23 @@ class PeerDB:
                             "user": value["settings"]["username"],
                             "password": value["settings"]["password"],
                             "database": value["settings"]["database"],
-                            "disable_tls": not value["settings"]["secure"],
+                            "disable_tls": disable_tls,
                         },
                     }
+
+                    if not disable_tls:
+                        peerdb_config["clickhouse_config"].update(
+                            pydash.pick(value["settings"], "certificate", "private_key", "root_ca")
+                        )
+
                 elif value["type"] == Dialects.POSTGRES:
+                    if "ssh_config" in value["settings"]:
+                        ssh_config = pydash.pick(
+                            value["settings"]["ssh_config"], "host", "port", "user", "private_key"
+                        )
+                    else:
+                        ssh_config = None
+
                     peerdb_config = {
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "postgres_config": {
@@ -401,8 +444,10 @@ class PeerDB:
                             "user": value["settings"]["username"],
                             "password": value["settings"]["password"],
                             "database": value["settings"]["database"],
+                            "ssh_config": ssh_config,
                         },
                     }
+
                 else:
                     raise Exception(f"Adapter type '{value['type']}' is not supported")
 
@@ -575,7 +620,9 @@ class PeerDB:
                 data.append(
                     pydash.pick(
                         {**mirror.model_dump(), "status": status_response.current_flow_state},
-                        *["name", "created_at", "status"],
+                        "name",
+                        "created_at",
+                        "status",
                     )
                 )
             data = pydash.order_by(data, ["name"])

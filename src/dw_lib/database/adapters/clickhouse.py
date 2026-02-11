@@ -43,7 +43,6 @@ class ClickHouseAdapter(BaseAdapter):
         password: str,
         database: str,
         driver: str | None = None,
-        secure: bool | None = None,
     ) -> URL:
         if driver:
             scheme = f"clickhouse+{driver}"
@@ -74,7 +73,6 @@ class ClickHouseAdapter(BaseAdapter):
             self.settings.password,
             self.settings.database,
             self.settings.driver,
-            self.settings.secure,
         )
 
     @contextmanager
@@ -90,7 +88,6 @@ class ClickHouseAdapter(BaseAdapter):
             username=self.settings.username,
             password=self.settings.password,
             database=self.settings.database,
-            secure=self.settings.secure,
         )
 
         yield client

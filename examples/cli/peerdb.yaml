@@ -44,7 +44,6 @@ peers:
       username: default
       password: default
       database: example
-      secure: false
 
     # Optional. The Python wrapper connects to the destination database for some tasks, e.g.
     # to check whether the destination tables exist. This connection is created outside of the
@@ -56,7 +55,6 @@ peers:
       username: default
       password: default
       database: example
-      secure: false
 
 mirrors:
   +do_initial_snapshot: true

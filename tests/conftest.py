@@ -81,7 +81,6 @@ class DatabaseTest:
             username="default",
             password="default",
             database="default",
-            secure=False,
             driver="http",
         )
         clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)

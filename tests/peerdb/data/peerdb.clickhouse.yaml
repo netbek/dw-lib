@@ -28,7 +28,6 @@ peers:
       username: default
       password: default
       database: default
-      secure: false
     adapter_settings:
       host: localhost
       http_port: 28123
@@ -36,7 +35,6 @@ peers:
       username: default
       password: default
       database: default
-      secure: false
 
 mirrors:
   +do_initial_snapshot: false

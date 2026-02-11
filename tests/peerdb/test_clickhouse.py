@@ -69,7 +69,6 @@ class TestLoadConfig(PeerDBIntegrationTest):
                             "username": "default",
                             "password": "default",
                             "database": "default",
-                            "secure": False,
                             "driver": None,
                         },
                     },

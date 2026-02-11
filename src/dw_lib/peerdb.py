@@ -18,7 +18,7 @@ from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, SecretStr
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
 from typing import Literal
@@ -80,13 +80,14 @@ class ClickHouseConfig(BaseModel):
     host: str
     port: int
     user: str
-    password: str
+    password: SecretStr
     database: str
     access_key_id: str = Field(alias="accessKeyId")
-    secret_access_key: str = Field(alias="secretAccessKey")
+    secret_access_key: SecretStr = Field(alias="secretAccessKey")
     region: str
     s3_path: str = Field(alias="s3Path")
     disable_tls: bool = Field(alias="disableTls")
+    # TODO Must the TLS fields (certificate, private_key, root_ca) be added?
 
 
 class ClickHousePeer(BaseModel):
@@ -101,7 +102,7 @@ class PostgresConfig(BaseModel):
     port: int
     database: str
     user: str
-    password: str
+    password: SecretStr
 
 
 class PostgresPeer(BaseModel):
@@ -244,9 +245,31 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
     host: str
     port: int
     user: str
-    password: str
+    password: SecretStr
     database: str
-    disable_tls: bool
+    disable_tls: bool = True
+    certificate: str | None = None
+    private_key: SecretStr | None = None
+    root_ca: str | None = None
+
+    @model_validator(mode="after")
+    def validate_tls_fields(self) -> "ConfigPeerPeerDBClickHouseConfig":
+        tls_fields = [self.certificate, self.private_key, self.root_ca]
+
+        if not self.disable_tls:
+            if not all(tls_fields):
+                raise ValueError(
+                    "When TLS is enabled (disable_tls=False), certificate, "
+                    "private_key, and root_ca must all be provided."
+                )
+        else:
+            if any(tls_fields):
+                raise ValueError(
+                    "When TLS is disabled (disable_tls=True), certificate, "
+                    "private_key, and root_ca must not be provided."
+                )
+
+        return self
 
 
 class ConfigPeerPeerDBClickHouse(BaseModel):
@@ -265,12 +288,20 @@ class ConfigPeerAdapterPostgres(BaseModel):
     settings: PostgresSettings
 
 
+class SSHConfig(BaseModel):
+    host: str
+    port: int
+    user: str
+    private_key: SecretStr
+
+
 class ConfigPeerPeerDBPostgresConfig(BaseModel):
     host: str
     port: int
     database: str
     user: str
-    password: str
+    password: SecretStr
+    ssh_config: SSHConfig | None = None
 
 
 class ConfigPeerPeerDBPostgres(BaseModel):
@@ -389,9 +420,19 @@ class PeerDB:
                             "user": value["settings"]["username"],
                             "password": value["settings"]["password"],
                             "database": value["settings"]["database"],
-                            "disable_tls": not value["settings"]["secure"],
+                            "disable_tls": value["settings"]["disable_tls"],
                         },
                     }
+
+                    if not value["settings"]["disable_tls"]:
+                        peerdb_config["clickhouse_config"].update(
+                            {
+                                "certificate": value["settings"]["certificate"],
+                                "private_key": value["settings"]["private_key"],
+                                "root_ca": value["settings"]["root_ca"],
+                            }
+                        )
+
                 elif value["type"] == Dialects.POSTGRES:
                     peerdb_config = {
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
@@ -403,6 +444,9 @@ class PeerDB:
                             "database": value["settings"]["database"],
                         },
                     }
+
+                    if value["settings"]["ssh_config"]:
+                        peerdb_config["postgres_config"]["ssh_config"] = {}
                 else:
                     raise Exception(f"Adapter type '{value['type']}' is not supported")
 

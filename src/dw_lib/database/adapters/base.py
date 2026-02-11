@@ -23,7 +23,6 @@ class BaseAdapter(ABC):
         password: str,
         database: str,
         driver: str | None = None,
-        secure: bool | None = None,
     ) -> URL: ...
 
     @overload

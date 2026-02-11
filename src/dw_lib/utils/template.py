@@ -1,18 +1,11 @@
 from jinja2 import Environment, FileSystemLoader, Undefined
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-class EnvVars(BaseSettings):
-    model_config = SettingsConfigDict(
-        # env_file=list(Path("/usr/local/share/dw").glob("*.env")),
-        extra="allow",
-        case_sensitive=True,
-    )
+import os
 
 
 def env_var(var: str, default: str | None = None) -> str:
-    return getattr(EnvVars(), var, default)
+    return os.environ.get(var, default=default)
 
 
 def render_template(

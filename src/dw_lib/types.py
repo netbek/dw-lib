@@ -1,6 +1,5 @@
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
 from typing import ClassVar
@@ -134,7 +133,7 @@ class DuckDBSystemSettings(BaseModel):
         return value
 
 
-class ClickHouseSettings(BaseSettings):
+class ClickHouseSettings(BaseModel):
     host: str
     http_port: int
     tcp_port: int
@@ -144,14 +143,14 @@ class ClickHouseSettings(BaseSettings):
     driver: str | None = Field(default=None)
 
 
-class DuckDBSettings(BaseSettings):
+class DuckDBSettings(BaseModel):
     database: Path | str
     schema_: str = Field(default="main", serialization_alias="schema")
     extensions: list[str] | None = None
     settings: DuckDBSystemSettings | None = None
 
 
-class PostgresSettings(BaseSettings):
+class PostgresSettings(BaseModel):
     host: str
     port: int
     username: str
@@ -160,7 +159,7 @@ class PostgresSettings(BaseSettings):
     schema_: str = Field(default="public", serialization_alias="schema")
 
 
-class S3Settings(BaseSettings):
+class S3Settings(BaseModel):
     key_id: str
     secret: str
     region: str
@@ -171,14 +170,14 @@ class S3Settings(BaseSettings):
     prefix: str | None = None
 
 
-class DbtSettings(BaseSettings):
+class DbtSettings(BaseModel):
     directory: Path | str
     config: dict
 
 
-class PeerDBSettings(BaseSettings):
+class PeerDBSettings(BaseModel):
     config_path: Path | str
 
 
-class NotebookSettings(BaseSettings):
+class NotebookSettings(BaseModel):
     directory: Path | str

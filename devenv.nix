@@ -9,7 +9,7 @@
   env.DEVENV_TASKS_QUIET = 1;
 
   packages = with pkgs; [
-    nixfmt-rfc-style
+    nixfmt
     pre-commit
     ripgrep
   ];

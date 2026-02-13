@@ -336,14 +336,17 @@ class ConfigMirror(BaseModel):
     synced_at_col_name: str | None = "_peerdb_synced_at"
 
 
+# class ConfigPublication(BaseModel):
+#     name: str
+#     table_identifiers: list[str]
+
+
 class Config(BaseModel):
     api_url: str
     settings: list[ConfigSetting] | None = None
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
-    # publications: List
-    # users: List
-    # publication_schemas: List[str]
+    # publications: list[ConfigPublication]
 
 
 class PeerDB:
@@ -384,18 +387,7 @@ class PeerDB:
         settings = []
         peers = []
         mirrors = []
-
-        # if "users" not in config:
-        #     config["users"] = {}
-
-        # if "publications" in config:
-        #     for key, value in config["publications"].items():
-        #         config["publications"][key] = {
-        #             "name": key,
-        #             "table_identifiers": value,
-        #         }
-        # else:
-        #     config["publications"] = {}
+        # publications = []
 
         if "settings" in config:
             settings = [{"name": key, "value": value} for key, value in config["settings"].items()]
@@ -467,27 +459,16 @@ class PeerDB:
 
             mirrors = list(config["mirrors"].values())
 
-        # publication_schemas = []
-
-        # for value in config["publications"].values():
-        #     for identifier in value["table_identifiers"]:
-        #         source_table_identifier = PostgresRelation.from_string(identifier)
-        #         publication_schemas.append(source_table_identifier.schema_)
-
-        # for value in config["mirrors"].values():
-        #     for table_mapping in value["table_mappings"]:
-        #         source_table_identifier = PostgresRelation.from_string(
-        #             table_mapping["source_table_identifier"]
-        #         )
-        #         publication_schemas.append(source_table_identifier.schema_)
-
-        # config["publication_schemas"] = sorted(pydash.uniq(publication_schemas))
+        # if "publications" in config:
+        #     for key, value in config["publications"].items():
+        #         publications.append({"name": key, "table_identifiers": value})
 
         return Config(
             api_url=config.get("api_url"),
             settings=settings,
             peers=peers,
             mirrors=mirrors,
+            # publications=publications,
         )
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:

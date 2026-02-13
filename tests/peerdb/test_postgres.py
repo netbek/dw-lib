@@ -138,15 +138,13 @@ class TestLoadConfig(PeerDBIntegrationTest):
             # "publications": [
             #     {
             #         "name": "publication_1",
-            #         "table_identifiers": ["private.table_1", "private.table_2"],
+            #         "table_identifiers": ["public.table_1", "public.table_2"],
             #     },
             #     {
             #         "name": "publication_2",
-            #         "table_identifiers": ["private.table_3"],
+            #         "table_identifiers": ["public.table_3"],
             #     },
             # ],
-            # "users": {},
-            # "publication_schemas": ["private", "public"],
         }
 
         config_file = Path(__file__).parent / "data" / "peerdb.postgres.yaml"

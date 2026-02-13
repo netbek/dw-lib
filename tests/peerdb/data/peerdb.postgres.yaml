@@ -34,6 +34,13 @@ peers:
       password: postgres
       database: test
 
+# publications:
+#   publication_1:
+#   - public.table_1
+#   - public.table_2
+#   publication_2:
+#   - public.table_3
+
 mirrors:
   +do_initial_snapshot: false
   +resync: false
@@ -54,10 +61,3 @@ mirrors:
       destination_table_identifier: replica.table_2
     - source_table_identifier: public.table_3
       destination_table_identifier: replica.table_3
-
-# publications:
-#   publication_1:
-#   - private.table_1
-#   - private.table_2
-#   publication_2:
-#   - private.table_3

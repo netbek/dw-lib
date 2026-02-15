@@ -1,4 +1,4 @@
-from dw_lib.dbt import Dbt, find_project_dir
+from dw_lib.dbt import Dbt
 
 import rich.console
 import typer
@@ -10,15 +10,13 @@ console = rich.console.Console()
 @dbt_docs_app.command()
 def generate():
     """Generate project docs."""
-    project_dir = find_project_dir()
-    dbt = Dbt(project_dir)
+    dbt = Dbt()
     dbt.docs_generate()
-    console.print(f"Generated docs for '{project_dir}'", style="green")
+    console.print(f"Generated docs for '{dbt._project_dir}'", style="green")
 
 
 @dbt_docs_app.command()
 def serve():
     """Serve project docs."""
-    project_dir = find_project_dir()
-    dbt = Dbt(project_dir)
+    dbt = Dbt()
     dbt.docs_serve()

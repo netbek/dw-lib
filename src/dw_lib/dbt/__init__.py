@@ -2,7 +2,7 @@ from ..utils.filesystem import find_up, get_file_extension
 from ..utils.yaml_utils import safe_load_file
 from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
 from datetime import datetime, timezone
-from dbt.artifacts.schemas.run import RunExecutionResult
+from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
 from livereload import Server
@@ -12,7 +12,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import get_tracer, set_tracer_provider, Status, StatusCode, Tracer
 from pathlib import Path
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel
 from typing import Any
 from uuid import uuid4
 
@@ -173,101 +173,6 @@ def bundle_docs(project_dir: Path, dest_dir: Path | None = None) -> Path:
     return dest_file
 
 
-# Based on https://github.com/elementary-data/dbt-data-reliability/blob/6551383e8a37e5814bd2bb9fd74330be8265a3c9/models/run_results.yml#L133
-class NodeSpan(BaseModel):
-    unique_id: str
-    name: str
-    message: str | None = None
-    status: str
-    resource_type: str
-    execution_time: float
-    compile_started_at: datetime | None = None
-    compile_completed_at: datetime | None = None
-    execute_started_at: datetime | None = None
-    execute_completed_at: datetime | None = None
-    rows_affected: int | None = 0
-    compiled_code: str | None = None
-    failures: int | None = 0
-    query_id: str | None = None
-    thread_id: str | None = None
-    materialization: str | None = None
-    adapter_response: str | None = None
-
-    @computed_field
-    @property
-    def compile_start_ns(self) -> int | None:
-        return to_ns(self.compile_started_at) if self.compile_started_at else None
-
-    @computed_field
-    @property
-    def compile_end_ns(self) -> int | None:
-        return to_ns(self.compile_completed_at) if self.compile_completed_at else None
-
-    @computed_field
-    @property
-    def compile_duration_s(self) -> int | None:
-        if self.compile_start_ns is not None and self.compile_end_ns is not None:
-            return (self.compile_end_ns - self.compile_start_ns) / 1e9
-        else:
-            return None
-
-    @computed_field
-    @property
-    def execute_start_ns(self) -> int | None:
-        return to_ns(self.execute_started_at) if self.execute_started_at else None
-
-    @computed_field
-    @property
-    def execute_end_ns(self) -> int | None:
-        return to_ns(self.execute_completed_at) if self.execute_completed_at else None
-
-    @computed_field
-    @property
-    def execute_duration_s(self) -> int | None:
-        if self.execute_start_ns is not None and self.execute_end_ns is not None:
-            return (self.execute_end_ns - self.execute_start_ns) / 1e9
-        else:
-            return None
-
-
-class RootSpan(BaseModel):
-    invocation_id: str
-    full_refresh: bool
-    generated_at: datetime
-    spans: list[NodeSpan]
-
-    @computed_field
-    @property
-    def run_start_ns(self) -> int:
-        start_times = [self.generated_at]
-        for s in self.spans:
-            if s.compile_started_at:
-                start_times.append(s.compile_started_at)
-            if s.execute_started_at:
-                start_times.append(s.execute_started_at)
-
-        run_start_dt = min(start_times)
-        return to_ns(run_start_dt)
-
-    @computed_field
-    @property
-    def run_end_ns(self) -> int:
-        end_times = [self.generated_at]
-        for s in self.spans:
-            if s.compile_completed_at:
-                end_times.append(s.compile_completed_at)
-            if s.execute_completed_at:
-                end_times.append(s.execute_completed_at)
-
-        if end_times:
-            run_end_dt = max(end_times)
-            return to_ns(run_end_dt)
-
-        # Fallback: start time + sum of execution times
-        total_exec_ns = int(sum(max(0.0, s.execution_time) for s in self.spans) * 1e9)
-        return self.run_start_ns + total_exec_ns
-
-
 def normalize_rows_affected(value: int | str | None) -> int | None:
     if value is None:
         return None
@@ -287,70 +192,6 @@ def to_ns(dt: datetime) -> int:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return int(dt.timestamp() * 1e9)
-
-
-def _truncate_str(s: str | None, max_len: int = 200) -> str | None:
-    if s is None:
-        return None
-    if len(s) <= max_len:
-        return s
-    return s[:max_len] + "...(truncated)"
-
-
-def parse_runner_result(
-    invocation_id: str, runner_result: dbtRunnerResult, full_refresh: bool | None = False
-) -> RootSpan:
-    root_result: RunExecutionResult = runner_result.result
-    spans = []
-
-    for node_result in root_result.results:
-        compile_started_at = None
-        compile_completed_at = None
-        execute_started_at = None
-        execute_completed_at = None
-
-        for timing_info in node_result.timing:
-            if timing_info.name == "compile":
-                compile_started_at = timing_info.started_at
-                compile_completed_at = timing_info.completed_at
-            elif timing_info.name == "execute":
-                execute_started_at = timing_info.started_at
-                execute_completed_at = timing_info.completed_at
-
-        if isinstance(node_result.node, ModelNode):
-            compiled_code = node_result.node.compiled_code
-        else:
-            compiled_code = None
-
-        node_span = NodeSpan(
-            unique_id=node_result.node.unique_id,
-            name=node_result.node.name,
-            message=node_result.message,
-            status=node_result.status,
-            resource_type=node_result.node.resource_type,
-            execution_time=node_result.execution_time,
-            compile_started_at=compile_started_at,
-            compile_completed_at=compile_completed_at,
-            execute_started_at=execute_started_at,
-            execute_completed_at=execute_completed_at,
-            rows_affected=normalize_rows_affected(
-                node_result.adapter_response.get("rows_affected")
-            ),
-            compiled_code=compiled_code,
-            failures=node_result.failures,
-            query_id=node_result.adapter_response.get("query_id"),
-            thread_id=node_result.thread_id,
-            materialization=node_result.node.config.materialized,
-            adapter_response=json.dumps(node_result.adapter_response),
-        )
-        spans.append(node_span)
-
-    return RootSpan(
-        invocation_id=invocation_id,
-        full_refresh=full_refresh,
-        generated_at=root_result.generated_at,
-        spans=spans,
-    )
 
 
 class Dbt:
@@ -642,7 +483,7 @@ class Dbt:
         if self._tracer:
             raw_command = " ".join(cmd)
             invocation_id = str(uuid4())
-            self._trace_runner_result(
+            self._trace_invocation(
                 self._tracer, raw_command, invocation_id, runner_result, full_refresh=full_refresh
             )
 
@@ -798,7 +639,7 @@ class Dbt:
         if self._tracer:
             raw_command = " ".join(cmd)
             invocation_id = str(uuid4())
-            self._trace_runner_result(self._tracer, raw_command, invocation_id, runner_result)
+            self._trace_invocation(self._tracer, raw_command, invocation_id, runner_result)
 
         return runner_result
 
@@ -999,7 +840,7 @@ class Dbt:
 
         return get_tracer(__name__)
 
-    def _trace_runner_result(
+    def _trace_invocation(
         self,
         tracer: Tracer,
         raw_command: str,
@@ -1007,110 +848,189 @@ class Dbt:
         runner_result: dbtRunnerResult,
         full_refresh: bool | None = False,
     ):
-        parsed_root_span = parse_runner_result(
-            invocation_id, runner_result, full_refresh=full_refresh
+        def truncate_str(value: str | None, max_length: int = 200) -> str | None:
+            if value is None:
+                return None
+            if len(value) <= max_length:
+                return value
+            return value[:max_length] + "... (truncated)"
+
+        class ParsedRoot(BaseModel):
+            raw_command: str
+            invocation_id: str
+            full_refresh: bool
+            generated_at: datetime
+
+        # Based on https://github.com/elementary-data/dbt-data-reliability/blob/6551383e8a37e5814bd2bb9fd74330be8265a3c9/models/run_results.yml#L133
+        class ParsedNode(BaseModel):
+            unique_id: str
+            name: str
+            message: str | None = None
+            status: RunStatus
+            resource_type: str
+            execution_time: float
+            compile_started_at: datetime | None = None
+            compile_completed_at: datetime | None = None
+            execute_started_at: datetime | None = None
+            execute_completed_at: datetime | None = None
+            rows_affected: int | None = 0
+            compiled_code: str | None = None
+            failures: int | None = 0
+            query_id: str | None = None
+            thread_id: str | None = None
+            materialization: str | None = None
+            adapter_response: str | None = None
+
+        parsed_root = ParsedRoot(
+            raw_command=raw_command,
+            invocation_id=invocation_id,
+            full_refresh=full_refresh,
+            generated_at=runner_result.result.generated_at,
         )
 
-        if not parsed_root_span.spans:
+        parsed_nodes: list[ParsedNode] = []
+        for node_result in runner_result.result.results:
+            compile_started_at = None
+            compile_completed_at = None
+            execute_started_at = None
+            execute_completed_at = None
+
+            for timing_info in node_result.timing:
+                if timing_info.name == "compile":
+                    compile_started_at = timing_info.started_at
+                    compile_completed_at = timing_info.completed_at
+                elif timing_info.name == "execute":
+                    execute_started_at = timing_info.started_at
+                    execute_completed_at = timing_info.completed_at
+
+            if isinstance(node_result.node, ModelNode):
+                compiled_code = node_result.node.compiled_code
+            else:
+                compiled_code = None
+
+            note_item = ParsedNode(
+                unique_id=node_result.node.unique_id,
+                name=node_result.node.name,
+                message=node_result.message,
+                status=node_result.status,
+                resource_type=node_result.node.resource_type,
+                execution_time=node_result.execution_time,
+                compile_started_at=compile_started_at,
+                compile_completed_at=compile_completed_at,
+                execute_started_at=execute_started_at,
+                execute_completed_at=execute_completed_at,
+                rows_affected=normalize_rows_affected(
+                    node_result.adapter_response.get("rows_affected")
+                ),
+                compiled_code=compiled_code,
+                failures=node_result.failures,
+                query_id=node_result.adapter_response.get("query_id"),
+                thread_id=node_result.thread_id,
+                materialization=node_result.node.config.materialized,
+                adapter_response=json.dumps(node_result.adapter_response),
+            )
+            parsed_nodes.append(note_item)
+
+        if not parsed_nodes:
             return
 
+        root_dts = (
+            [node.compile_started_at for node in parsed_nodes]
+            + [node.compile_completed_at for node in parsed_nodes]
+            + [node.execute_started_at for node in parsed_nodes]
+            + [node.execute_completed_at for node in parsed_nodes]
+        )
+        root_dts = [dt for dt in root_dts if dt]
+        root_start_dt = min(root_dts) if root_dts else parsed_root.generated_at
+        root_end_dt = max(root_dts) if root_dts else parsed_root.generated_at
+
         root_attrs = {
-            "dbt.run.raw_command": raw_command,
-            "dbt.run.full_refresh": full_refresh,
-            "dbt.run.invocation_id": invocation_id,
-            "dbt.run.node_count": len(parsed_root_span.spans),
-            "dbt.run.generated_at": parsed_root_span.generated_at.isoformat(),
+            "dbt.invocation.raw_command": raw_command,
+            "dbt.invocation.full_refresh": full_refresh,
+            "dbt.invocation.invocation_id": invocation_id,
+            "dbt.invocation.node_count": len(parsed_nodes),
+            "dbt.invocation.generated_at": parsed_root.generated_at.isoformat(),
         }
 
         # create root span but don't end it automatically; we want to set custom end_time
         with tracer.start_as_current_span(
-            f"dbt.run {invocation_id}",
+            f"dbt.invocation {invocation_id}",
             attributes=root_attrs,
-            start_time=parsed_root_span.run_start_ns,
+            start_time=to_ns(root_start_dt),
             end_on_exit=False,
         ) as root_span:
             # iterate nodes and create child spans
-            for r in parsed_root_span.spans:
-                # choose node start/end; prefer execute timestamps
-                node_start_dt = r.execute_started_at or r.compile_started_at or r.generated_at
-                node_end_dt = (
-                    r.execute_completed_at
-                    or r.compile_completed_at
-                    or (node_start_dt if node_start_dt else r.generated_at)
-                )
-                node_start_ns = to_ns(node_start_dt)
-                node_end_ns = to_ns(node_end_dt)
+            for n in parsed_nodes:
+                node_dts = [
+                    n.compile_started_at,
+                    n.compile_completed_at,
+                    n.execute_started_at,
+                    n.execute_completed_at,
+                ]
+                node_dts = [dt for dt in node_dts if dt]
+                node_start_dt = min(node_dts) if node_dts else parsed_root.generated_at
+                node_end_dt = max(node_dts) if node_dts else parsed_root.generated_at
 
                 node_attrs = {
-                    "dbt.node.unique_id": r.unique_id,
-                    "dbt.node.name": r.name,
-                    "dbt.node.resource_type": r.resource_type,
-                    "dbt.node.materialization": r.materialization or "",
-                    "dbt.node.execution_time_s": float(r.execution_time or 0.0),
-                    "dbt.node.rows_affected": int(r.rows_affected or 0),
-                    "dbt.node.query_id": r.query_id or "",
-                    "dbt.node.thread_id": r.thread_id or "",
+                    "dbt.node.unique_id": n.unique_id,
+                    "dbt.node.name": n.name,
+                    "dbt.node.resource_type": n.resource_type,
+                    "dbt.node.materialization": n.materialization or "",
+                    "dbt.node.execution_time_s": float(n.execution_time or 0.0),
+                    "dbt.node.rows_affected": int(n.rows_affected or 0),
+                    "dbt.node.query_id": n.query_id or "",
+                    "dbt.node.thread_id": n.thread_id or "",
                 }
 
                 # keep largest text fields trimmed
-                if r.adapter_response:
-                    node_attrs["dbt.node.adapter_response_excerpt"] = _truncate_str(
-                        r.adapter_response, 200
+                if n.adapter_response:
+                    node_attrs["dbt.node.adapter_response_excerpt"] = truncate_str(
+                        n.adapter_response, 200
                     )
 
                 # start node span with explicit timestamp and don't end on exit so we can set end_time
                 with tracer.start_as_current_span(
-                    f"dbt.node.run {r.name}",
+                    f"dbt.node.run {n.name}",
                     attributes=node_attrs,
-                    start_time=node_start_ns,
+                    start_time=to_ns(node_start_dt),
                     end_on_exit=False,
                 ) as node_span:
                     # record compile nested span if we have timestamps
-                    if r.compile_start_ns is not None and r.compile_end_ns is not None:
+                    if n.compile_started_at and n.compile_completed_at:
                         with tracer.start_as_current_span(
                             "dbt.node.compile",
-                            start_time=r.compile_start_ns,
+                            start_time=to_ns(n.compile_started_at),
                             end_on_exit=False,
                         ) as compile_span:
-                            compile_span.set_attribute(
-                                "dbt.compile.duration_s", r.compile_duration_s
-                            )
-                            compile_span.end(end_time=r.compile_end_ns)
+                            compile_span.end(end_time=to_ns(n.compile_completed_at))
 
                     # record execute nested span if we have timestamps
-                    if r.execute_start_ns is not None and r.execute_end_ns is not None:
+                    if n.execute_started_at and n.execute_completed_at:
                         with tracer.start_as_current_span(
                             "dbt.node.execute",
-                            start_time=r.execute_start_ns,
+                            start_time=to_ns(n.execute_started_at),
                             end_on_exit=False,
-                        ) as exec_span:
-                            exec_span.set_attribute("dbt.execute.duration_s", r.execute_duration_s)
-                            exec_span.end(end_time=r.execute_end_ns)
+                        ) as execute_span:
+                            execute_span.end(end_time=to_ns(n.execute_completed_at))
 
-                    # failures / status handling
-                    if (r.failures or 0) > 0 or (
-                        r.status and r.status.lower() not in ("success", "ok")
-                    ):
-                        message = r.message or f"status={r.status}"
+                    if n.status == RunStatus.Success:
+                        node_span.set_status(Status(StatusCode.OK))
+                    elif n.status == RunStatus.Error:
+                        message = n.message or f"status={n.status}"
                         node_span.record_exception(Exception(message))
-                        # set error status so it's visible in traces
-                        node_span.set_status(Status(StatusCode.ERROR, str(message)))
-                        node_span.add_event(
-                            "dbt.node.failure",
-                            {"failures": int(r.failures or 0), "msg": _truncate_str(message, 200)},
-                        )
-                    else:
-                        # leaving status unset (Unset) is normal for success; set OK only if you want explicit OK
+                        node_span.set_status(Status(StatusCode.ERROR, message))
+                        node_span.add_event("dbt.node.failure", {"failures": int(n.failures or 0)})
+                    elif n.status == RunStatus.Skipped:
                         node_span.set_status(Status(StatusCode.UNSET))
+                    else:
+                        raise Exception(f"Run status '{n.status}' is not supported")
 
-                    # attach the textual message as an event (trimmed)
-                    if r.message:
-                        node_span.add_event(
-                            "dbt.node.message", {"message_excerpt": _truncate_str(r.message, 200)}
-                        )
+                    # attach the textual message as an event
+                    if n.message:
+                        node_span.add_event("dbt.node.message", {"message": n.message})
 
                     # end node span with explicit end_time
-                    node_span.end(end_time=node_end_ns)
+                    node_span.end(end_time=to_ns(node_end_dt))
 
             # now end root span with run end timestamp
-            root_span.end(end_time=parsed_root_span.run_end_ns)
+            root_span.end(end_time=to_ns(root_end_dt))

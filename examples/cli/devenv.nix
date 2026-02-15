@@ -9,6 +9,7 @@
   env.DEVENV_TASKS_QUIET = 1;
   env.TILT_PORT = 28000;
   env.DBT_PROFILES_DIR = "${config.env.DEVENV_ROOT}/.dbt";
+  env.DBT_PROJECT_DIR = "${config.env.DEVENV_ROOT}/dbt";
 
   packages = with pkgs; [
     tilt

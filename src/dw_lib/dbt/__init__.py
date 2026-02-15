@@ -6,18 +6,7 @@ from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
 from livereload import Server
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import (
-    get_tracer,
-    get_tracer_provider,
-    set_tracer_provider,
-    Status,
-    StatusCode,
-    Tracer,
-)
+from opentelemetry import trace
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Any
@@ -28,6 +17,8 @@ import os
 import pydash
 import subprocess
 import yaml
+
+tracer = trace.get_tracer(__name__)
 
 RE_REF = r"^ref\(['\"](.*?)['\"]\)$"
 RE_SOURCE = r"^source\(['\"](.*?)['\"], ['\"](.*?)['\"]\)$"
@@ -201,48 +192,18 @@ def to_ns(dt: datetime) -> int:
     return int(dt.timestamp() * 1e9)
 
 
-_GLOBAL_TRACER_PROVIDER: TracerProvider | None = None
-
-
 class Dbt:
     def __init__(
         self,
         profiles_dir: Path | None = None,
         project_dir: Path | None = None,
         target: str | None = None,
-        otlp_traces_endpoints: list[str] | None = None,
     ) -> None:
         self._profiles_dir = profiles_dir or find_profiles_dir()
         self._project_dir = project_dir or find_project_dir()
         self._project_docs_dir = self._project_dir / "docs"
         self._project_config_file = self._project_dir / "dbt_project.yml"
         self._target = target
-        self._otlp_traces_endpoints = otlp_traces_endpoints
-
-        if otlp_traces_endpoints:
-            global _GLOBAL_TRACER_PROVIDER
-
-            resource = Resource(attributes={SERVICE_NAME: "dbt"})
-
-            if _GLOBAL_TRACER_PROVIDER is not None:
-                tracer_provider = _GLOBAL_TRACER_PROVIDER
-            else:
-                tracer_provider = TracerProvider(resource=resource)
-                try:
-                    set_tracer_provider(tracer_provider)
-                    _GLOBAL_TRACER_PROVIDER = tracer_provider
-                except Exception:
-                    # Another provider was set elsewhere concurrently; fall back
-                    tracer_provider = get_tracer_provider()
-                    _GLOBAL_TRACER_PROVIDER = tracer_provider
-
-            for endpoint in self._otlp_traces_endpoints:
-                processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint))
-                tracer_provider.add_span_processor(processor)
-
-            self._tracer = get_tracer(__name__)
-        else:
-            self._tracer = None
 
     def _list_command(
         self,
@@ -509,17 +470,15 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        if self._tracer:
-            raw_command = " ".join(cmd)
-            invocation_id = str(uuid4())
-            _trace_invocation(
-                self._tracer,
-                DbtCommand.RUN,
-                raw_command,
-                invocation_id,
-                runner_result,
-                full_refresh=full_refresh,
-            )
+        raw_command = " ".join(cmd)
+        invocation_id = str(uuid4())
+        _trace_invocation(
+            DbtCommand.RUN,
+            raw_command,
+            invocation_id,
+            runner_result,
+            full_refresh=full_refresh,
+        )
 
         return runner_result
 
@@ -601,12 +560,9 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        if self._tracer:
-            raw_command = " ".join(cmd)
-            invocation_id = str(uuid4())
-            _trace_invocation(
-                self._tracer, DbtCommand.RUN_OPERATION, raw_command, invocation_id, runner_result
-            )
+        raw_command = " ".join(cmd)
+        invocation_id = str(uuid4())
+        _trace_invocation(DbtCommand.RUN_OPERATION, raw_command, invocation_id, runner_result)
 
         return runner_result
 
@@ -678,12 +634,9 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        if self._tracer:
-            raw_command = " ".join(cmd)
-            invocation_id = str(uuid4())
-            _trace_invocation(
-                self._tracer, DbtCommand.SEED, raw_command, invocation_id, runner_result
-            )
+        raw_command = " ".join(cmd)
+        invocation_id = str(uuid4())
+        _trace_invocation(DbtCommand.SEED, raw_command, invocation_id, runner_result)
 
         return runner_result
 
@@ -875,13 +828,12 @@ class Dbt:
 
 
 def _trace_invocation(
-    tracer: Tracer,
     command: DbtCommand,
     raw_command: str,
     invocation_id: str,
     runner_result: dbtRunnerResult,
     full_refresh: bool | None = False,
-):
+) -> None:
     def truncate_str(value: str | None, max_length: int = 200) -> str | None:
         if value is None:
             return None
@@ -1095,14 +1047,14 @@ def _trace_invocation(
                         execute_span.end(end_time=to_ns(n.execute_completed_at))
 
                 if n.status == RunStatus.Success:
-                    node_span.set_status(Status(StatusCode.OK))
+                    node_span.set_status(trace.Status(trace.StatusCode.OK))
                 elif n.status == RunStatus.Error:
                     message = n.message or f"status={n.status}"
                     node_span.record_exception(Exception(message))
-                    node_span.set_status(Status(StatusCode.ERROR, message))
+                    node_span.set_status(trace.Status(trace.StatusCode.ERROR, message))
                     node_span.add_event("dbt.node.failure", {"failures": int(n.failures or 0)})
                 elif n.status == RunStatus.Skipped:
-                    node_span.set_status(Status(StatusCode.UNSET))
+                    node_span.set_status(trace.Status(trace.StatusCode.UNSET))
                 else:
                     raise Exception(f"Run status '{n.status}' is not supported")
 

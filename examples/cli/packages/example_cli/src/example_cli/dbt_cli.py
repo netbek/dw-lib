@@ -3,6 +3,7 @@ from .root import app
 from dw_lib.dbt import Dbt
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
@@ -15,7 +16,8 @@ dbt_app.add_typer(dbt_docs_app)
 app.add_typer(dbt_app)
 console = rich.console.Console()
 
-tracer_provider = TracerProvider()
+resource = Resource.create({SERVICE_NAME: "cli"})
+tracer_provider = TracerProvider(resource=resource)
 span_processor = BatchSpanProcessor(
     OTLPSpanExporter(endpoint="http://localhost:20428/insert/opentelemetry/v1/traces")
 )

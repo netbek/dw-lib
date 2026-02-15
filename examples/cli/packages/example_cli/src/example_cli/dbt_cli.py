@@ -10,6 +10,7 @@ dbt_app = typer.Typer(name="dbt")
 dbt_app.add_typer(dbt_docs_app)
 app.add_typer(dbt_app)
 console = rich.console.Console()
+otlp_traces_endpoints = ["http://localhost:20428/insert/opentelemetry/v1/traces"]
 
 
 @dbt_app.command()
@@ -40,7 +41,7 @@ def model_yaml(models: list[str]):
 def run():
     """Compile SQL and execute against the current target database."""
     project_dir = find_project_dir()
-    dbt = Dbt(project_dir)
+    dbt = Dbt(project_dir, otlp_traces_endpoints=otlp_traces_endpoints)
     dbt.run()
 
 
@@ -48,7 +49,5 @@ def run():
 def seed():
     """Load data from CSV files into your data warehouse."""
     project_dir = find_project_dir()
-    dbt = Dbt(
-        project_dir, otlp_traces_endpoints=["http://localhost:20428/insert/opentelemetry/v1/traces"]
-    )
+    dbt = Dbt(project_dir, otlp_traces_endpoints=otlp_traces_endpoints)
     dbt.seed()

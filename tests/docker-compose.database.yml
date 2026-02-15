@@ -33,14 +33,14 @@ services:
       retries: 10
     stop_grace_period: 0s
 
-  victoria-traces:
-    image: victoriametrics/victoria-traces:v0.7.1
-    ports:
-      - 20428:10428
-    healthcheck:
-      test: wget --no-verbose --spider http://0.0.0.0:10428 || exit 1
-      interval: 1s
-      timeout: 1s
-      retries: 10
-      start_period: 30s
-    stop_grace_period: 0s
+  # victoria-traces:
+  #   image: victoriametrics/victoria-traces:v0.7.1
+  #   ports:
+  #     - 20428:10428
+  #   healthcheck:
+  #     test: wget --no-verbose --spider http://0.0.0.0:10428 || exit 1
+  #     interval: 1s
+  #     timeout: 1s
+  #     retries: 10
+  #     start_period: 30s
+  #   stop_grace_period: 0s

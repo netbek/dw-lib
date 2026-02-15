@@ -128,20 +128,20 @@ class DatabaseTest:
 
         yield postgres_adapter
 
-    @pytest.fixture(scope="module")
-    def victoria_traces(self, docker_services) -> Generator[str, Any, None]:
-        url = "http://localhost:20428"
+    # @pytest.fixture(scope="module")
+    # def victoria_traces(self, docker_services) -> Generator[str, Any, None]:
+    #     url = "http://localhost:20428"
 
-        def is_responsive():
-            try:
-                response = httpx.get(url)
-                return response.status_code == 200
-            except Exception:
-                return False
+    #     def is_responsive():
+    #         try:
+    #             response = httpx.get(url)
+    #             return response.status_code == 200
+    #         except Exception:
+    #             return False
 
-        docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
+    #     docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
 
-        yield url
+    #     yield url
 
 
 class PeerDBTest:

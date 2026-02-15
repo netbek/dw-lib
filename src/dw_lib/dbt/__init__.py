@@ -18,8 +18,6 @@ import pydash
 import subprocess
 import yaml
 
-tracer = trace.get_tracer(__name__)
-
 RE_REF = r"^ref\(['\"](.*?)['\"]\)$"
 RE_SOURCE = r"^source\(['\"](.*?)['\"], ['\"](.*?)['\"]\)$"
 
@@ -834,6 +832,8 @@ def _trace_invocation(
     runner_result: dbtRunnerResult,
     full_refresh: bool | None = False,
 ) -> None:
+    tracer = trace.get_tracer(__name__)
+
     def truncate_str(value: str | None, max_length: int = 200) -> str | None:
         if value is None:
             return None

@@ -34,16 +34,44 @@ class TestSeed(DatabaseTest):
         monkeypatch,
     ):
         class _DummyExporter:
+            instances = []
+
             def __init__(self, endpoint=None, **kwargs):
                 self.endpoint = endpoint
+                self.exported_spans = []
+                _DummyExporter.instances.append(self)
 
             def export(self, spans):
+                # store spans for inspection by the test
+                self.exported_spans.extend(spans)
                 return None
 
             def shutdown(self):
                 return None
 
         monkeypatch.setattr("dw_lib.dbt.OTLPSpanExporter", _DummyExporter)
+
+        class _ImmediateSpanProcessor:
+            def __init__(self, exporter):
+                self._exporter = exporter
+
+            def on_start(self, span, parent_context):
+                return None
+
+            def on_end(self, span):
+                # Export span synchronously for test inspection
+                try:
+                    self._exporter.export([span])
+                except Exception:
+                    pass
+
+            def shutdown(self):
+                return None
+
+            def force_flush(self, timeout_millis=None):
+                return None
+
+        monkeypatch.setattr("dw_lib.dbt.BatchSpanProcessor", _ImmediateSpanProcessor)
 
         dbt = Dbt(
             profiles_dir=profiles_dir,
@@ -52,3 +80,27 @@ class TestSeed(DatabaseTest):
         )
         runner_result = dbt.seed()
         assert runner_result.success is True
+
+        # Collect exported spans from dummy exporters
+        exporters = getattr(_DummyExporter, "instances", [])
+        exported_spans = []
+        for exp in exporters:
+            exported_spans.extend(getattr(exp, "exported_spans", []))
+
+        # There should be at least one root span and node spans
+        root_spans = [s for s in exported_spans if s.name.startswith("dbt.invoke")]
+        node_spans = [s for s in exported_spans if s.name.startswith("dbt.node.invoke")]
+
+        assert root_spans, "no root invocation span exported"
+        assert node_spans, "no node spans exported"
+
+        # Verify node span attributes contain expected keys
+        for s in node_spans:
+            attrs = getattr(s, "attributes", {}) or {}
+            assert "dbt.node.name" in attrs
+            assert "dbt.node.resource_type" in attrs
+
+        # Verify root span reports node count matching number of node results
+        root_attrs = getattr(root_spans[0], "attributes", {}) or {}
+        expected_node_count = len(runner_result.result.results)
+        assert int(root_attrs.get("dbt.invoke.node_count", 0)) == expected_node_count

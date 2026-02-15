@@ -193,6 +193,42 @@ class NodeSpan(BaseModel):
     materialization: str | None = None
     adapter_response: str | None = None
 
+    @computed_field
+    @property
+    def compile_start_ns(self) -> int | None:
+        return to_ns(self.compile_started_at) if self.compile_started_at else None
+
+    @computed_field
+    @property
+    def compile_end_ns(self) -> int | None:
+        return to_ns(self.compile_completed_at) if self.compile_completed_at else None
+
+    @computed_field
+    @property
+    def compile_duration_s(self) -> int | None:
+        if self.compile_start_ns is not None and self.compile_end_ns is not None:
+            return (self.compile_end_ns - self.compile_start_ns) / 1e9
+        else:
+            return None
+
+    @computed_field
+    @property
+    def execute_start_ns(self) -> int | None:
+        return to_ns(self.execute_started_at) if self.execute_started_at else None
+
+    @computed_field
+    @property
+    def execute_end_ns(self) -> int | None:
+        return to_ns(self.execute_completed_at) if self.execute_completed_at else None
+
+    @computed_field
+    @property
+    def execute_duration_s(self) -> int | None:
+        if self.execute_start_ns is not None and self.execute_end_ns is not None:
+            return (self.execute_end_ns - self.execute_start_ns) / 1e9
+        else:
+            return None
+
 
 class RootSpan(BaseModel):
     invocation_id: str
@@ -1024,38 +1060,32 @@ class Dbt:
 
                 # start node span with explicit timestamp and don't end on exit so we can set end_time
                 with tracer.start_as_current_span(
-                    f"dbt.node {r.name}",
+                    f"dbt.node.run {r.name}",
                     attributes=node_attrs,
                     start_time=node_start_ns,
                     end_on_exit=False,
                 ) as node_span:
                     # record compile nested span if we have timestamps
-                    if r.compile_started_at and r.compile_completed_at:
-                        compile_start_ns = to_ns(r.compile_started_at)
-                        compile_end_ns = to_ns(r.compile_completed_at)
+                    if r.compile_start_ns is not None and r.compile_end_ns is not None:
                         with tracer.start_as_current_span(
                             "dbt.node.compile",
-                            start_time=compile_start_ns,
+                            start_time=r.compile_start_ns,
                             end_on_exit=False,
                         ) as compile_span:
                             compile_span.set_attribute(
-                                "dbt.compile.duration_s", (compile_end_ns - compile_start_ns) / 1e9
+                                "dbt.compile.duration_s", r.compile_duration_s
                             )
-                            compile_span.end(end_time=compile_end_ns)
+                            compile_span.end(end_time=r.compile_end_ns)
 
                     # record execute nested span if we have timestamps
-                    if r.execute_started_at and r.execute_completed_at:
-                        execute_start_ns = to_ns(r.execute_started_at)
-                        execute_end_ns = to_ns(r.execute_completed_at)
+                    if r.execute_start_ns is not None and r.execute_end_ns is not None:
                         with tracer.start_as_current_span(
                             "dbt.node.execute",
-                            start_time=execute_start_ns,
+                            start_time=r.execute_start_ns,
                             end_on_exit=False,
                         ) as exec_span:
-                            exec_span.set_attribute(
-                                "dbt.execute.duration_s", (execute_end_ns - execute_start_ns) / 1e9
-                            )
-                            exec_span.end(end_time=execute_end_ns)
+                            exec_span.set_attribute("dbt.execute.duration_s", r.execute_duration_s)
+                            exec_span.end(end_time=r.execute_end_ns)
 
                     # failures / status handling
                     if (r.failures or 0) > 0 or (

@@ -908,7 +908,7 @@ class Dbt:
             else:
                 compiled_code = None
 
-            note_item = ParsedNode(
+            parsed_node = ParsedNode(
                 unique_id=node_result.node.unique_id,
                 name=node_result.node.name,
                 message=node_result.message,
@@ -929,7 +929,7 @@ class Dbt:
                 materialization=node_result.node.config.materialized,
                 adapter_response=json.dumps(node_result.adapter_response),
             )
-            parsed_nodes.append(note_item)
+            parsed_nodes.append(parsed_node)
 
         if not parsed_nodes:
             return

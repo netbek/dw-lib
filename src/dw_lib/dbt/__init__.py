@@ -91,7 +91,7 @@ CODEGEN_TO_CLICKHOUSE_DATA_TYPE = {
 }
 
 
-def get_profiles_dir() -> Path:
+def find_profiles_dir() -> Path:
     dbt_profiles_dir = os.environ.get("DBT_PROFILES_DIR")
 
     if dbt_profiles_dir:
@@ -197,13 +197,14 @@ def to_ns(dt: datetime) -> int:
 class Dbt:
     def __init__(
         self,
-        project_dir: Path,
+        profiles_dir: Path | None = None,
+        project_dir: Path | None = None,
         target: str | None = None,
         otlp_service_name: str = "dbt",
         otlp_traces_endpoints: list[str] | None = None,
     ) -> None:
-        self._profiles_dir = get_profiles_dir()
-        self._project_dir = project_dir
+        self._profiles_dir = profiles_dir or find_profiles_dir()
+        self._project_dir = project_dir or find_project_dir()
         self._project_docs_dir = self._project_dir / "docs"
         self._project_config_file = self._project_dir / "dbt_project.yml"
         self._target = target

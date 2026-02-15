@@ -13,7 +13,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import get_tracer, set_tracer_provider, Status, StatusCode, Tracer
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 import json

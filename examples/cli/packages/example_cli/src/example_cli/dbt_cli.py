@@ -58,5 +58,4 @@ def run_operation(macro: str):
     """Run a named macro."""
     project_dir = find_project_dir()
     dbt = Dbt(project_dir, otlp_traces_endpoints=otlp_traces_endpoints)
-    # dbt = Dbt(project_dir)
     dbt.run_operation(macro)

@@ -198,22 +198,25 @@ class ParsedRunResult(BaseModel):
     adapter_response: str | None = None
 
 
+def normalize_rows_affected(value: int | str | None) -> int | None:
+    if value is None:
+        return None
+
+    if isinstance(value, int):
+        return value if value >= 0 else None
+
+    if isinstance(value, str):
+        value = value.strip()
+
+        if value.isdigit():
+            return int(value)
+
+    return None
+
+
 def parse_runner_result(
     invocation_id: str, runner_result: dbtRunnerResult, full_refresh: bool | None = False
 ) -> list[ParsedRunResult]:
-    def _normalize_rows_affected(value) -> int | None:
-        if value is None:
-            return None
-        elif isinstance(value, int):
-            return value
-        elif isinstance(value, str) and value.isdigit():
-            if value == "-1":
-                return None
-            else:
-                return int(value)
-        else:
-            return None
-
     parsed_run_results = []
     execution_result: RunExecutionResult = runner_result.result
 
@@ -250,9 +253,7 @@ def parse_runner_result(
             compile_completed_at=compile_completed_at,
             execute_started_at=execute_started_at,
             execute_completed_at=execute_completed_at,
-            rows_affected=_normalize_rows_affected(
-                run_result.adapter_response.get("rows_affected")
-            ),
+            rows_affected=normalize_rows_affected(run_result.adapter_response.get("rows_affected")),
             full_refresh=full_refresh,
             compiled_code=compiled_code,
             failures=run_result.failures,

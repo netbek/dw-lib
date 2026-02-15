@@ -28,6 +28,8 @@ dbt = [
     "dbt-clickhouse",
     "dbt-core>=1.10.0,<1.11", # Pinned because of dbt-clickhouse
     "livereload>=2.7.1",
+    "opentelemetry-exporter-otlp>=1.39.1",
+    "opentelemetry-sdk>=1.39.1",
     "polyfactory>=3.0.0",
     "pydantic>=2.12.4",
     "pydash>=8.0.5",

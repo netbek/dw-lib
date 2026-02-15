@@ -34,3 +34,21 @@ def model_yaml(models: list[str]):
     dbt = Dbt(project_dir)
     dbt.generate_model_yaml(models)
     console.print(f"Generated schema YAML for: {', '.join(models)}", style="green")
+
+
+@dbt_app.command()
+def run():
+    """Compile SQL and execute against the current target database."""
+    project_dir = find_project_dir()
+    dbt = Dbt(project_dir)
+    dbt.run()
+
+
+@dbt_app.command()
+def seed():
+    """Load data from CSV files into your data warehouse."""
+    project_dir = find_project_dir()
+    dbt = Dbt(
+        project_dir, otlp_traces_endpoints=["http://localhost:20428/insert/opentelemetry/v1/traces"]
+    )
+    dbt.seed()

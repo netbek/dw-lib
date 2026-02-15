@@ -109,6 +109,40 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  victoria-logs:
+    container_name: victoria-logs
+    image: victoriametrics/victoria-logs:v1.45.0
+    networks:
+      - default
+    ports:
+      - 29428:9428
+    volumes:
+      - victoria-logs-data:/victoria-logs-data/:rw
+    healthcheck:
+      test: wget --no-verbose --spider http://0.0.0.0:9428 || exit 1
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  victoria-traces:
+    container_name: victoria-traces
+    image: victoriametrics/victoria-traces:v0.7.1
+    networks:
+      - default
+    ports:
+      - 20428:10428
+    volumes:
+      - victoria-traces-data:/victoria-traces-data/:rw
+    healthcheck:
+      test: wget --no-verbose --spider http://0.0.0.0:10428 || exit 1
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
   temporal:
     container_name: temporal
     image: temporalio/auto-setup:1.29.0
@@ -272,6 +306,8 @@ volumes:
   clickhouse-data:
   clickhouse-logs:
   minio-data:
+  victoria-logs-data:
+  victoria-traces-data:
 
 networks:
   default:

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
+from enum import StrEnum
 from livereload import Server
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
@@ -24,6 +25,13 @@ import yaml
 
 RE_REF = r"^ref\(['\"](.*?)['\"]\)$"
 RE_SOURCE = r"^source\(['\"](.*?)['\"], ['\"](.*?)['\"]\)$"
+
+
+class Command(StrEnum):
+    RUN = "run"
+    RUN_OPERATION = "run-operation"
+    SEED = "seed"
+
 
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
@@ -484,7 +492,12 @@ class Dbt:
             raw_command = " ".join(cmd)
             invocation_id = str(uuid4())
             self._trace_invocation(
-                self._tracer, raw_command, invocation_id, runner_result, full_refresh=full_refresh
+                self._tracer,
+                Command.RUN,
+                raw_command,
+                invocation_id,
+                runner_result,
+                full_refresh=full_refresh,
             )
 
         return runner_result
@@ -565,8 +578,16 @@ class Dbt:
             use_colors=use_colors,
             vars=vars,
         )
+        runner_result = dbtRunner().invoke(cmd[1:])
 
-        return dbtRunner().invoke(cmd[1:])
+        if self._tracer:
+            raw_command = " ".join(cmd)
+            invocation_id = str(uuid4())
+            self._trace_invocation(
+                self._tracer, Command.RUN_OPERATION, raw_command, invocation_id, runner_result
+            )
+
+        return runner_result
 
     def _seed_command(
         self,
@@ -639,7 +660,9 @@ class Dbt:
         if self._tracer:
             raw_command = " ".join(cmd)
             invocation_id = str(uuid4())
-            self._trace_invocation(self._tracer, raw_command, invocation_id, runner_result)
+            self._trace_invocation(
+                self._tracer, Command.SEED, raw_command, invocation_id, runner_result
+            )
 
         return runner_result
 
@@ -843,6 +866,7 @@ class Dbt:
     def _trace_invocation(
         self,
         tracer: Tracer,
+        command: str,
         raw_command: str,
         invocation_id: str,
         runner_result: dbtRunnerResult,
@@ -881,55 +905,102 @@ class Dbt:
             materialization: str | None = None
             adapter_response: str | None = None
 
+        parsed_nodes: list[ParsedNode] = []
+
+        if command in {Command.RUN, Command.SEED}:
+            generated_at = runner_result.result.generated_at
+
+            for node_result in runner_result.result.results:
+                compile_started_at = None
+                compile_completed_at = None
+                execute_started_at = None
+                execute_completed_at = None
+
+                for timing_info in node_result.timing:
+                    if timing_info.name == "compile":
+                        compile_started_at = timing_info.started_at
+                        compile_completed_at = timing_info.completed_at
+                    elif timing_info.name == "execute":
+                        execute_started_at = timing_info.started_at
+                        execute_completed_at = timing_info.completed_at
+
+                if isinstance(node_result.node, ModelNode):
+                    compiled_code = node_result.node.compiled_code
+                else:
+                    compiled_code = None
+
+                parsed_node = ParsedNode(
+                    unique_id=node_result.node.unique_id,
+                    name=node_result.node.name,
+                    message=node_result.message,
+                    status=node_result.status,
+                    resource_type=node_result.node.resource_type,
+                    execution_time=node_result.execution_time,
+                    compile_started_at=compile_started_at,
+                    compile_completed_at=compile_completed_at,
+                    execute_started_at=execute_started_at,
+                    execute_completed_at=execute_completed_at,
+                    rows_affected=normalize_rows_affected(
+                        node_result.adapter_response.get("rows_affected")
+                    ),
+                    compiled_code=compiled_code,
+                    failures=node_result.failures,
+                    query_id=node_result.adapter_response.get("query_id"),
+                    thread_id=node_result.thread_id,
+                    materialization=node_result.node.config.materialized,
+                    adapter_response=json.dumps(node_result.adapter_response),
+                )
+                parsed_nodes.append(parsed_node)
+
+        elif command == Command.RUN_OPERATION:
+            generated_at = runner_result.result.metadata.generated_at
+
+            for node_result in runner_result.result.results:
+                compile_started_at = None
+                compile_completed_at = None
+                execute_started_at = None
+                execute_completed_at = None
+
+                for timing_info in node_result.timing:
+                    if timing_info.name == "compile":
+                        compile_started_at = timing_info.started_at
+                        compile_completed_at = timing_info.completed_at
+                    elif timing_info.name == "execute":
+                        execute_started_at = timing_info.started_at
+                        execute_completed_at = timing_info.completed_at
+
+                parsed_node = ParsedNode(
+                    unique_id=node_result.unique_id,
+                    name=runner_result.result.args["macro"],
+                    message=node_result.message,
+                    status=node_result.status,
+                    resource_type="operation",
+                    execution_time=node_result.execution_time,
+                    compile_started_at=compile_started_at,
+                    compile_completed_at=compile_completed_at,
+                    execute_started_at=execute_started_at,
+                    execute_completed_at=execute_completed_at,
+                    rows_affected=normalize_rows_affected(
+                        node_result.adapter_response.get("rows_affected")
+                    ),
+                    compiled_code=None,
+                    failures=node_result.failures,
+                    query_id=node_result.adapter_response.get("query_id"),
+                    thread_id=node_result.thread_id,
+                    materialization=None,
+                    adapter_response=json.dumps(node_result.adapter_response),
+                )
+                parsed_nodes.append(parsed_node)
+
+        else:
+            raise Exception(f"Command '{command}' is not supported")
+
         parsed_root = ParsedRoot(
             raw_command=raw_command,
             invocation_id=invocation_id,
             full_refresh=full_refresh,
-            generated_at=runner_result.result.generated_at,
+            generated_at=generated_at,
         )
-
-        parsed_nodes: list[ParsedNode] = []
-        for node_result in runner_result.result.results:
-            compile_started_at = None
-            compile_completed_at = None
-            execute_started_at = None
-            execute_completed_at = None
-
-            for timing_info in node_result.timing:
-                if timing_info.name == "compile":
-                    compile_started_at = timing_info.started_at
-                    compile_completed_at = timing_info.completed_at
-                elif timing_info.name == "execute":
-                    execute_started_at = timing_info.started_at
-                    execute_completed_at = timing_info.completed_at
-
-            if isinstance(node_result.node, ModelNode):
-                compiled_code = node_result.node.compiled_code
-            else:
-                compiled_code = None
-
-            parsed_node = ParsedNode(
-                unique_id=node_result.node.unique_id,
-                name=node_result.node.name,
-                message=node_result.message,
-                status=node_result.status,
-                resource_type=node_result.node.resource_type,
-                execution_time=node_result.execution_time,
-                compile_started_at=compile_started_at,
-                compile_completed_at=compile_completed_at,
-                execute_started_at=execute_started_at,
-                execute_completed_at=execute_completed_at,
-                rows_affected=normalize_rows_affected(
-                    node_result.adapter_response.get("rows_affected")
-                ),
-                compiled_code=compiled_code,
-                failures=node_result.failures,
-                query_id=node_result.adapter_response.get("query_id"),
-                thread_id=node_result.thread_id,
-                materialization=node_result.node.config.materialized,
-                adapter_response=json.dumps(node_result.adapter_response),
-            )
-            parsed_nodes.append(parsed_node)
 
         if not parsed_nodes:
             return
@@ -945,16 +1016,17 @@ class Dbt:
         root_end_dt = max(root_dts) if root_dts else parsed_root.generated_at
 
         root_attrs = {
-            "dbt.invocation.raw_command": raw_command,
-            "dbt.invocation.full_refresh": full_refresh,
-            "dbt.invocation.invocation_id": invocation_id,
-            "dbt.invocation.node_count": len(parsed_nodes),
-            "dbt.invocation.generated_at": parsed_root.generated_at.isoformat(),
+            "dbt.invoke.command": command,
+            "dbt.invoke.raw_command": raw_command,
+            "dbt.invoke.full_refresh": full_refresh,
+            "dbt.invoke.invocation_id": invocation_id,
+            "dbt.invoke.node_count": len(parsed_nodes),
+            "dbt.invoke.generated_at": parsed_root.generated_at.isoformat(),
         }
 
         # create root span but don't end it automatically; we want to set custom end_time
         with tracer.start_as_current_span(
-            f"dbt.invocation {invocation_id}",
+            f"dbt.invoke {invocation_id}",
             attributes=root_attrs,
             start_time=to_ns(root_start_dt),
             end_on_exit=False,
@@ -976,7 +1048,6 @@ class Dbt:
                     "dbt.node.name": n.name,
                     "dbt.node.resource_type": n.resource_type,
                     "dbt.node.materialization": n.materialization or "",
-                    "dbt.node.execution_time_s": float(n.execution_time or 0.0),
                     "dbt.node.rows_affected": int(n.rows_affected or 0),
                     "dbt.node.query_id": n.query_id or "",
                     "dbt.node.thread_id": n.thread_id or "",
@@ -990,7 +1061,7 @@ class Dbt:
 
                 # start node span with explicit timestamp and don't end on exit so we can set end_time
                 with tracer.start_as_current_span(
-                    f"dbt.node.run {n.name}",
+                    f"dbt.node.invoke {n.name}",
                     attributes=node_attrs,
                     start_time=to_ns(node_start_dt),
                     end_on_exit=False,

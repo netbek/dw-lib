@@ -943,7 +943,7 @@ class Dbt:
                 return s
             return s[:max_len] + "...(truncated)"
 
-        # compute root start/end from model timestamps if available
+        # compute root start/end from node timestamps if available
         def _min_datetime(*datetimes):
             vals = [d for d in datetimes if d is not None]
             return min(vals) if vals else None
@@ -978,7 +978,7 @@ class Dbt:
         root_attrs = {
             "dbt.invocation_id": invocation_id,
             "dbt.raw_command": raw_command,
-            "dbt.run.model_count": len(parsed_run_results),
+            "dbt.run.node_count": len(parsed_run_results),
             "dbt.run.generated_at": parsed_run_results[0].generated_at.isoformat(),
         }
 
@@ -989,49 +989,49 @@ class Dbt:
             start_time=run_start_ns,
             end_on_exit=False,
         ) as root_span:
-            # iterate models and create child spans
+            # iterate nodes and create child spans
             for r in parsed_run_results:
-                # choose model start/end; prefer execute timestamps
-                model_start_dt = r.execute_started_at or r.compile_started_at or r.generated_at
-                model_end_dt = (
+                # choose node start/end; prefer execute timestamps
+                node_start_dt = r.execute_started_at or r.compile_started_at or r.generated_at
+                node_end_dt = (
                     r.execute_completed_at
                     or r.compile_completed_at
-                    or (model_start_dt if model_start_dt else r.generated_at)
+                    or (node_start_dt if node_start_dt else r.generated_at)
                 )
-                model_start_ns = _to_ns(model_start_dt)
-                model_end_ns = _to_ns(model_end_dt)
+                node_start_ns = _to_ns(node_start_dt)
+                node_end_ns = _to_ns(node_end_dt)
 
-                model_attrs = {
-                    "dbt.model.unique_id": r.unique_id,
-                    "dbt.model.name": r.name,
-                    "dbt.model.resource_type": r.resource_type,
-                    "dbt.model.materialization": r.materialization or "",
-                    "dbt.model.execution_time_s": float(r.execution_time or 0.0),
-                    "dbt.model.rows_affected": int(r.rows_affected or 0),
-                    "dbt.model.full_refresh": bool(r.full_refresh),
-                    "dbt.model.query_id": r.query_id or "",
-                    "dbt.model.thread_id": r.thread_id or "",
+                node_attrs = {
+                    "dbt.node.unique_id": r.unique_id,
+                    "dbt.node.name": r.name,
+                    "dbt.node.resource_type": r.resource_type,
+                    "dbt.node.materialization": r.materialization or "",
+                    "dbt.node.execution_time_s": float(r.execution_time or 0.0),
+                    "dbt.node.rows_affected": int(r.rows_affected or 0),
+                    "dbt.node.full_refresh": bool(r.full_refresh),
+                    "dbt.node.query_id": r.query_id or "",
+                    "dbt.node.thread_id": r.thread_id or "",
                 }
 
                 # keep largest text fields trimmed
                 if r.adapter_response:
-                    model_attrs["dbt.model.adapter_response_excerpt"] = _safe_str(
+                    node_attrs["dbt.node.adapter_response_excerpt"] = _safe_str(
                         r.adapter_response, 200
                     )
 
-                # start model span with explicit timestamp and don't end on exit so we can set end_time
+                # start node span with explicit timestamp and don't end on exit so we can set end_time
                 with tracer.start_as_current_span(
-                    f"dbt.model {r.name}",
-                    attributes=model_attrs,
-                    start_time=model_start_ns,
+                    f"dbt.node {r.name}",
+                    attributes=node_attrs,
+                    start_time=node_start_ns,
                     end_on_exit=False,
-                ) as model_span:
+                ) as node_span:
                     # record compile nested span if we have timestamps
                     if r.compile_started_at and r.compile_completed_at:
                         cs_ns = _to_ns(r.compile_started_at)
                         ce_ns = _to_ns(r.compile_completed_at)
                         with tracer.start_as_current_span(
-                            "dbt.model.compile",
+                            "dbt.node.compile",
                             start_time=cs_ns,
                             end_on_exit=False,
                         ) as compile_span:
@@ -1045,7 +1045,7 @@ class Dbt:
                         es_ns = _to_ns(r.execute_started_at)
                         ee_ns = _to_ns(r.execute_completed_at)
                         with tracer.start_as_current_span(
-                            "dbt.model.execute",
+                            "dbt.node.execute",
                             start_time=es_ns,
                             end_on_exit=False,
                         ) as exec_span:
@@ -1057,25 +1057,25 @@ class Dbt:
                         r.status and r.status.lower() not in ("success", "ok")
                     ):
                         msg = r.message or f"status={r.status}"
-                        model_span.record_exception(Exception(msg))
+                        node_span.record_exception(Exception(msg))
                         # set error status so it's visible in traces
-                        model_span.set_status(Status(StatusCode.ERROR, str(msg)))
-                        model_span.add_event(
-                            "dbt.model.failure",
+                        node_span.set_status(Status(StatusCode.ERROR, str(msg)))
+                        node_span.add_event(
+                            "dbt.node.failure",
                             {"failures": int(r.failures or 0), "msg": _safe_str(msg, 200)},
                         )
                     else:
                         # leaving status unset (Unset) is normal for success; set OK only if you want explicit OK
-                        model_span.set_status(Status(StatusCode.UNSET))
+                        node_span.set_status(Status(StatusCode.UNSET))
 
                     # attach the textual message as an event (trimmed)
                     if r.message:
-                        model_span.add_event(
-                            "dbt.message", {"message_excerpt": _safe_str(r.message, 200)}
+                        node_span.add_event(
+                            "dbt.node.message", {"message_excerpt": _safe_str(r.message, 200)}
                         )
 
-                    # end model span with explicit end_time
-                    model_span.end(end_time=model_end_ns)
+                    # end node span with explicit end_time
+                    node_span.end(end_time=node_end_ns)
 
             # now end root span with run end timestamp
             root_span.end(end_time=run_end_ns)

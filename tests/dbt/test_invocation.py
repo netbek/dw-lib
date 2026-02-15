@@ -31,7 +31,20 @@ class TestSeed(DatabaseTest):
         profiles_dir,
         project_dir,
         otlp_traces_endpoints,
+        monkeypatch,
     ):
+        class _DummyExporter:
+            def __init__(self, endpoint=None, **kwargs):
+                self.endpoint = endpoint
+
+            def export(self, spans):
+                return None
+
+            def shutdown(self):
+                return None
+
+        monkeypatch.setattr("dw_lib.dbt.OTLPSpanExporter", _DummyExporter)
+
         dbt = Dbt(
             profiles_dir=profiles_dir,
             project_dir=project_dir,

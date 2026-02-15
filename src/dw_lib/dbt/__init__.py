@@ -1,11 +1,10 @@
 from ..utils.filesystem import find_up, get_file_extension
 from ..utils.yaml_utils import safe_load_file
-from .types import DbtModel, DbtResourceType, DbtSeed, DbtSource
+from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed, DbtSource
 from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
-from enum import StrEnum
 from livereload import Server
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
@@ -25,13 +24,6 @@ import yaml
 
 RE_REF = r"^ref\(['\"](.*?)['\"]\)$"
 RE_SOURCE = r"^source\(['\"](.*?)['\"], ['\"](.*?)['\"]\)$"
-
-
-class Command(StrEnum):
-    RUN = "run"
-    RUN_OPERATION = "run-operation"
-    SEED = "seed"
-
 
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
@@ -493,7 +485,7 @@ class Dbt:
             invocation_id = str(uuid4())
             self._trace_invocation(
                 self._tracer,
-                Command.RUN,
+                DbtCommand.RUN,
                 raw_command,
                 invocation_id,
                 runner_result,
@@ -584,7 +576,7 @@ class Dbt:
             raw_command = " ".join(cmd)
             invocation_id = str(uuid4())
             self._trace_invocation(
-                self._tracer, Command.RUN_OPERATION, raw_command, invocation_id, runner_result
+                self._tracer, DbtCommand.RUN_OPERATION, raw_command, invocation_id, runner_result
             )
 
         return runner_result
@@ -661,7 +653,7 @@ class Dbt:
             raw_command = " ".join(cmd)
             invocation_id = str(uuid4())
             self._trace_invocation(
-                self._tracer, Command.SEED, raw_command, invocation_id, runner_result
+                self._tracer, DbtCommand.SEED, raw_command, invocation_id, runner_result
             )
 
         return runner_result
@@ -866,7 +858,7 @@ class Dbt:
     def _trace_invocation(
         self,
         tracer: Tracer,
-        command: str,
+        command: DbtCommand,
         raw_command: str,
         invocation_id: str,
         runner_result: dbtRunnerResult,
@@ -907,7 +899,7 @@ class Dbt:
 
         parsed_nodes: list[ParsedNode] = []
 
-        if command in {Command.RUN, Command.SEED}:
+        if command in {DbtCommand.RUN, DbtCommand.SEED}:
             generated_at = runner_result.result.generated_at
 
             for node_result in runner_result.result.results:
@@ -952,7 +944,7 @@ class Dbt:
                 )
                 parsed_nodes.append(parsed_node)
 
-        elif command == Command.RUN_OPERATION:
+        elif command == DbtCommand.RUN_OPERATION:
             generated_at = runner_result.result.metadata.generated_at
 
             for node_result in runner_result.result.results:

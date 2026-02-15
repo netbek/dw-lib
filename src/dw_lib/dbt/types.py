@@ -2,6 +2,12 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 
+class DbtCommand(StrEnum):
+    RUN = "run"
+    RUN_OPERATION = "run-operation"
+    SEED = "seed"
+
+
 class DbtResourceType(StrEnum):
     MODEL = "model"
     SEED = "seed"

@@ -39,7 +39,7 @@ def model_yaml(models: list[str]):
 
 @dbt_app.command()
 def run():
-    """Compile SQL and execute against the current target database."""
+    """Compile SQL and execute against the target database."""
     project_dir = find_project_dir()
     dbt = Dbt(project_dir, otlp_traces_endpoints=otlp_traces_endpoints)
     dbt.run()
@@ -47,7 +47,16 @@ def run():
 
 @dbt_app.command()
 def seed():
-    """Load data from CSV files into your data warehouse."""
+    """Load data from CSV files into the target database."""
     project_dir = find_project_dir()
     dbt = Dbt(project_dir, otlp_traces_endpoints=otlp_traces_endpoints)
     dbt.seed()
+
+
+@dbt_app.command()
+def run_operation(macro: str):
+    """Run a named macro."""
+    project_dir = find_project_dir()
+    dbt = Dbt(project_dir, otlp_traces_endpoints=otlp_traces_endpoints)
+    # dbt = Dbt(project_dir)
+    dbt.run_operation(macro)

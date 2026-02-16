@@ -58,8 +58,9 @@ peerdb = [
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-docker>=3.2.3",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-docker>=3.2.5",
     "ruff>=0.15.0",
 ]
 
@@ -81,8 +82,8 @@ extend-exclude = ["./vendor"]
 [tool.ruff.lint]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
-[tool.pytest.ini_options]
-addopts = "-x --no-header --container-scope=module"
+[tool.pytest]
+addopts = ["-x", "--no-header", "--container-scope=module"]
 filterwarnings = [
     "ignore::DeprecationWarning:dbt_common.invocation", # https://github.com/dbt-labs/dbt-core/issues/9791
     "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038

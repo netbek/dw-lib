@@ -572,8 +572,9 @@ provides-extras = ["dbt", "loader", "peerdb"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-docker", specifier = ">=3.2.3" },
+    { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-docker", specifier = ">=3.2.5" },
     { name = "ruff", specifier = ">=0.15.0" },
 ]
 

@@ -10,7 +10,6 @@
 
   packages = with pkgs; [
     nixfmt
-    pre-commit
     ripgrep
   ];
 

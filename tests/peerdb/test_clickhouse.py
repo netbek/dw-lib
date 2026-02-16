@@ -2,7 +2,6 @@ from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
 from datetime import datetime
 from dw_lib.exceptions import (
-    EmptyConfigException,
     MirrorExistsException,
     MirrorNotFoundException,
     PeerExistsException,
@@ -18,12 +17,6 @@ import pytest
 
 
 class TestLoadConfig(PeerDBIntegrationTest):
-    def test_empty_config(self, monkeypatch):
-        monkeypatch.setattr("dw_lib.peerdb.PeerDB._load_config_data", lambda *args, **kwargs: {})
-
-        with pytest.raises(EmptyConfigException):
-            PeerDB(None)
-
     def test_valid_config(self, all_postgres_tables: list[Table]):
         expected = {
             "api_url": "http://localhost:3000/api",

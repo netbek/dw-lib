@@ -11,6 +11,9 @@ class TestIntegration(PeerDBTest):
     def peerdb_config_path(self) -> Path:
         return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
 
+    def test_can_connect(self, peerdb: PeerDB):
+        assert peerdb.can_connect() is True
+
     def test_get_and_update_settings(self, peerdb: PeerDB):
         settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value is None

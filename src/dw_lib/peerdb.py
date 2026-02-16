@@ -471,6 +471,12 @@ class PeerDB:
             # publications=publications,
         )
 
+    def can_connect(self) -> bool:
+        url = f"{self.config.api_url}/v1/version"
+        response = httpx.get(url, headers=self._headers)
+
+        return response.status_code == 200
+
     def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:
         # TODO Add to result: missing publications, unused publications, replication slots
         # TODO Table mappings: check whether the source schema and table exists, check whether the destination schema exists

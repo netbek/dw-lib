@@ -1155,7 +1155,18 @@ class PeerDB:
         return data
 
 
-def find_config_file(filename: str = "peerdb.yaml") -> Path:
+def find_config_file() -> Path:
+    config_file = os.environ.get("PEERDB_CONFIG_FILE")
+
+    if config_file:
+        config_path = Path(config_file)
+
+        if not config_path.exists():
+            raise FileNotFoundError(f"PEERDB_CONFIG_FILE '{config_file}' not found")
+
+        return config_path
+
+    filename = "peerdb.yaml"
     cwd = os.getcwd()
     config_file = find_up(cwd, filename)
 

@@ -56,6 +56,13 @@ class FlowStatus:
     STATUS_MODIFYING = 11
 
 
+LITERAL_FLOW_STATUS_LABELS = {
+    attr: attr.removeprefix("STATUS_").replace("_", " ").title()
+    for attr in dir(FlowStatus)
+    if attr.startswith("STATUS_")
+}
+
+
 # https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L39
 class DynamicSetting(BaseModel):
     name: str
@@ -606,7 +613,13 @@ class PeerDB:
                 status_response = self.get_mirror_status(mirror.name)
                 data.append(
                     pydash.pick(
-                        {**mirror.model_dump(), "status": status_response.current_flow_state},
+                        {
+                            **mirror.model_dump(),
+                            "status": LITERAL_FLOW_STATUS_LABELS.get(
+                                status_response.current_flow_state,
+                                status_response.current_flow_state,
+                            ),
+                        },
                         "name",
                         "created_at",
                         "status",

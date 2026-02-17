@@ -45,12 +45,17 @@ def update_settings(if_exists: Literal["fail", "keep", "replace"] = "keep") -> N
 
 
 @peerdb_app.command()
-def create_peers(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def create_peers(
+    drop_destination_tables: bool | None = False,
+    if_exists: Literal["fail", "keep", "replace"] = "fail",
+) -> None:
     """Create all peers, and add replication slots to source database."""
     peerdb = PeerDB()
     for peer in peerdb.config.peers:
         response = peerdb.create_peer(
-            {"name": peer.name, **peer.peerdb.model_dump()}, if_exists=if_exists
+            {"name": peer.name, **peer.peerdb.model_dump()},
+            drop_destination_tables=drop_destination_tables,
+            if_exists=if_exists,
         )
         console.print(response.message, style="green")
 
@@ -72,20 +77,33 @@ def drop_peers(
 
 
 @peerdb_app.command()
-def create_mirror(name: str, if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def create_mirror(
+    name: str,
+    drop_destination_tables: bool | None = False,
+    if_exists: Literal["fail", "keep", "replace"] = "fail",
+) -> None:
     """Create a mirror."""
     peerdb = PeerDB()
     mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
-    response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
+    response = peerdb.create_mirror(
+        mirror.model_dump(), drop_destination_tables=drop_destination_tables, if_exists=if_exists
+    )
     console.print(response.message, style="green")
 
 
 @peerdb_app.command()
-def create_mirrors(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def create_mirrors(
+    drop_destination_tables: bool | None = False,
+    if_exists: Literal["fail", "keep", "replace"] = "fail",
+) -> None:
     """Create all mirrors."""
     peerdb = PeerDB()
     for mirror in peerdb.config.mirrors:
-        response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
+        response = peerdb.create_mirror(
+            mirror.model_dump(),
+            drop_destination_tables=drop_destination_tables,
+            if_exists=if_exists,
+        )
         console.print(response.message, style="green")
 
 

@@ -695,7 +695,10 @@ class PeerDB:
         return PeerTypeResponse(**response.json())
 
     def create_peer(
-        self, peer: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
+        self,
+        peer: dict,
+        drop_destination_tables: bool | None = False,
+        if_exists: Literal["fail", "keep", "replace"] = "fail",
     ) -> CreatePeerResponse:
         self._console.print(f"Creating peer '{peer['name']}'")
 
@@ -705,7 +708,11 @@ class PeerDB:
             if if_exists == "keep":
                 return CreatePeerResponse(message=f"Kept peer '{peer['name']}'")
             elif if_exists == "replace":
-                self.drop_peer(peer["name"], drop_mirrors=True, drop_destination_tables=True)
+                self.drop_peer(
+                    peer["name"],
+                    drop_mirrors=True,
+                    drop_destination_tables=drop_destination_tables,
+                )
             else:
                 raise PeerExistsException(f"Peer '{peer['name']}' exists")
 
@@ -827,7 +834,10 @@ class PeerDB:
             )
 
     def create_mirror(
-        self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
+        self,
+        mirror: dict,
+        drop_destination_tables: bool | None = False,
+        if_exists: Literal["fail", "keep", "replace"] = "fail",
     ) -> CreateMirrorResponse:
         self._console.print(f"Creating mirror '{mirror['flow_job_name']}'")
 
@@ -837,7 +847,9 @@ class PeerDB:
             if if_exists == "keep":
                 return CreateMirrorResponse(message=f"Kept mirror '{mirror['flow_job_name']}'")
             elif if_exists == "replace":
-                self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
+                self.drop_mirror(
+                    mirror["flow_job_name"], drop_destination_tables=drop_destination_tables
+                )
             else:
                 raise MirrorExistsException(f"Mirror '{mirror['flow_job_name']}' exists")
 

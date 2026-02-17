@@ -41,6 +41,7 @@ def update_settings(if_exists: Literal["fail", "keep", "replace"] = "keep") -> N
     """Update settings."""
     peerdb = PeerDB()
     peerdb.update_settings({setting.name: setting.value for setting in peerdb.config.settings})
+    console.print("Updated settings", style="green")
 
 
 @peerdb_app.command()

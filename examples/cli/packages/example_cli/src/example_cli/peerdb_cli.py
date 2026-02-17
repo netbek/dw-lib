@@ -45,7 +45,7 @@ def update_settings() -> None:
 
 
 @peerdb_app.command()
-def create_peers(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def create_peers(if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
     """Create all peers, and add replication slots to source database."""
     peerdb = PeerDB()
     for peer in peerdb.config.peers:
@@ -56,9 +56,7 @@ def create_peers(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None
 
 
 @peerdb_app.command()
-def drop_peers(
-    drop_destination_tables: bool | None = False, if_exists: bool | None = False
-) -> None:
+def drop_peers(drop_destination_tables: bool | None = False, if_exists: bool | None = True) -> None:
     """Drop all peers and mirrors, and remove replication slots from source database."""
     peerdb = PeerDB()
     for peer in peerdb.config.peers:
@@ -72,16 +70,7 @@ def drop_peers(
 
 
 @peerdb_app.command()
-def create_mirror(name: str, if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
-    """Create a mirror."""
-    peerdb = PeerDB()
-    mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
-    response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
-    console.print(response.message, style="green")
-
-
-@peerdb_app.command()
-def create_mirrors(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def create_mirrors(if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
     """Create all mirrors."""
     peerdb = PeerDB()
     for mirror in peerdb.config.mirrors:
@@ -90,22 +79,8 @@ def create_mirrors(if_exists: Literal["fail", "keep", "replace"] = "fail") -> No
 
 
 @peerdb_app.command()
-def drop_mirror(
-    name: str,
-    drop_destination_tables: bool | None = False,
-    if_exists: bool | None = False,
-) -> None:
-    """Drop a mirror."""
-    peerdb = PeerDB()
-    response = peerdb.drop_mirror(
-        name, drop_destination_tables=drop_destination_tables, if_exists=if_exists
-    )
-    console.print(response.message, style="green")
-
-
-@peerdb_app.command()
 def drop_mirrors(
-    drop_destination_tables: bool | None = False, if_exists: bool | None = False
+    drop_destination_tables: bool | None = False, if_exists: bool | None = True
 ) -> None:
     """Drop all mirrors."""
     peerdb = PeerDB()
@@ -120,29 +95,13 @@ def drop_mirrors(
 
 
 @peerdb_app.command()
-def resync_mirror(name: str, if_exists: bool | None = False) -> None:
-    """Resync a mirror."""
-    peerdb = PeerDB()
-    response = peerdb.resync_mirror(name, if_exists=if_exists)
-    console.print(response.message, style="green")
-
-
-@peerdb_app.command()
-def resync_mirrors(if_exists: bool | None = False) -> None:
+def resync_mirrors(if_exists: bool | None = True) -> None:
     """Resync all mirrors."""
     peerdb = PeerDB()
     list_response = peerdb.list_mirrors()
     for mirror in list_response.mirrors:
         response = peerdb.resync_mirror(mirror.name, if_exists=if_exists)
         console.print(response.message, style="green")
-
-
-@peerdb_app.command()
-def pause_mirror(name: str) -> None:
-    """Pause a running mirror."""
-    peerdb = PeerDB()
-    response = peerdb.pause_mirror(name)
-    console.print(response.message, style="green")
 
 
 @peerdb_app.command()
@@ -156,14 +115,6 @@ def pause_mirrors() -> None:
 
 
 @peerdb_app.command()
-def resume_mirror(name: str) -> None:
-    """Resume a paused mirror."""
-    peerdb = PeerDB()
-    response = peerdb.resume_mirror(name)
-    console.print(response.message, style="green")
-
-
-@peerdb_app.command()
 def resume_mirrors() -> None:
     """Resume all paused mirrors."""
     peerdb = PeerDB()
@@ -171,3 +122,59 @@ def resume_mirrors() -> None:
     for mirror in list_response.mirrors:
         response = peerdb.resume_mirror(mirror.name)
         console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def create_peer(name: str, if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
+    """Create a peer."""
+    peerdb = PeerDB()
+    peer = pydash.find(peerdb.config.peers, lambda x: x.name == name)
+    response = peerdb.create_peer(peer.model_dump(), if_exists=if_exists)
+    console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def create_mirror(name: str, if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
+    """Create a mirror."""
+    peerdb = PeerDB()
+    mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
+    response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
+    console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def drop_mirror(
+    name: str,
+    drop_destination_tables: bool | None = False,
+    if_exists: bool | None = True,
+) -> None:
+    """Drop a mirror."""
+    peerdb = PeerDB()
+    response = peerdb.drop_mirror(
+        name, drop_destination_tables=drop_destination_tables, if_exists=if_exists
+    )
+    console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def resync_mirror(name: str, if_exists: bool | None = True) -> None:
+    """Resync a mirror."""
+    peerdb = PeerDB()
+    response = peerdb.resync_mirror(name, if_exists=if_exists)
+    console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def pause_mirror(name: str) -> None:
+    """Pause a running mirror."""
+    peerdb = PeerDB()
+    response = peerdb.pause_mirror(name)
+    console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def resume_mirror(name: str) -> None:
+    """Resume a paused mirror."""
+    peerdb = PeerDB()
+    response = peerdb.resume_mirror(name)
+    console.print(response.message, style="green")

@@ -37,7 +37,7 @@ def up(if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
 
 
 @peerdb_app.command()
-def update_settings(if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
+def update_settings() -> None:
     """Update settings."""
     peerdb = PeerDB()
     peerdb.update_settings({setting.name: setting.value for setting in peerdb.config.settings})

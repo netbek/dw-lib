@@ -19,7 +19,7 @@ def debug() -> None:
 
 
 @peerdb_app.command()
-def up(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
+def up(if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
     """Create all peers and mirrors, and add replication slots to the source database."""
     peerdb = PeerDB()
     peerdb.update_settings({setting.name: setting.value for setting in peerdb.config.settings})
@@ -34,6 +34,13 @@ def up(if_exists: Literal["fail", "keep", "replace"] = "fail") -> None:
     for mirror in peerdb.config.mirrors:
         response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
         console.print(response.message, style="green")
+
+
+@peerdb_app.command()
+def update_settings(if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
+    """Update settings."""
+    peerdb = PeerDB()
+    peerdb.update_settings({setting.name: setting.value for setting in peerdb.config.settings})
 
 
 @peerdb_app.command()

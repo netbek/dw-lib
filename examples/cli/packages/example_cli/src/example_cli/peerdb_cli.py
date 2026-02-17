@@ -116,7 +116,7 @@ def pause_mirrors() -> None:
 
 @peerdb_app.command()
 def resume_mirrors() -> None:
-    """Resume all paused mirrors."""
+    """Resume all paused or pausing mirrors."""
     peerdb = PeerDB()
     list_response = peerdb.list_mirrors()
     for mirror in list_response.mirrors:
@@ -174,7 +174,7 @@ def pause_mirror(name: str) -> None:
 
 @peerdb_app.command()
 def resume_mirror(name: str) -> None:
-    """Resume a paused mirror."""
+    """Resume a paused or pausing mirror."""
     peerdb = PeerDB()
     response = peerdb.resume_mirror(name)
     console.print(response.message, style="green")

@@ -647,7 +647,21 @@ class PeerDB:
 
             # Replication slots
             self._console.print()
-            data = [slot.model_dump() for slot in self.list_replication_slots()]
+            data = [
+                slot.model_dump(
+                    include=[
+                        "slot_name",
+                        "active",
+                        "inactive_since",
+                        "redo_lsn",
+                        "restart_lsn",
+                        "lag_mb",
+                        "failover",
+                        "synced",
+                    ]
+                )
+                for slot in self.list_replication_slots()
+            ]
             if data:
                 self._console.print(render_table(data, title="Replication slots"))
             else:

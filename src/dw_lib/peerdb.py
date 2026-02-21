@@ -227,13 +227,27 @@ class ListPublicationsItem(BaseModel):
 
 
 class ListReplicationSlotsItem(BaseModel):
-    name: str
+    slot_name: str
+    redo_lsn: str
+    restart_lsn: str
+    current_lsn: str
     active: bool
     inactive_since: datetime | None = None
-    restart_lsn: str | None = None
-    restart_lag: str | None = None
-    confirmed_flush_lsn: str | None = None
-    confirmed_flush_lag: str | None = None
+    lag_mb: float
+    confirmed_flush_lsn: str
+    sent_lsn: str | None = None
+    restart_to_confirmed_mb: float
+    confirmed_to_current_mb: float
+    wal_status: str
+    safe_wal_size: int | None = None
+    wait_event_type: str
+    wait_event: str
+    backend_state: str
+    logical_decoding_work_mem_mb: int
+    stats_reset: int | None = None
+    spill_txns: int | None = None
+    spill_count: int | None = None
+    spill_bytes: int | None = None
     failover: bool
     synced: bool
 
@@ -633,7 +647,21 @@ class PeerDB:
 
             # Replication slots
             self._console.print()
-            data = [slot.model_dump() for slot in self.list_replication_slots()]
+            data = [
+                slot.model_dump(
+                    include=[
+                        "slot_name",
+                        "active",
+                        "inactive_since",
+                        "redo_lsn",
+                        "restart_lsn",
+                        "lag_mb",
+                        "failover",
+                        "synced",
+                    ]
+                )
+                for slot in self.list_replication_slots()
+            ]
             if data:
                 self._console.print(render_table(data, title="Replication slots"))
             else:
@@ -1129,41 +1157,93 @@ class PeerDB:
 
     def list_replication_slots(self) -> list[ListReplicationSlotsItem]:
         """List the replication slots in the source database."""
+        # Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.8/flow/connectors/postgres/client.go#L281
+        POSTGRES_13 = 130000
+        POSTGRES_16 = 160000
+
         source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
         database = source_adapter.settings.database
         data = []
+
         with source_adapter.create_session() as session:
-            # TODO Check whether `database` is not null in a read replica deployment
-            query = """
-            SELECT
-                slot_name AS name,
-                active,
-                inactive_since,
-                restart_lsn,
-                pg_size_pretty(pg_wal_lsn_diff(
-                    CASE
-                        WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn()
+            pg_version_str = session.exec(text("SHOW server_version_num")).scalar()
+            pg_version = int(pg_version_str)
+
+            wal_status_select = "prs.wal_status"
+            safe_wal_size_select = "prs.safe_wal_size"
+
+            if pg_version < POSTGRES_13:
+                wal_status_select = "'unknown' AS wal_status"
+                safe_wal_size_select = "NULL::bigint AS safe_wal_size"
+
+            ldw_mb_select = "NULL::bigint AS logical_decoding_work_mem_mb"
+            if pg_version >= POSTGRES_13:
+                ldw_mb_select = """(
+                    SELECT (pg_size_bytes(setting || COALESCE(unit,'')) / 1024 / 1024)::bigint
+                    FROM pg_settings WHERE name='logical_decoding_work_mem'
+                ) AS logical_decoding_work_mem_mb"""
+
+            stats_select = "NULL::bigint AS stats_reset, NULL::bigint AS spill_txns, NULL::bigint AS spill_count, NULL::bigint AS spill_bytes"
+            stats_join = ""
+            if pg_version >= POSTGRES_16:
+                stats_select = """
+                    EXTRACT(EPOCH FROM psrs.stats_reset)::bigint AS stats_reset,
+                    psrs.spill_txns,
+                    psrs.spill_count,
+                    psrs.spill_bytes
+                """
+                stats_join = (
+                    "LEFT JOIN pg_stat_replication_slots AS psrs ON psrs.slot_name = prs.slot_name"
+                )
+
+            query = f"""
+                WITH current_wal AS (
+                    SELECT CASE
+                        WHEN pg_is_in_recovery()
+                        THEN pg_last_wal_receive_lsn()
                         ELSE pg_current_wal_lsn()
-                    END,
-                    restart_lsn
-                )) AS restart_lag,
-                confirmed_flush_lsn,
-                pg_size_pretty(pg_wal_lsn_diff(
-                    CASE
-                        WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn()
-                        ELSE pg_current_wal_lsn()
-                    END,
-                    confirmed_flush_lsn
-                )) AS confirmed_flush_lag,
-                failover,
-                synced
-            FROM pg_replication_slots
-            WHERE database = :database
-            ORDER BY slot_name
+                    END AS current_lsn
+                )
+                SELECT
+                    prs.slot_name,
+                    pcc.redo_lsn::text,
+                    prs.restart_lsn::text,
+                    cw.current_lsn::text,
+                    {wal_status_select},
+                    {safe_wal_size_select},
+                    prs.confirmed_flush_lsn::text,
+                    psr.sent_lsn::text,
+                    prs.active,
+                    prs.inactive_since,
+                    round((cw.current_lsn - prs.restart_lsn) / 1024 / 1024)::float4 AS lag_mb,
+                    round((prs.confirmed_flush_lsn - prs.restart_lsn) / 1024 / 1024)::float4 AS restart_to_confirmed_mb,
+                    round((cw.current_lsn - prs.confirmed_flush_lsn) / 1024 / 1024)::float4 AS confirmed_to_current_mb,
+                    psa.wait_event_type,
+                    psa.wait_event,
+                    psa.state AS backend_state,
+                    {ldw_mb_select},
+                    {stats_select},
+                    prs.failover,
+                    prs.synced
+                FROM current_wal cw,
+                    pg_control_checkpoint() as pcc,
+                    (pg_replication_slots as prs
+                        LEFT JOIN pg_stat_activity as psa
+                            on psa.pid = prs.active_pid
+                        LEFT JOIN pg_stat_replication as psr
+                            on psr.pid = prs.active_pid
+                        {stats_join})
+                WHERE prs.database = :database
             """
             result = session.exec(text(query), params={"database": database})
             for row in result.fetchall():
-                data.append(ListReplicationSlotsItem(**row._asdict()))
+                row_dict = row._asdict()
+                row_dict["active"] = bool(row.active) if row.active is not None else False
+                row_dict["lag_mb"] = row.lag_mb or 0
+                row_dict["restart_to_confirmed_mb"] = row.restart_to_confirmed_mb or 0
+                row_dict["confirmed_to_current_mb"] = row.confirmed_to_current_mb or 0
+                row_dict["logical_decoding_work_mem_mb"] = row.logical_decoding_work_mem_mb or 0
+                data.append(ListReplicationSlotsItem(**row_dict))
 
         return data
 

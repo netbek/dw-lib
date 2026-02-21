@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
+from functools import cached_property
 from livereload import Server
 from opentelemetry import trace
 from pathlib import Path
@@ -199,84 +200,31 @@ class Dbt:
     ) -> None:
         self._profiles_dir = profiles_dir or find_profiles_dir()
         self._project_dir = project_dir or find_project_dir()
-        self._project_docs_dir = self._project_dir / "docs"
-        self._project_config_file = self._project_dir / "dbt_project.yml"
         self._target = target
 
-    def _list_command(
-        self,
-        debug: bool | None = False,
-        exclude: str | None = None,
-        fail_fast: bool | None = True,
-        models: str | None = None,
-        output: str | None = None,
-        quiet: bool | None = False,
-        resource_types: list[DbtResourceType] | None = None,
-        select: str | None = None,
-        selector: str | None = None,
-        target: str | None = None,
-        use_colors: bool | None = False,
-        vars: dict[str, Any] | None = None,
-    ) -> list[str]:
-        if target is None:
-            target = self._target
+    @cached_property
+    def profiles_file(self) -> Path:
+        return self._profiles_dir / "profiles.yml"
 
-        cmd = [
-            "dbt",
-            "list",
-            "--profiles-dir",
-            str(self._profiles_dir),
-            "--project-dir",
-            str(self._project_dir),
-        ]
+    @cached_property
+    def profiles(self):
+        with open(self.profiles_file) as fp:
+            data = yaml.safe_load(fp)
+        return data
 
-        if debug:
-            cmd.extend(["--debug"])
-        else:
-            cmd.extend(["--no-debug"])
+    @cached_property
+    def project_config_file(self) -> Path:
+        return self._project_dir / "dbt_project.yml"
 
-        if exclude:
-            cmd.extend(["--exclude", exclude])
+    @cached_property
+    def project_config(self):
+        with open(self.project_config_file) as fp:
+            data = yaml.safe_load(fp)
+        return data
 
-        if fail_fast:
-            cmd.extend(["--fail-fast"])
-        else:
-            cmd.extend(["--no-fail-fast"])
-
-        if models:
-            cmd.extend(["--models", models])
-
-        if output:
-            cmd.extend(["--output", output])
-
-        if quiet:
-            cmd.extend(["--quiet"])
-        else:
-            cmd.extend(["--no-quiet"])
-
-        if resource_types:
-            for resource_type in resource_types:
-                cmd.extend(["--resource-type", resource_type])
-
-        if select:
-            cmd.extend(["--select", select])
-
-        if selector:
-            cmd.extend(["--selector", selector])
-
-        if target:
-            cmd.extend(["--target", target])
-
-        if use_colors:
-            cmd.extend(["--use-colors"])
-        else:
-            cmd.extend(["--no-use-colors"])
-
-        if vars:
-            vars_yaml = yaml.safe_dump(vars, default_flow_style=False)
-            cmd.extend(["--vars", vars_yaml])
-
-        return cmd
+    @cached_property
+    def project_docs_dir(self) -> Path:
+        return self._project_dir / "docs"
 
     def list_(
         self,
@@ -370,75 +318,6 @@ class Dbt:
 
         return resources
 
-    def _run_command(
-        self,
-        debug: bool | None = False,
-        exclude: str | None = None,
-        fail_fast: bool | None = True,
-        full_refresh: bool | None = False,
-        models: str | None = None,
-        quiet: bool | None = False,
-        select: str | None = None,
-        selector: str | None = None,
-        target: str | None = None,
-        use_colors: bool | None = False,
-        vars: dict[str, Any] | None = None,
-    ) -> list[str]:
-        if target is None:
-            target = self._target
-
-        cmd = [
-            "dbt",
-            "run",
-            "--profiles-dir",
-            str(self._profiles_dir),
-            "--project-dir",
-            str(self._project_dir),
-        ]
-
-        if debug:
-            cmd.extend(["--debug"])
-        else:
-            cmd.extend(["--no-debug"])
-
-        if exclude:
-            cmd.extend(["--exclude", exclude])
-
-        if fail_fast:
-            cmd.extend(["--fail-fast"])
-        else:
-            cmd.extend(["--no-fail-fast"])
-
-        if full_refresh:
-            cmd.extend(["--full-refresh"])
-
-        if models:
-            cmd.extend(["--models", models])
-
-        if quiet:
-            cmd.extend(["--quiet"])
-        else:
-            cmd.extend(["--no-quiet"])
-
-        if select:
-            cmd.extend(["--select", select])
-
-        if selector:
-            cmd.extend(["--selector", selector])
-
-        if target:
-            cmd.extend(["--target", target])
-
-        if use_colors:
-            cmd.extend(["--use-colors"])
-        else:
-            cmd.extend(["--no-use-colors"])
-
-        if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
-
-        return cmd
-
     def run(
         self,
         debug: bool | None = False,
@@ -480,61 +359,6 @@ class Dbt:
 
         return runner_result
 
-    def _run_operation_command(
-        self,
-        macro: str,
-        args: dict[str, Any] | None = None,
-        debug: bool | None = False,
-        fail_fast: bool | None = True,
-        quiet: bool | None = False,
-        target: str | None = None,
-        use_colors: bool | None = False,
-        vars: dict[str, Any] | None = None,
-    ) -> list[str]:
-        if target is None:
-            target = self._target
-
-        cmd = [
-            "dbt",
-            "run-operation",
-            "--profiles-dir",
-            str(self._profiles_dir),
-            "--project-dir",
-            str(self._project_dir),
-            macro,
-        ]
-
-        if args:
-            cmd.extend(["--args", json.dumps(args)])
-
-        if debug:
-            cmd.extend(["--debug"])
-        else:
-            cmd.extend(["--no-debug"])
-
-        if fail_fast:
-            cmd.extend(["--fail-fast"])
-        else:
-            cmd.extend(["--no-fail-fast"])
-
-        if quiet:
-            cmd.extend(["--quiet"])
-        else:
-            cmd.extend(["--no-quiet"])
-
-        if target:
-            cmd.extend(["--target", target])
-
-        if use_colors:
-            cmd.extend(["--use-colors"])
-        else:
-            cmd.extend(["--no-use-colors"])
-
-        if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
-
-        return cmd
-
     def run_operation(
         self,
         macro: str,
@@ -563,55 +387,6 @@ class Dbt:
         _trace_invocation(DbtCommand.RUN_OPERATION, raw_command, invocation_id, runner_result)
 
         return runner_result
-
-    def _seed_command(
-        self,
-        debug: bool | None = False,
-        fail_fast: bool | None = True,
-        quiet: bool | None = False,
-        select: str | None = None,
-        target: str | None = None,
-        use_colors: bool | None = False,
-    ) -> list[str]:
-        if target is None:
-            target = self._target
-
-        cmd = [
-            "dbt",
-            "seed",
-            "--profiles-dir",
-            str(self._profiles_dir),
-            "--project-dir",
-            str(self._project_dir),
-        ]
-
-        if debug:
-            cmd.extend(["--debug"])
-        else:
-            cmd.extend(["--no-debug"])
-
-        if fail_fast:
-            cmd.extend(["--fail-fast"])
-        else:
-            cmd.extend(["--no-fail-fast"])
-
-        if quiet:
-            cmd.extend(["--quiet"])
-        else:
-            cmd.extend(["--no-quiet"])
-
-        if select:
-            cmd.extend(["--select", select])
-
-        if target:
-            cmd.extend(["--target", target])
-
-        if use_colors:
-            cmd.extend(["--use-colors"])
-        else:
-            cmd.extend(["--no-use-colors"])
-
-        return cmd
 
     def seed(
         self,
@@ -700,7 +475,311 @@ class Dbt:
                 data = yaml.safe_dump(schema, sort_keys=False)
                 fp.write(data)
 
-    def docs_generate_command(
+    def docs_generate(
+        self,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        models: str | None = None,
+        quiet: bool | None = True,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> tuple[dbtRunnerResult, Path]:
+        cmd = self._docs_generate_command(
+            debug=debug,
+            fail_fast=fail_fast,
+            exclude=exclude,
+            models=models,
+            quiet=quiet,
+            select=select,
+            selector=selector,
+            target=target,
+            use_colors=use_colors,
+            vars=vars,
+        )
+        result = dbtRunner().invoke(cmd[1:])
+        dest_file = bundle_docs(self._project_dir)
+
+        return (result, dest_file)
+
+    def docs_serve(self):
+        # If the docs page has not been generated before, then do so now
+        if not os.path.exists(os.path.join(self.project_docs_dir, "index.html")):
+            self.docs_generate()
+
+        watch_paths = [self.project_config_file]
+        for path in self.project_config["macro-paths"]:
+            watch_paths.extend(
+                [
+                    os.path.join(self._project_dir, path, "**", "*.sql"),
+                ]
+            )
+        for path in self.project_config["model-paths"]:
+            watch_paths.extend(
+                [
+                    os.path.join(self._project_dir, path, "**", "*.sql"),
+                    os.path.join(self._project_dir, path, "**", "*.yml"),
+                ]
+            )
+
+        # Start the LiveReload server
+        server = Server()
+        for path in watch_paths:
+            server.watch(path, lambda: self.docs_generate())
+        server.serve(host="0.0.0.0", port=8080, root=self.project_docs_dir)
+
+    def _list_command(
+        self,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        models: str | None = None,
+        output: str | None = None,
+        quiet: bool | None = False,
+        resource_types: list[DbtResourceType] | None = None,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "list",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+        ]
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if exclude:
+            cmd.extend(["--exclude", exclude])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if models:
+            cmd.extend(["--models", models])
+
+        if output:
+            cmd.extend(["--output", output])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if resource_types:
+            for resource_type in resource_types:
+                cmd.extend(["--resource-type", resource_type])
+
+        if select:
+            cmd.extend(["--select", select])
+
+        if selector:
+            cmd.extend(["--selector", selector])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            vars_yaml = yaml.safe_dump(vars, default_flow_style=False)
+            cmd.extend(["--vars", vars_yaml])
+
+        return cmd
+
+    def _run_command(
+        self,
+        debug: bool | None = False,
+        exclude: str | None = None,
+        fail_fast: bool | None = True,
+        full_refresh: bool | None = False,
+        models: str | None = None,
+        quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "run",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+        ]
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if exclude:
+            cmd.extend(["--exclude", exclude])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if full_refresh:
+            cmd.extend(["--full-refresh"])
+
+        if models:
+            cmd.extend(["--models", models])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if select:
+            cmd.extend(["--select", select])
+
+        if selector:
+            cmd.extend(["--selector", selector])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+
+        return cmd
+
+    def _run_operation_command(
+        self,
+        macro: str,
+        args: dict[str, Any] | None = None,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "run-operation",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+            macro,
+        ]
+
+        if args:
+            cmd.extend(["--args", json.dumps(args)])
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+
+        return cmd
+
+    def _seed_command(
+        self,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        select: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "seed",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+        ]
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if select:
+            cmd.extend(["--select", select])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        return cmd
+
+    def _docs_generate_command(
         self,
         debug: bool | None = False,
         exclude: str | None = None,
@@ -765,64 +844,6 @@ class Dbt:
             cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
 
         return cmd
-
-    def docs_generate(
-        self,
-        debug: bool | None = False,
-        exclude: str | None = None,
-        fail_fast: bool | None = True,
-        models: str | None = None,
-        quiet: bool | None = True,
-        select: str | None = None,
-        selector: str | None = None,
-        target: str | None = None,
-        use_colors: bool | None = False,
-        vars: dict[str, Any] | None = None,
-    ) -> tuple[dbtRunnerResult, Path]:
-        cmd = self.docs_generate_command(
-            debug=debug,
-            fail_fast=fail_fast,
-            exclude=exclude,
-            models=models,
-            quiet=quiet,
-            select=select,
-            selector=selector,
-            target=target,
-            use_colors=use_colors,
-            vars=vars,
-        )
-        result = dbtRunner().invoke(cmd[1:])
-        dest_file = bundle_docs(self._project_dir)
-
-        return (result, dest_file)
-
-    def docs_serve(self):
-        project_config = safe_load_file(self._project_dir / "dbt_project.yml")
-
-        # If the docs page has not been generated before, then do so now
-        if not os.path.exists(os.path.join(self._project_docs_dir, "index.html")):
-            self.docs_generate()
-
-        watch_paths = [self._project_config_file]
-        for path in project_config["macro-paths"]:
-            watch_paths.extend(
-                [
-                    os.path.join(self._project_dir, path, "**", "*.sql"),
-                ]
-            )
-        for path in project_config["model-paths"]:
-            watch_paths.extend(
-                [
-                    os.path.join(self._project_dir, path, "**", "*.sql"),
-                    os.path.join(self._project_dir, path, "**", "*.yml"),
-                ]
-            )
-
-        # Start the LiveReload server
-        server = Server()
-        for path in watch_paths:
-            server.watch(path, lambda: self.docs_generate())
-        server.serve(host="0.0.0.0", port=8080, root=self._project_docs_dir)
 
 
 def _trace_invocation(

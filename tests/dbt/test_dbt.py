@@ -1,5 +1,72 @@
-from dw_lib.dbt import bundle_docs, normalize_rows_affected
+from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
 from pathlib import Path
+
+import pytest
+
+
+class TestAttributes:
+    @pytest.fixture
+    def profiles_dir(self) -> Path:
+        return Path(__file__).parent / "data" / "invocation" / ".dbt"
+
+    @pytest.fixture
+    def project_dir(self) -> Path:
+        return Path(__file__).parent / "data" / "invocation" / "dbt"
+
+    @pytest.fixture
+    def dbt(self, profiles_dir, project_dir) -> Dbt:
+        return Dbt(profiles_dir=profiles_dir, project_dir=project_dir)
+
+    def test_profiles_file(self, profiles_dir: Path, dbt: Dbt):
+        assert dbt.profiles_file == profiles_dir / "profiles.yml"
+
+    def test_profiles(self, dbt: Dbt):
+        assert dbt.profiles == {
+            "example": {
+                "target": "dev",
+                "outputs": {
+                    "dev": {
+                        "type": "clickhouse",
+                        "threads": 1,
+                        "host": "localhost",
+                        "port": 18123,
+                        "user": "default",
+                        "password": "default",
+                        "schema": "default",
+                        "driver": "http",
+                        "secure": False,
+                        "use_lw_deletes": True,
+                    }
+                },
+            }
+        }
+
+    def test_project_config_file(self, project_dir: Path, dbt: Dbt):
+        assert dbt.project_config_file == project_dir / "dbt_project.yml"
+
+    def test_project_config(self, dbt: Dbt):
+        assert dbt.project_config == {
+            "name": "example",
+            "version": "1.0.0",
+            "profile": "example",
+            "model-paths": ["models"],
+            "analysis-paths": ["analyses"],
+            "test-paths": ["tests"],
+            "seed-paths": ["seeds"],
+            "macro-paths": ["macros"],
+            "snapshot-paths": ["snapshots"],
+            "clean-targets": ["logs", "target", "dbt_packages"],
+            "flags": {
+                "fail_fast": True,
+                "partial_parse": True,
+                "send_anonymous_usage_stats": False,
+                "use_colors": True,
+            },
+            "models": {"example": {"example": {"+materialized": "view"}}},
+        }
+
+    def test_project_docs_dir(self, project_dir: Path, dbt: Dbt):
+        assert dbt.project_docs_dir == project_dir / "docs"
 
 
 class TestBundleDocs:

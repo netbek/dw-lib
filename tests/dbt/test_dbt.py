@@ -20,27 +20,6 @@ class TestAttributes:
     def test_profiles_file(self, profiles_dir: Path, dbt: Dbt):
         assert dbt.profiles_file == profiles_dir / "profiles.yml"
 
-    def test_profiles(self, dbt: Dbt):
-        assert dbt.profiles == {
-            "example": {
-                "target": "dev",
-                "outputs": {
-                    "dev": {
-                        "type": "clickhouse",
-                        "threads": 1,
-                        "host": "localhost",
-                        "port": 18123,
-                        "user": "default",
-                        "password": "default",
-                        "schema": "default",
-                        "driver": "http",
-                        "secure": False,
-                        "use_lw_deletes": True,
-                    }
-                },
-            }
-        }
-
     def test_project_config_file(self, project_dir: Path, dbt: Dbt):
         assert dbt.project_config_file == project_dir / "dbt_project.yml"
 

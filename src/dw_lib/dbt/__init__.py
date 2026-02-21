@@ -207,12 +207,6 @@ class Dbt:
         return self._profiles_dir / "profiles.yml"
 
     @cached_property
-    def profiles(self):
-        with open(self.profiles_file) as fp:
-            data = yaml.safe_load(fp)
-        return data
-
-    @cached_property
     def project_config_file(self) -> Path:
         return self._project_dir / "dbt_project.yml"
 

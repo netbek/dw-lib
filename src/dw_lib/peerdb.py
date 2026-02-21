@@ -240,9 +240,9 @@ class ListReplicationSlotsItem(BaseModel):
     confirmed_to_current_mb: float
     wal_status: str
     safe_wal_size: int | None = None
-    wait_event_type: str
-    wait_event: str
-    backend_state: str
+    wait_event_type: str | None = None
+    wait_event: str | None = None
+    backend_state: str | None = None
     logical_decoding_work_mem_mb: int
     stats_reset: int | None = None
     spill_txns: int | None = None

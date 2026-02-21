@@ -17,6 +17,7 @@ from .types import (
 from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
 from sqlglot.dialects.dialect import Dialects
@@ -373,20 +374,11 @@ class Config(BaseModel):
 class PeerDB:
     def __init__(self, config_file: Path | str | None = None) -> None:
         self._config_file = config_file or find_config_file()
-        self._config = self._load_config()
         self._headers = {"Content-Type": "application/json"}
         self._console = rich.console.Console()
 
-    @property
+    @cached_property
     def config(self) -> Config:
-        return self._config
-
-    def _load_config_data(self) -> dict:
-        data = render_template(self._config_file)
-        data = yaml.safe_load(data)
-        return data
-
-    def _load_config(self) -> Config:
         def process_node(node: dict) -> dict:
             default_keys = [key for key in node.keys() if key.startswith("+")]
             defaults = {key.lstrip("+").strip(): node[key] for key in default_keys}
@@ -400,7 +392,8 @@ class PeerDB:
 
             return node
 
-        config = self._load_config_data()
+        config = render_template(self._config_file)
+        config = yaml.safe_load(config)
 
         if not config:
             raise EmptyConfigException()

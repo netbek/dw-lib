@@ -21,7 +21,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
-from typing import Literal, Optional
+from typing import Literal
 
 import httpx
 import os
@@ -232,22 +232,22 @@ class ListReplicationSlotsItem(BaseModel):
     restart_lsn: str
     current_lsn: str
     active: bool
-    inactive_since: datetime | None
+    inactive_since: datetime | None = None
     lag_mb: float
     confirmed_flush_lsn: str
-    sent_lsn: str | None
+    sent_lsn: str | None = None
     restart_to_confirmed_mb: float
     confirmed_to_current_mb: float
     wal_status: str
-    safe_wal_size: int | None
+    safe_wal_size: int | None = None
     wait_event_type: str
     wait_event: str
     backend_state: str
     logical_decoding_work_mem_mb: int
-    stats_reset: int | None
-    spill_txns: int | None
-    spill_count: int | None
-    spill_bytes: int | None
+    stats_reset: int | None = None
+    spill_txns: int | None = None
+    spill_count: int | None = None
+    spill_bytes: int | None = None
     failover: bool
     synced: bool
 

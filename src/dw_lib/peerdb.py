@@ -234,11 +234,11 @@ class ListReplicationSlotsItem(BaseModel):
     current_lsn: str
     active: bool
     inactive_since: datetime | None = None
-    lag_mb: float
+    lag_mb: int
     confirmed_flush_lsn: str
     sent_lsn: str | None = None
-    restart_to_confirmed_mb: float
-    confirmed_to_current_mb: float
+    restart_to_confirmed_mb: int
+    confirmed_to_current_mb: int
     wal_status: str
     safe_wal_size: int | None = None
     wait_event_type: str | None = None
@@ -1208,9 +1208,9 @@ class PeerDB:
                     psr.sent_lsn::text,
                     prs.active,
                     prs.inactive_since,
-                    round((cw.current_lsn - prs.restart_lsn) / 1024 / 1024)::float4 AS lag_mb,
-                    round((prs.confirmed_flush_lsn - prs.restart_lsn) / 1024 / 1024)::float4 AS restart_to_confirmed_mb,
-                    round((cw.current_lsn - prs.confirmed_flush_lsn) / 1024 / 1024)::float4 AS confirmed_to_current_mb,
+                    round((cw.current_lsn - prs.restart_lsn) / 1024 / 1024)::integer AS lag_mb,
+                    round((prs.confirmed_flush_lsn - prs.restart_lsn) / 1024 / 1024)::integer AS restart_to_confirmed_mb,
+                    round((cw.current_lsn - prs.confirmed_flush_lsn) / 1024 / 1024)::integer AS confirmed_to_current_mb,
                     psa.wait_event_type,
                     psa.wait_event,
                     psa.state AS backend_state,

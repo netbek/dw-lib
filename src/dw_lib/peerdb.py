@@ -714,23 +714,23 @@ class PeerDB:
 
     def get_peer_info(self, peer_name: str) -> PeerInfoResponse:
         url = f"{self.config.api_url}/v1/peers/info/{peer_name}"
-        response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to peer info of '{peer_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to peer info of '{peer_name}' ({exc})")
 
         return PeerInfoResponse(**response.json())
 
     def get_peer_type(self, peer_name: str) -> PeerTypeResponse:
         url = f"{self.config.api_url}/v1/peers/type/{peer_name}"
-        response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to peer type of '{peer_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to peer type of '{peer_name}' ({exc})")
 
         return PeerTypeResponse(**response.json())
 
@@ -751,12 +751,12 @@ class PeerDB:
 
         url = f"{self.config.api_url}/v1/peers/create"
         data = {"peer": peer}
-        response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to create peer '{peer['name']}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to create peer '{peer['name']}' ({exc})")
 
         deserialized = RawCreatePeerResponse(**response.json())
 
@@ -794,12 +794,12 @@ class PeerDB:
 
         url = f"{self.config.api_url}/v1/peers/drop"
         data = {"peerName": peer_name}
-        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to drop peer '{peer_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to drop peer '{peer_name}' ({exc})")
 
         return DropPeerResponse(message=f"Dropped peer '{peer_name}'")
 
@@ -812,10 +812,12 @@ class PeerDB:
 
     def list_peers(self) -> ListPeersResponse:
         url = f"{self.config.api_url}/v1/peers/list"
-        response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
 
-        if response.status_code != 200:
-            raise Exception(f"Failed to list peers (error {response.status_code}: {response.text})")
+        try:
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to list peers ({exc})")
 
         return ListPeersResponse(**response.json())
 
@@ -828,7 +830,12 @@ class PeerDB:
     def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
         url = f"{self.config.api_url}/v1/mirrors/status"
         data = {"flowJobName": flow_job_name}
-        response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
+
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
+        except httpx.RequestError as exc:
+            raise Exception(f"Failed to get status of mirror '{flow_job_name}' ({exc})")
+
         message = response.json().get("message", "")
 
         if response.status_code == 200:
@@ -913,12 +920,18 @@ class PeerDB:
         # Step 3: Create the mirror
         url = f"{self.config.api_url}/v1/flows/cdc/create"
         data = {"connection_configs": mirror}
-        response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
+
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to create mirror '{mirror['flow_job_name']}' ({exc})")
+
         workflow_id = response.json().get("workflowId")
 
-        if not (response.status_code == 200 and workflow_id):
+        if not workflow_id:
             raise Exception(
-                f"Failed to create mirror '{mirror['flow_job_name']}' (error {response.status_code}: {response.text})"
+                f"Failed to create mirror '{mirror['flow_job_name']}' (HTTP {response.status_code})"
             )
 
         deserialized = RawCreateMirrorResponse(**response.json())
@@ -954,12 +967,12 @@ class PeerDB:
             "dropMirrorStats": True,
             "skipDestinationDrop": False,
         }
-        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to drop mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to drop mirror '{flow_job_name}' ({exc})")
 
         for _ in range(timeout):
             if not self.has_mirror(flow_job_name):
@@ -992,12 +1005,12 @@ class PeerDB:
             "requestedFlowState": FlowStatus.STATUS_RESYNC,
             "dropMirrorStats": True,
         }
-        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to resync mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to resync mirror '{flow_job_name}' ({exc})")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
 
@@ -1022,12 +1035,12 @@ class PeerDB:
             "flowJobName": flow_job_name,
             "requestedFlowState": "STATUS_PAUSED",
         }
-        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to pause mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to pause mirror '{flow_job_name}' ({exc})")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_PAUSED"}, timeout=timeout)
 
@@ -1050,12 +1063,12 @@ class PeerDB:
             "flowJobName": flow_job_name,
             "requestedFlowState": "STATUS_RUNNING",
         }
-        response = httpx.post(url, json=data, headers=self._headers, timeout=None)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to resume mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.post(url, json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to resume mirror '{flow_job_name}' ({exc})")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RUNNING"}, timeout=timeout)
 
@@ -1098,12 +1111,12 @@ class PeerDB:
 
     def list_mirrors(self) -> ListMirrorsResponse:
         url = f"{self.config.api_url}/v1/mirrors/list"
-        response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to list mirrors (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to list mirrors ({exc})")
 
         return ListMirrorsResponse(mirrors=pydash.sort_by(response.json()["mirrors"], "name"))
 

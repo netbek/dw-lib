@@ -19,7 +19,7 @@ import pytest
 class TestLoadConfig(PeerDBIntegrationTest):
     def test_valid_config(self, all_postgres_tables: list[Table]):
         expected = {
-            "api_url": "http://localhost:3000/api",
+            "peerdb_ui_url": "http://localhost:3000",
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",

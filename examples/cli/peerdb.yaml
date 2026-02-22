@@ -1,4 +1,4 @@
-api_url: http://localhost:28920/api
+peerdb_ui_url: http://localhost:28920
 
 # Reference: https://github.com/PeerDB-io/peerdb/blob/v0.36.6/flow/internal/dynamicconf.go#L26
 settings:

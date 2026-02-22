@@ -366,11 +366,15 @@ class ConfigMirror(BaseModel):
 
 
 class Config(BaseModel):
-    api_url: str
+    peerdb_ui_url: str
     settings: list[ConfigSetting] | None = None
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
     # publications: list[ConfigPublication]
+
+    @property
+    def peerdb_api_url(self) -> str:
+        return f"{self.peerdb_ui_url}/api"
 
 
 class PeerDB:
@@ -480,7 +484,7 @@ class PeerDB:
         #         publications.append({"name": key, "table_identifiers": value})
 
         return Config(
-            api_url=config.get("api_url"),
+            peerdb_ui_url=config.get("peerdb_ui_url"),
             settings=settings,
             peers=peers,
             mirrors=mirrors,
@@ -488,7 +492,7 @@ class PeerDB:
         )
 
     def can_connect(self) -> bool:
-        url = f"{self.config.api_url}/v1/version"
+        url = f"{self.config.peerdb_api_url}/v1/version"
 
         try:
             response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
@@ -558,7 +562,7 @@ class PeerDB:
 
         result = {
             "API": {
-                "URL": self.config.api_url,
+                "URL": self.config.peerdb_api_url,
                 "Connection test": create_message(api_can_connect),
             },
             "Source peer": {
@@ -682,7 +686,7 @@ class PeerDB:
             raise Exception(f"Peer type '{peer.adapter.type}' has no adapter")
 
     def get_settings(self) -> GetDynamicSettingsResponse:
-        url = f"{self.config.api_url}/v1/dynamic_settings"
+        url = f"{self.config.peerdb_api_url}/v1/dynamic_settings"
 
         try:
             response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
@@ -695,7 +699,7 @@ class PeerDB:
     def update_settings(self, settings: dict[str, str]) -> None:
         self._console.print("Updating settings")
 
-        url = f"{self.config.api_url}/v1/dynamic_settings"
+        url = f"{self.config.peerdb_api_url}/v1/dynamic_settings"
 
         for key, value in settings.items():
             data = {"name": key, "value": value}
@@ -713,7 +717,7 @@ class PeerDB:
         return bool(matched)
 
     def get_peer_info(self, peer_name: str) -> PeerInfoResponse:
-        url = f"{self.config.api_url}/v1/peers/info/{peer_name}"
+        url = f"{self.config.peerdb_api_url}/v1/peers/info/{peer_name}"
 
         try:
             response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
@@ -724,7 +728,7 @@ class PeerDB:
         return PeerInfoResponse(**response.json())
 
     def get_peer_type(self, peer_name: str) -> PeerTypeResponse:
-        url = f"{self.config.api_url}/v1/peers/type/{peer_name}"
+        url = f"{self.config.peerdb_api_url}/v1/peers/type/{peer_name}"
 
         try:
             response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
@@ -749,7 +753,7 @@ class PeerDB:
             else:
                 raise PeerExistsException(f"Peer '{peer['name']}' exists")
 
-        url = f"{self.config.api_url}/v1/peers/create"
+        url = f"{self.config.peerdb_api_url}/v1/peers/create"
         data = {"peer": peer}
 
         try:
@@ -792,7 +796,7 @@ class PeerDB:
             else:
                 raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
-        url = f"{self.config.api_url}/v1/peers/drop"
+        url = f"{self.config.peerdb_api_url}/v1/peers/drop"
         data = {"peerName": peer_name}
 
         try:
@@ -811,7 +815,7 @@ class PeerDB:
                 self.drop_mirror(mirror.name, drop_destination_tables=drop_destination_tables)
 
     def list_peers(self) -> ListPeersResponse:
-        url = f"{self.config.api_url}/v1/peers/list"
+        url = f"{self.config.peerdb_api_url}/v1/peers/list"
 
         try:
             response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
@@ -828,7 +832,7 @@ class PeerDB:
             return False
 
     def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
-        url = f"{self.config.api_url}/v1/mirrors/status"
+        url = f"{self.config.peerdb_api_url}/v1/mirrors/status"
         data = {"flowJobName": flow_job_name}
 
         try:
@@ -918,7 +922,7 @@ class PeerDB:
         self.drop_destination_tables_of_mirror(mirror["flow_job_name"])
 
         # Step 3: Create the mirror
-        url = f"{self.config.api_url}/v1/flows/cdc/create"
+        url = f"{self.config.peerdb_api_url}/v1/flows/cdc/create"
         data = {"connection_configs": mirror}
 
         try:
@@ -960,7 +964,7 @@ class PeerDB:
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        url = f"{self.config.peerdb_api_url}/v1/mirrors/state_change"
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": FlowStatus.STATUS_TERMINATING,
@@ -999,7 +1003,7 @@ class PeerDB:
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        url = f"{self.config.peerdb_api_url}/v1/mirrors/state_change"
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": FlowStatus.STATUS_RESYNC,
@@ -1030,7 +1034,7 @@ class PeerDB:
                 message=f"Not pausing mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )
 
-        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        url = f"{self.config.peerdb_api_url}/v1/mirrors/state_change"
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": "STATUS_PAUSED",
@@ -1058,7 +1062,7 @@ class PeerDB:
                 message=f"Not resuming mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )
 
-        url = f"{self.config.api_url}/v1/mirrors/state_change"
+        url = f"{self.config.peerdb_api_url}/v1/mirrors/state_change"
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": "STATUS_RUNNING",
@@ -1110,7 +1114,7 @@ class PeerDB:
             destination_adapter.drop_table(**relation.model_dump(by_alias=True), if_exists=True)
 
     def list_mirrors(self) -> ListMirrorsResponse:
-        url = f"{self.config.api_url}/v1/mirrors/list"
+        url = f"{self.config.peerdb_api_url}/v1/mirrors/list"
 
         try:
             response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)

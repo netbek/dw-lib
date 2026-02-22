@@ -12,7 +12,6 @@ from sqlmodel import Field, SQLModel, Table
 from typing import Any
 
 import httpx
-import os
 import pytest
 import yaml
 
@@ -206,7 +205,7 @@ class PeerDBTest:
             with open(peerdb_config_path) as fp:
                 peerdb_config = yaml.safe_load(fp)
 
-            url = os.path.join(peerdb_config["api_url"], "v1/instance/info")
+            url = f"{peerdb_config['peerdb_ui_url']}/api/v1/instance/info"
 
             def is_responsive():
                 try:

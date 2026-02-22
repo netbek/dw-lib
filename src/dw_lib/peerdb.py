@@ -683,12 +683,12 @@ class PeerDB:
 
     def get_settings(self) -> GetDynamicSettingsResponse:
         url = f"{self.config.api_url}/v1/dynamic_settings"
-        response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
 
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to get dynamic settings (error {response.status_code}: {response.text})"
-            )
+        try:
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise Exception(f"Failed to get dynamic settings ({exc})")
 
         return GetDynamicSettingsResponse(**response.json())
 
@@ -699,12 +699,12 @@ class PeerDB:
 
         for key, value in settings.items():
             data = {"name": key, "value": value}
-            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
 
-            if response.status_code != 200:
-                raise Exception(
-                    f"Failed to set {key}={value} (error {response.status_code}: {response.text})"
-                )
+            try:
+                response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                raise Exception(f"Failed to set {key}={value} ({exc})")
 
     def has_peer(self, peer_name: str) -> bool:
         response = self.list_peers()

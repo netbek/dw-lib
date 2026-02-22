@@ -849,7 +849,7 @@ class PeerDB:
             raise MirrorNotFoundException()
         else:
             raise Exception(
-                f"Failed to get status of mirror '{flow_job_name}' (error {response.status_code}: {response.text})"
+                f"Failed to get status of mirror '{flow_job_name}' (HTTP {response.status_code})"
             )
 
     def wait_for_mirror_status(

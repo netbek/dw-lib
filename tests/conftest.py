@@ -206,7 +206,7 @@ class PeerDBTest:
             with open(peerdb_config_path) as fp:
                 peerdb_config = yaml.safe_load(fp)
 
-            url = os.path.join(peerdb_config["peerdb_ui_url"], "v1/instance/info")
+            url = f"{peerdb_config['peerdb_ui_url']}/api/v1/instance/info"
 
             def is_responsive():
                 try:

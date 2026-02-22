@@ -355,6 +355,9 @@ class TestPauseMirror(PeerDBPostgresTest):
             def json(self):
                 return {}
 
+            def raise_for_status(self):
+                return None
+
             text = ""
 
         monkeypatch.setattr("dw_lib.peerdb.httpx.post", lambda *a, **k: _Response())
@@ -395,6 +398,9 @@ class TestResumeMirror(PeerDBPostgresTest):
 
             def json(self):
                 return {}
+
+            def raise_for_status(self):
+                return None
 
             text = ""
 

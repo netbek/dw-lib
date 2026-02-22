@@ -12,7 +12,6 @@ from sqlmodel import Field, SQLModel, Table
 from typing import Any
 
 import httpx
-import os
 import pytest
 import yaml
 

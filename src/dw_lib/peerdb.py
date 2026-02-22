@@ -31,6 +31,8 @@ import rich
 import time
 import yaml
 
+TIMEOUT = httpx.Timeout(5.0)
+
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
 
@@ -489,7 +491,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/version"
 
         try:
-            response = httpx.get(url, headers=self._headers, timeout=5)
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
             return response.status_code == 200
         except httpx.RequestError:
             return False
@@ -682,7 +684,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/dynamic_settings"
 
         try:
-            response = httpx.get(url, headers=self._headers)
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(f"Request error while fetching dynamic settings: {err}")
 
@@ -702,7 +704,7 @@ class PeerDB:
             data = {"name": key, "value": value}
 
             try:
-                response = httpx.post(url, json=data, headers=self._headers)
+                response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
             except httpx.RequestError as err:
                 raise Exception(f"Request error while setting {key}={value}: {err}")
 
@@ -721,7 +723,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/peers/info/{peer_name}"
 
         try:
-            response = httpx.get(url, headers=self._headers)
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(f"Request error while fetching peer info of '{peer_name}': {err}")
 
@@ -736,7 +738,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/peers/type/{peer_name}"
 
         try:
-            response = httpx.get(url, headers=self._headers)
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(f"Request error while fetching peer type of '{peer_name}': {err}")
 
@@ -766,7 +768,7 @@ class PeerDB:
         data = {"peer": peer}
 
         try:
-            response = httpx.post(url, json=data, headers=self._headers)
+            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(f"Request error while creating peer '{peer['name']}': {err}")
 
@@ -835,7 +837,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/peers/list"
 
         try:
-            response = httpx.get(url, headers=self._headers)
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(f"Request error while listing peers: {err}")
 
@@ -855,7 +857,7 @@ class PeerDB:
         data = {"flowJobName": flow_job_name}
 
         try:
-            response = httpx.post(url, json=data, headers=self._headers)
+            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(
                 f"Request error while getting status of mirror '{flow_job_name}': {err}"
@@ -947,7 +949,7 @@ class PeerDB:
         data = {"connection_configs": mirror}
 
         try:
-            response = httpx.post(url, json=data, headers=self._headers)
+            response = httpx.post(url, json=data, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(
                 f"Request error while creating mirror '{mirror['flow_job_name']}': {err}"
@@ -1155,7 +1157,7 @@ class PeerDB:
         url = f"{self.config.api_url}/v1/mirrors/list"
 
         try:
-            response = httpx.get(url, headers=self._headers)
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
         except httpx.RequestError as err:
             raise Exception(f"Request error while listing mirrors: {err}")
 

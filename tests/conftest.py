@@ -197,23 +197,28 @@ class PeerDBTest:
         yield postgres_adapter
 
     @pytest.fixture(scope="function")
-    def peerdb(self, peerdb_config_path: str, docker_services) -> Generator[str, Any, None]:
-        with open(peerdb_config_path) as fp:
-            peerdb_config = yaml.safe_load(fp)
+    def peerdb(
+        self, request, peerdb_config_path: str, docker_services
+    ) -> Generator[str, Any, None]:
+        skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
-        url = os.path.join(peerdb_config["api_url"], "v1/instance/info")
+        if not skip_wait:
+            with open(peerdb_config_path) as fp:
+                peerdb_config = yaml.safe_load(fp)
 
-        def is_responsive():
-            try:
-                response = httpx.get(url, headers={"Content-Type": "application/json"})
-                if response.status_code == 200 and response.json() == {
-                    "status": "INSTANCE_STATUS_READY"
-                }:
-                    return True
-            except Exception:
-                return False
+            url = os.path.join(peerdb_config["api_url"], "v1/instance/info")
 
-        docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
+            def is_responsive():
+                try:
+                    response = httpx.get(url, headers={"Content-Type": "application/json"})
+                    if response.status_code == 200 and response.json() == {
+                        "status": "INSTANCE_STATUS_READY"
+                    }:
+                        return True
+                except Exception:
+                    return False
+
+            docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
 
         peerdb = PeerDB(peerdb_config_path)
 

@@ -88,6 +88,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:dbt_common.invocation", # https://github.com/dbt-labs/dbt-core/issues/9791
     "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038
 ]
+markers = ["docker_skip_wait_until_responsive"]
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }

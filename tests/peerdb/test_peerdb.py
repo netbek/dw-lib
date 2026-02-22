@@ -25,3 +25,13 @@ class TestIntegration(PeerDBTest):
         peerdb.update_settings({"PEERDB_NULLABLE": "true"})
         settings = peerdb.get_settings().settings
         assert pydash.find(settings, lambda x: x.name == "PEERDB_NULLABLE").value == "true"
+
+
+@pytest.mark.docker_skip_wait_until_responsive
+class TestServicesOffline(PeerDBTest):
+    @pytest.fixture(scope="function")
+    def peerdb_config_path(self) -> Path:
+        return Path(__file__).parent / "data" / "peerdb.offline.yaml"
+
+    def test_can_connect(self, peerdb: PeerDB):
+        assert peerdb.can_connect() is False

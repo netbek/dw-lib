@@ -489,9 +489,13 @@ class PeerDB:
 
     def can_connect(self) -> bool:
         url = f"{self.config.api_url}/v1/version"
-        response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
 
-        return response.status_code == 200
+        try:
+            response = httpx.get(url, headers=self._headers, timeout=TIMEOUT)
+            response.raise_for_status()
+            return True
+        except httpx.HTTPError:
+            return False
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:
         # TODO Add to result: missing publications, unused publications, replication slots

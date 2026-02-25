@@ -44,8 +44,8 @@ class TestAttributes:
             "models": {"example": {"example": {"+materialized": "view"}}},
         }
 
-    def test_project_docs_dir(self, project_dir: Path, dbt: Dbt):
-        assert dbt.project_docs_dir == project_dir / "docs"
+    def test_docs_dir(self, project_dir: Path, dbt: Dbt):
+        assert dbt.docs_dir == project_dir / "docs"
 
 
 class TestBundleDocs:

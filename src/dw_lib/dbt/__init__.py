@@ -209,6 +209,10 @@ class Dbt:
         return self._profiles_dir / "profiles.yml"
 
     @cached_property
+    def project_dir(self) -> Path:
+        return self._project_dir
+
+    @cached_property
     def project_config_file(self) -> Path:
         return self._project_dir / "dbt_project.yml"
 
@@ -219,8 +223,12 @@ class Dbt:
         return data
 
     @cached_property
-    def project_docs_dir(self) -> Path:
+    def docs_dir(self) -> Path:
         return self._project_dir / "docs"
+
+    @cached_property
+    def models_dir(self) -> Path:
+        return self._project_dir / "models"
 
     def list_(
         self,
@@ -483,7 +491,7 @@ class Dbt:
 
     def docs_serve(self):
         # If the docs page has not been generated before, then do so now
-        if not os.path.exists(os.path.join(self.project_docs_dir, "index.html")):
+        if not os.path.exists(os.path.join(self.docs_dir, "index.html")):
             self.docs_generate()
 
         watch_paths = [self.project_config_file]
@@ -505,7 +513,7 @@ class Dbt:
         server = Server()
         for path in watch_paths:
             server.watch(path, lambda: self.docs_generate())
-        server.serve(host="0.0.0.0", port=8080, root=self.project_docs_dir)
+        server.serve(host="0.0.0.0", port=8080, root=self.docs_dir)
 
     def _list_command(
         self,

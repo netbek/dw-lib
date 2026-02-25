@@ -12,7 +12,7 @@ def generate():
     """Generate project docs."""
     dbt = Dbt()
     dbt.docs_generate()
-    console.print(f"Generated docs for '{dbt._project_dir}'", style="green")
+    console.print(f"Generated docs for '{dbt.project_dir}'", style="green")
 
 
 @dbt_docs_app.command()

@@ -57,7 +57,7 @@ def generate_source_yaml(database: str) -> None:
             },
         },
     )
-    file = f"dbt/models/staging/{database}/sources.yml"
+    file = dbt_.models_dir / "staging" / database / "sources.yml"
     with open(file, "w") as fp:
         fp.write(data)
     console.print(f"Written to {file}", style="green")
@@ -73,7 +73,7 @@ def generate_model_yaml(database: str) -> None:
         table_pattern=f"stg_{database}_%",
     )
     for table_name, yaml in data.items():
-        file = f"dbt/models/staging/{database}/{table_name}.yml"
+        file = dbt_.models_dir / "staging" / database / f"{table_name}.yml"
         with open(file, "w") as fp:
             fp.write(yaml)
         console.print(f"Written to {file}", style="green")

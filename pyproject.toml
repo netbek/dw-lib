@@ -33,6 +33,7 @@ dbt = [
     "pydantic>=2.12.4",
     "pydash>=8.0.5",
     "pyyaml>=6.0.3",
+    "ruamel-yaml>=0.19.1",
 ]
 loader = [
     "boto3>=1.41.1",

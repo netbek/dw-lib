@@ -1,5 +1,7 @@
 from .dbt_docs_cli import dbt_docs_app
 from .root import app
+from .settings import get_settings
+from dw_lib.database import ClickHouseAdapter
 from dw_lib.dbt import Dbt
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -15,6 +17,8 @@ dbt_app = typer.Typer(name="dbt")
 dbt_app.add_typer(dbt_docs_app)
 app.add_typer(dbt_app)
 console = rich.console.Console()
+settings = get_settings()
+dbt_ = Dbt()
 
 resource = Resource.create({SERVICE_NAME: "cli"})
 tracer_provider = TracerProvider(resource=resource)
@@ -32,37 +36,62 @@ def version():
 
 
 @dbt_app.command()
-def resources():
+def list_resources():
     """List project resources."""
-    dbt = Dbt()
-    for resource in dbt.list_resources():
-        print(f"{resource.resource_type}: {resource.name}")
+    for resource in dbt_.list_resources():
+        console.print(f"{resource.resource_type}: {resource.name}")
 
 
 @dbt_app.command()
-def model_yaml(models: list[str]):
-    """Generate dbt model schema YAML."""
-    dbt = Dbt()
-    dbt.generate_model_yaml(models)
-    console.print(f"Generated schema YAML for: {', '.join(models)}", style="green")
+def generate_source_yaml(database: str) -> None:
+    """Generate dbt source YAML."""
+    adapter = ClickHouseAdapter(settings.database)
+    data = dbt_.generate_source_yaml(
+        adapter,
+        database=database,
+        table_pattern=f"raw_{database}_%",
+        source_props={
+            "loader": "peerdb",
+            "config": {
+                "loaded_at_field": "_peerdb_synced_at",
+            },
+        },
+    )
+    file = f"dbt/models/staging/{database}/sources.yml"
+    with open(file, "w") as fp:
+        fp.write(data)
+    console.print(f"Written to {file}", style="green")
+
+
+@dbt_app.command()
+def generate_model_yaml(database: str) -> None:
+    """Generate dbt model YAML."""
+    adapter = ClickHouseAdapter(settings.database)
+    data = dbt_.generate_model_yaml(
+        adapter,
+        database=database,
+        table_pattern=f"stg_{database}_%",
+    )
+    for table_name, yaml in data.items():
+        file = f"dbt/models/staging/{database}/{table_name}.yml"
+        with open(file, "w") as fp:
+            fp.write(yaml)
+        console.print(f"Written to {file}", style="green")
 
 
 @dbt_app.command()
 def run():
     """Compile SQL and execute against the target database."""
-    dbt = Dbt()
-    dbt.run()
+    dbt_.run()
 
 
 @dbt_app.command()
 def seed():
     """Load data from CSV files into the target database."""
-    dbt = Dbt()
-    dbt.seed()
+    dbt_.seed()
 
 
 @dbt_app.command()
 def run_operation(macro: str):
     """Run a named macro."""
-    dbt = Dbt()
-    dbt.run_operation(macro)
+    dbt_.run_operation(macro)

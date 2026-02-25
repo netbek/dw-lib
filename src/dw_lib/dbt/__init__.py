@@ -1,90 +1,31 @@
 from ..utils.filesystem import find_up, get_file_extension
 from ..utils.yaml_utils import safe_load_file
 from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed, DbtSource
+from clickhouse_connect.driver.client import Client
 from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
+from dw_lib.database import ClickHouseAdapter
 from functools import cached_property
+from io import StringIO
 from livereload import Server
 from opentelemetry import trace
 from pathlib import Path
 from pydantic import BaseModel
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from typing import Any
 from uuid import uuid4
 
 import json
 import os
-import pydash
-import subprocess
 import yaml
-
-RE_REF = r"^ref\(['\"](.*?)['\"]\)$"
-RE_SOURCE = r"^source\(['\"](.*?)['\"], ['\"](.*?)['\"]\)$"
 
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
     DbtResourceType.SEED: DbtSeed,
     DbtResourceType.SOURCE: DbtSource,
-}
-
-"""
-Map from dbt-codegen to ClickHouse data types that are case-sensitive.
-See https://clickhouse.com/docs/en/operations/system-tables/data_type_families
-Query:
-    select '"' || lower(name) || '": "' || name || '",'
-    from system.data_type_families
-    where not case_insensitive
-    order by name;
-"""
-CODEGEN_TO_CLICKHOUSE_DATA_TYPE = {
-    "aggregatefunction": "AggregateFunction",
-    "array": "Array",
-    "enum16": "Enum16",
-    "enum8": "Enum8",
-    "fixedstring": "FixedString",
-    "float32": "Float32",
-    "float64": "Float64",
-    "ipv4": "IPv4",
-    "ipv6": "IPv6",
-    "int128": "Int128",
-    "int16": "Int16",
-    "int256": "Int256",
-    "int32": "Int32",
-    "int64": "Int64",
-    "int8": "Int8",
-    "intervalday": "IntervalDay",
-    "intervalhour": "IntervalHour",
-    "intervalmicrosecond": "IntervalMicrosecond",
-    "intervalmillisecond": "IntervalMillisecond",
-    "intervalminute": "IntervalMinute",
-    "intervalmonth": "IntervalMonth",
-    "intervalnanosecond": "IntervalNanosecond",
-    "intervalquarter": "IntervalQuarter",
-    "intervalsecond": "IntervalSecond",
-    "intervalweek": "IntervalWeek",
-    "intervalyear": "IntervalYear",
-    "lowcardinality": "LowCardinality",
-    "map": "Map",
-    "multipolygon": "MultiPolygon",
-    "nested": "Nested",
-    "nothing": "Nothing",
-    "nullable": "Nullable",
-    "object": "Object",
-    "point": "Point",
-    "polygon": "Polygon",
-    "ring": "Ring",
-    "simpleaggregatefunction": "SimpleAggregateFunction",
-    "string": "String",
-    "tuple": "Tuple",
-    "uint128": "UInt128",
-    "uint16": "UInt16",
-    "uint256": "UInt256",
-    "uint32": "UInt32",
-    "uint64": "UInt64",
-    "uint8": "UInt8",
-    "uuid": "UUID",
-    "variant": "Variant",
 }
 
 
@@ -189,6 +130,67 @@ def to_ns(dt: datetime) -> int:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return int(dt.timestamp() * 1e9)
+
+
+def list_tables(client: Client, database: str, table_pattern: str = "%") -> list[str]:
+    query = """
+    SELECT name
+    FROM system.tables
+    WHERE database = {database:String}
+    AND name ILIKE {table_pattern:String}
+    ORDER BY name
+    """
+    result = client.query(query, parameters={"database": database, "table_pattern": table_pattern})
+    tables = [row[0] for row in result.result_rows]
+    return tables
+
+
+def describe_table(client: Client, database: str, table: str):
+    query = """
+    DESCRIBE TABLE {database:Identifier}.{table:Identifier}
+    """
+    result = client.query(query, parameters={"database": database, "table": table})
+    columns = [{"name": row[0], "data_type": row[1]} for row in result.result_rows]
+    return columns
+
+
+def dump_source_yaml(data: dict) -> str:
+    yaml = YAML()
+    yaml.default_flow_style = False
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    cm = CommentedMap(data)
+
+    # Add blank line between version and sources
+    if "sources" in cm:
+        cm.yaml_set_comment_before_after_key("sources", before="\n")
+
+    # Add blank line between tables
+    for source in cm.get("sources", []):
+        tables = source.get("tables")
+        if tables:
+            seq = CommentedSeq(tables)
+            for i in range(1, len(seq)):
+                seq.yaml_set_comment_before_after_key(i, before="\n")
+            source["tables"] = seq
+
+    stream = StringIO()
+    yaml.dump(cm, stream)
+    return stream.getvalue()
+
+
+def dump_model_yaml(data: dict) -> str:
+    yaml = YAML()
+    yaml.default_flow_style = False
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    cm = CommentedMap(data)
+
+    # Add blank line between version and models
+    if "models" in cm:
+        cm.yaml_set_comment_before_after_key("models", before="\n")
+
+    stream = StringIO()
+    yaml.dump(cm, stream)
+    return stream.getvalue()
 
 
 class Dbt:
@@ -407,67 +409,47 @@ class Dbt:
 
         return runner_result
 
-    def generate_model_yaml(self, models: list[str]):
-        """Generate the schema YAML for the given models using dbt-codegen."""
-        resources = self.list_resources(resource_types=[DbtResourceType.MODEL])
-        selected_resources = pydash.filter_(resources, lambda resource: resource.name in models)
+    def generate_source_yaml(
+        self,
+        adapter: ClickHouseAdapter,
+        database: str | None = None,
+        table_pattern: str = "%",
+        source_props=None,
+    ) -> str:
+        """Generate the schema YAML for the given source."""
+        if database is None:
+            database = adapter.settings.database
 
-        # Build the models
-        model_names = [resource.name for resource in selected_resources]
-        self.run(quiet=True, full_refresh=True, models=" ".join(model_names))
+        data = {"version": 2, "sources": []}
+        with adapter.create_client() as client:
+            table_names = list_tables(client, database, table_pattern)
+            tables = []
+            for table_name in table_names:
+                columns = describe_table(client, database, table_name)
+                tables.append({"name": table_name, "columns": columns})
+            data["sources"].append({"name": database, **(source_props or {}), "tables": tables})
 
-        # Generate the schema YAML
-        cmd = self._run_operation_command(
-            "generate_model_yaml", quiet=True, args={"model_names": model_names}
-        )
-        output = subprocess.check_output(cmd, cwd=self._project_dir).decode().strip()
-        new_models = yaml.safe_load(output)["models"]
+        return dump_source_yaml(data)
 
-        for resource in selected_resources:
-            model_name = resource.name
-            model_path = self._project_dir / resource.original_file_path
-            schema_path = model_path.parent / f"{model_name}.yml"
-            schema_dir = schema_path.parent
-            new_model = pydash.find(new_models, lambda model: model["name"] == model_name)
+    def generate_model_yaml(
+        self,
+        adapter: ClickHouseAdapter,
+        database: str | None = None,
+        table_pattern: str = "%",
+    ) -> dict[str, str]:
+        """Generate the schema YAML for the given models."""
+        if database is None:
+            database = adapter.settings.database
 
-            if not new_model:
-                continue
+        result = {}
+        with adapter.create_client() as client:
+            table_names = list_tables(client, database, table_pattern)
+            for table_name in table_names:
+                columns = describe_table(client, database, table_name)
+                data = {"version": 2, "models": [{"name": table_name, "columns": columns}]}
+                result[table_name] = dump_model_yaml(data)
 
-            os.makedirs(schema_dir, exist_ok=True)
-
-            # Load existing schema
-            if schema_path.exists():
-                schema = safe_load_file(schema_path)
-            else:
-                schema = {"version": 2, "models": []}
-
-            new_model = {
-                "name": new_model["name"],
-                "columns": [
-                    {
-                        "name": column["name"],
-                        "data_type": CODEGEN_TO_CLICKHOUSE_DATA_TYPE.get(
-                            column["data_type"], column["data_type"]
-                        ),
-                    }
-                    for column in new_model["columns"]
-                ],
-            }
-            old_model_indexes = [
-                i for i, model in enumerate(schema["models"]) if model["name"] == model_name
-            ]
-
-            if old_model_indexes:
-                schema["models"][old_model_indexes[0]] = new_model
-            else:
-                schema["models"].append(new_model)
-
-            schema["models"] = sorted(schema["models"], key=lambda model: model["name"])
-
-            # Write schema file
-            with open(schema_path, "w") as fp:
-                data = yaml.safe_dump(schema, sort_keys=False)
-                fp.write(data)
+        return result
 
     def docs_generate(
         self,

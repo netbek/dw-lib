@@ -209,6 +209,10 @@ class Dbt:
         return self._profiles_dir / "profiles.yml"
 
     @cached_property
+    def project_dir(self) -> Path:
+        return self._project_dir
+
+    @cached_property
     def project_config_file(self) -> Path:
         return self._project_dir / "dbt_project.yml"
 

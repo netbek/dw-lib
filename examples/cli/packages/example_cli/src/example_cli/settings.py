@@ -1,10 +1,10 @@
 from dw_lib.types import ClickHouseSettings
 from functools import lru_cache
-from pathlib import Path
 from pydantic import BaseModel, Field
 
 
-# NOTE The settings are hard-coded in this example. In a real app, these values would be loaded from the environment.
+# The settings are hard-coded in this example. In a real app, these values would be loaded from
+# the environment.
 class DbtTargetSettings(BaseModel):
     driver: str = "http"
     host: str = "localhost"
@@ -30,7 +30,6 @@ def to_clickhouse_settings(dbt_target_settings: DbtTargetSettings) -> ClickHouse
 
 
 class Settings(BaseModel):
-    root_dir: Path = Path(__file__).parent.parent.parent
     database: ClickHouseSettings = Field(
         default_factory=lambda: to_clickhouse_settings(DbtTargetSettings())
     )

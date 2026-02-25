@@ -47,6 +47,9 @@ class TestAttributes:
     def test_docs_dir(self, project_dir: Path, dbt: Dbt):
         assert dbt.docs_dir == project_dir / "docs"
 
+    def test_models_dir(self, project_dir: Path, dbt: Dbt):
+        assert dbt.models_dir == project_dir / "models"
+
 
 class TestBundleDocs:
     def test_bundle_docs(self, pytestconfig):

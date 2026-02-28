@@ -127,7 +127,7 @@ def create_peer(name: str, if_exists: Literal["fail", "keep", "replace"] = "keep
 def drop_peer(
     name: str, drop_destination_tables: bool | None = False, if_exists: bool | None = True
 ) -> None:
-    """Drop a peer and its mirrors, and remove replication slots from source database."""
+    """Drop a peer and its mirrors, and remove replication slot from source database."""
     response = peerdb.drop_peer(
         name,
         drop_mirrors=True,

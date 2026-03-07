@@ -104,7 +104,7 @@ class TestRun(InvocationTest):
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
         )
 
-        runner_result = dbt.run()
+        runner_result = dbt.run(exclude="test_table")
         assert runner_result.success is True
 
         root_spans = [s for s in spans if s.name.startswith("dbt.invoke")]

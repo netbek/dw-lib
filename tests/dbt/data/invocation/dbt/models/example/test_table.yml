@@ -2,6 +2,7 @@ version: 2
 
 models:
   - name: test_table
+    description: Test table
     columns:
       - name: uint64
         description: Short description
@@ -9,7 +10,7 @@ models:
       - name: int64
         data_type: Int64
       - name: uint32
-        description: |
+        description: |-
           Description that spans
           Multiple lines in a row,
 

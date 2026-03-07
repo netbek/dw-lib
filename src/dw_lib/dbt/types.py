@@ -103,23 +103,24 @@ class DbtModelColumnConfig(BaseModel):
 
 
 class DbtModelColumn(BaseModel):
-    name: str
-    description: str = ""
-    meta: dict[str, Any] = {}
-    data_type: str
-    constraints: list[Any] = []
-    quote: bool | None = None
     config: DbtModelColumnConfig
-    tags: list[str] = []
-    granularity: int | None = None
+    constraints: list[Any] = []
+    data_type: str
+    description: str = ""
     doc_blocks: list[Any] = []
+    granularity: int | None = None
+    meta: dict[str, Any] = {}
+    name: str
+    quote: bool | None = None
+    tags: list[str] = []
 
 
 class DbtModel(DbtBaseResource):
     alias: str
-    config: DbtModelConfig
     columns: dict[str, DbtModelColumn]
+    config: DbtModelConfig
     depends_on: DbtDependsOn
+    description: str = ""
 
 
 class DbtSeedConfig(BaseModel):
@@ -128,6 +129,7 @@ class DbtSeedConfig(BaseModel):
     contract: DbtContract
     database: str | None = None
     delimiter: str
+    description: str = ""
     docs: DbtDocs
     enabled: bool
     full_refresh: bool | None = False

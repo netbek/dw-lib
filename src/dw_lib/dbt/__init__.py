@@ -180,6 +180,15 @@ def dump_model_yaml(data: dict) -> str:
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
+
+    # Custom representer for multiline strings
+    def str_representer(dumper, value):
+        if "\n" in value:
+            return dumper.represent_scalar("tag:yaml.org,2002:str", value.rstrip("\n"), style="|")
+        return dumper.represent_scalar("tag:yaml.org,2002:str", value)
+
+    yaml.representer.add_representer(str, str_representer)
+
     cm = CommentedMap(data)
 
     # Add blank line between version and models
@@ -428,7 +437,7 @@ class Dbt:
         adapter: ClickHouseAdapter,
         database: str | None = None,
         table_pattern: str = "%",
-        replace: bool = True,
+        merge: bool = False,
     ) -> dict[str, str]:
         """Generate the schema YAML for the given models."""
         if database is None:
@@ -439,8 +448,49 @@ class Dbt:
             table_names = list_tables(client, database, table_pattern)
             for table_name in table_names:
                 columns = describe_table(client, database, table_name)
-                data = {"version": 2, "models": [{"name": table_name, "columns": columns}]}
-                result[table_name] = dump_model_yaml(data)
+                result[table_name] = {
+                    "version": 2,
+                    "models": [{"name": table_name, "columns": columns}],
+                }
+
+        if result:
+            if merge:
+                resources = self.list_resources(resource_types=[DbtResourceType.MODEL])
+                for table_name, data in result.items():
+                    resource: DbtModel = pydash.find(
+                        resources, lambda resource: resource.name == table_name
+                    )
+
+                    if not resource:
+                        continue
+
+                    model = data["models"][0]
+
+                    if len(resource.description.strip()):
+                        model["description"] = resource.description.strip()
+
+                    for i, column in enumerate(model["columns"]):
+                        resource_column = pydash.find(
+                            resource.columns,
+                            lambda resource_column: resource_column.name == column["name"],
+                        )
+
+                        if not resource_column:
+                            continue
+
+                        if len(resource_column.description.strip()):
+                            column["description"] = resource_column.description.strip()
+
+                        if resource_column.meta:
+                            column["meta"] = resource_column.meta
+
+                        model["columns"][i] = pydash.pick(
+                            column, ["name", "description", "meta", "data_type"]
+                        )
+
+                    data["models"][0] = pydash.pick(model, ["name", "description", "columns"])
+
+            result = {table_name: dump_model_yaml(data) for table_name, data in result.items()}
 
         return result
 

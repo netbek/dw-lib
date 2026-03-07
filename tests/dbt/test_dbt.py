@@ -71,7 +71,12 @@ class TestListResources(InvocationTest):
     def test_select_all(self, dbt: Dbt):
         resources = dbt.list_resources()
         resource_names = [resource.name for resource in resources]
-        assert resource_names == ["my_first_dbt_model", "my_first_dbt_seed", "my_second_dbt_model"]
+        assert resource_names == [
+            "my_first_dbt_model",
+            "my_first_dbt_seed",
+            "my_second_dbt_model",
+            "test_table",
+        ]
 
     def test_select_one(self, dbt: Dbt):
         resources = dbt.list_resources(select="my_second_dbt_model")

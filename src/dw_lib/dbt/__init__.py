@@ -1,6 +1,5 @@
-from ..utils.filesystem import find_up, get_file_extension
-from ..utils.yaml_utils import safe_load_file
-from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed, DbtSource
+from ..utils.filesystem import find_up
+from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
 from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
@@ -20,12 +19,12 @@ from uuid import uuid4
 
 import json
 import os
+import pydash
 import yaml
 
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
     DbtResourceType.SEED: DbtSeed,
-    DbtResourceType.SOURCE: DbtSource,
 }
 
 
@@ -230,39 +229,7 @@ class Dbt:
     def models_dir(self) -> Path:
         return self._project_dir / "models"
 
-    def list_(
-        self,
-        debug: bool | None = False,
-        exclude: str | None = None,
-        fail_fast: bool | None = True,
-        models: str | None = None,
-        output: str | None = None,
-        quiet: bool | None = False,
-        resource_types: list[DbtResourceType] | None = None,
-        select: str | None = None,
-        selector: str | None = None,
-        target: str | None = None,
-        use_colors: bool | None = False,
-        vars: dict[str, Any] | None = None,
-    ) -> dbtRunnerResult:
-        cmd = self._list_command(
-            debug=debug,
-            exclude=exclude,
-            fail_fast=fail_fast,
-            models=models,
-            output=output,
-            quiet=quiet,
-            resource_types=resource_types,
-            select=select,
-            selector=selector,
-            target=target,
-            use_colors=use_colors,
-            vars=vars,
-        )
-
-        return dbtRunner().invoke(cmd[1:])
-
-    def get_resource(self, name: str) -> DbtModel | DbtSeed | DbtSource | None:
+    def get_resource(self, name: str) -> DbtModel | DbtSeed | None:
         resources = self.list_resources(select=name)
 
         if not resources:
@@ -274,8 +241,8 @@ class Dbt:
         self,
         resource_types: list[DbtResourceType] | None = None,
         select: str | None = None,
-    ) -> list[DbtModel | DbtSeed | DbtSource]:
-        valid_resource_types = RESOURCE_TYPE_TO_CLASS.keys()
+    ) -> list[DbtModel | DbtSeed]:
+        valid_resource_types = sorted(RESOURCE_TYPE_TO_CLASS.keys())
 
         if resource_types is None:
             resource_types = valid_resource_types
@@ -286,41 +253,60 @@ class Dbt:
                     f"'resource_types' must be any of: {', '.join(valid_resource_types)}"
                 )
 
-        result = self.list_(
-            output="json",
-            quiet=True,
-            resource_types=resource_types,
+        manifest_file = self.project_dir / "target" / "manifest.json"
+
+        if not os.path.exists(manifest_file):
+            self.compile(quiet=True)
+
+            if not os.path.exists(manifest_file):
+                raise Exception(f"'{manifest_file}' not found. Run 'dbt compile' first.")
+
+        with open(manifest_file) as f:
+            data = json.load(f)
+
+        resources: dict[str, DbtModel | DbtSeed] = {}
+        for resource_dict in data.get("nodes", {}).values():
+            resource_type = resource_dict.get("resource_type")
+
+            if (resource_types and resource_type not in resource_types) or (
+                resource_type not in RESOURCE_TYPE_TO_CLASS
+            ):
+                continue
+
+            class_: DbtModel | DbtSeed = RESOURCE_TYPE_TO_CLASS[resource_type]
+            resource = class_(**resource_dict)
+            resources[resource.name] = resource
+
+        selected_resources: list[DbtModel | DbtSeed] = []
+        if select:
+            resource = resources.get(select)
+            if resource:
+                selected_resources = [resource]
+        else:
+            selected_resources = list(resources.values())
+
+        return pydash.sort_by(selected_resources, lambda resource: resource.name)
+
+    def compile(
+        self,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        select: str | None = None,
+        target: str | None = None,
+        use_colors: bool | None = False,
+    ) -> dbtRunnerResult:
+        cmd = self._compile_command(
+            debug=debug,
+            fail_fast=fail_fast,
+            quiet=quiet,
             select=select,
+            target=target,
+            use_colors=use_colors,
         )
-        resource_dicts = [json.loads(string) for string in result.result]
+        runner_result = dbtRunner().invoke(cmd[1:])
 
-        cache = {}
-        for resource in resource_dicts:
-            if resource["resource_type"] == DbtResourceType.SOURCE:
-                original_config = None
-                path = resolve_resource_path(self._project_dir, resource)
-
-                if path and get_file_extension(path) in [".yml", ".yaml"]:
-                    if path not in cache:
-                        cache[path] = safe_load_file(path)
-
-                    for source in cache[path]["sources"]:
-                        if source["name"] == resource["source_name"]:
-                            for table in source["tables"]:
-                                if table["name"] == resource["name"]:
-                                    original_config = table
-                                    break
-                        if original_config:
-                            break
-
-                resource["original_config"] = original_config
-
-        resources = []
-        for resource in resource_dicts:
-            class_ = RESOURCE_TYPE_TO_CLASS[resource["resource_type"]]
-            resources.append(class_(**resource))
-
-        return resources
+        return runner_result
 
     def run(
         self,
@@ -515,15 +501,13 @@ class Dbt:
             server.watch(path, lambda: self.docs_generate())
         server.serve(host="0.0.0.0", port=8080, root=self.docs_dir)
 
-    def _list_command(
+    def _compile_command(
         self,
         debug: bool | None = False,
         exclude: str | None = None,
         fail_fast: bool | None = True,
         models: str | None = None,
-        output: str | None = None,
         quiet: bool | None = False,
-        resource_types: list[DbtResourceType] | None = None,
         select: str | None = None,
         selector: str | None = None,
         target: str | None = None,
@@ -535,7 +519,7 @@ class Dbt:
 
         cmd = [
             "dbt",
-            "list",
+            "compile",
             "--profiles-dir",
             str(self._profiles_dir),
             "--project-dir",
@@ -558,17 +542,10 @@ class Dbt:
         if models:
             cmd.extend(["--models", models])
 
-        if output:
-            cmd.extend(["--output", output])
-
         if quiet:
             cmd.extend(["--quiet"])
         else:
             cmd.extend(["--no-quiet"])
-
-        if resource_types:
-            for resource_type in resource_types:
-                cmd.extend(["--resource-type", resource_type])
 
         if select:
             cmd.extend(["--select", select])
@@ -585,8 +562,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            vars_yaml = yaml.safe_dump(vars, default_flow_style=False)
-            cmd.extend(["--vars", vars_yaml])
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
 
         return cmd
 

@@ -61,9 +61,7 @@ class TestListResources(InvocationTest):
         assert resource_names == ["my_first_dbt_seed"]
 
     def test_resource_types_non_existant(self, dbt: Dbt):
-        with pytest.raises(
-            ValueError, match="'resource_types' must be any of: model, seed, source"
-        ):
+        with pytest.raises(ValueError, match="'resource_types' must be any of: model, seed"):
             dbt.list_resources(resource_types=["non_existant"])
 
     def test_select_all(self, dbt: Dbt):

@@ -1,5 +1,5 @@
 from ..utils.filesystem import find_up
-from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed, DbtSource
+from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
 from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
@@ -25,7 +25,6 @@ import yaml
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
     DbtResourceType.SEED: DbtSeed,
-    DbtResourceType.SOURCE: DbtSource,
 }
 
 
@@ -230,7 +229,7 @@ class Dbt:
     def models_dir(self) -> Path:
         return self._project_dir / "models"
 
-    def get_resource(self, name: str) -> DbtModel | DbtSeed | DbtSource | None:
+    def get_resource(self, name: str) -> DbtModel | DbtSeed | None:
         resources = self.list_resources(select=name)
 
         if not resources:
@@ -242,7 +241,7 @@ class Dbt:
         self,
         resource_types: list[DbtResourceType] | None = None,
         select: str | None = None,
-    ) -> list[DbtModel | DbtSeed | DbtSource]:
+    ) -> list[DbtModel | DbtSeed]:
         valid_resource_types = RESOURCE_TYPE_TO_CLASS.keys()
 
         if resource_types is None:
@@ -265,7 +264,7 @@ class Dbt:
         with open(manifest_file) as f:
             data = json.load(f)
 
-        resources: dict[str, DbtModel | DbtSeed | DbtSource] = {}
+        resources: dict[str, DbtModel | DbtSeed] = {}
         for resource_dict in data.get("nodes", {}).values():
             resource_type = resource_dict.get("resource_type")
 
@@ -274,11 +273,11 @@ class Dbt:
             ):
                 continue
 
-            class_: DbtModel | DbtSeed | DbtSource = RESOURCE_TYPE_TO_CLASS[resource_type]
+            class_: DbtModel | DbtSeed = RESOURCE_TYPE_TO_CLASS[resource_type]
             resource = class_(**resource_dict)
             resources[resource.name] = resource
 
-        selected_resources: list[DbtModel | DbtSeed | DbtSource] = []
+        selected_resources: list[DbtModel | DbtSeed] = []
         if select:
             resource = resources.get(select)
             if resource:

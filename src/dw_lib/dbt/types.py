@@ -80,7 +80,7 @@ class DbtModelConfig(BaseModel):
     group: str | None = None
     incremental_strategy: str | None = None
     materialized: str
-    meta: dict[str, str | int | float | bool | None]
+    meta: dict[str, str | int | float | bool | list[dict] | None]
     on_configuration_change: str
     on_schema_change: str
     order_by: str | None = None

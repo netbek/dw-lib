@@ -87,10 +87,10 @@ class TestListResources(InvocationTest):
 class TestGenerateModelYAML(InvocationTest, CodeGenerationTest):
     def test_ok(
         self,
+        dbt: Dbt,
         clickhouse_adapter: ClickHouseAdapter,
         relation: ClickHouseRelation,
         table: Table,
-        dbt: Dbt,
     ):
         actual = dbt.generate_model_yaml(clickhouse_adapter)
         expected_yaml = """

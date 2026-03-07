@@ -27,7 +27,7 @@ def get_class_import_string(class_) -> str | None:
         return f"from {class_.__module__} import {class_.__name__}"
 
 
-def create_class_filename(class_name: str) -> str:
+def make_class_filename(class_name: str) -> str:
     filename = pydash.snake_case(class_name)
 
     # Fix keywords
@@ -37,18 +37,18 @@ def create_class_filename(class_name: str) -> str:
     return filename
 
 
-def create_factory_name(model_name: str) -> str:
+def make_factory_name(model_name: str) -> str:
     return f"{model_name}Factory"
 
 
-def create_model_code(
+def generate_sqlmodel_code(
     db_settings: ClickHouseSettings,
     database: str,
     dbt_resource: DbtSource,
     extend_primary_key: bool | None = False,
     random_seed: int = 0,
 ) -> dict[str, str]:
-    """Create the code of a SQLModel class from a table statement."""
+    """Generate the code of a SQLModel class from a table statement."""
     # 1. Create model
     clickhouse_adapter = ClickHouseAdapter(db_settings)
     table_name = dbt_resource.name
@@ -145,8 +145,8 @@ def create_model_code(
     model_code = "\n".join(lines) + "\n"
 
     # 2. Create factory
-    model_filename = create_class_filename(model_name)
-    factory_name = create_factory_name(model_name)
+    model_filename = make_class_filename(model_name)
+    factory_name = make_factory_name(model_name)
 
     imports = [
         f"from .{model_filename} import {model_name}",
@@ -182,7 +182,7 @@ def create_model_code(
     }
 
 
-def create_model_file(
+def generate_sqlmodel_file(
     db_settings: ClickHouseSettings,
     database: str,
     dbt_resource: DbtSource,
@@ -192,17 +192,17 @@ def create_model_file(
     replace_factory: bool | None = False,
 ) -> None:
     model_name = dbt_resource.original_config.meta.python_class
-    model_filename = create_class_filename(model_name)
+    model_filename = make_class_filename(model_name)
     model_path = os.path.join(directory, f"{model_filename}.py")
     create_model = not os.path.exists(model_path) or replace_model
 
-    factory_name = create_factory_name(model_name)
-    factory_filename = create_class_filename(factory_name)
+    factory_name = make_factory_name(model_name)
+    factory_filename = make_class_filename(factory_name)
     factory_path = os.path.join(directory, f"{factory_filename}.py")
     create_factory = not os.path.exists(factory_path) or replace_factory
 
     if create_model or create_factory:
-        result = create_model_code(
+        result = generate_sqlmodel_code(
             db_settings, database, dbt_resource, extend_primary_key=extend_primary_key
         )
 
@@ -215,7 +215,7 @@ def create_model_file(
                 fp.write(result["factory_code"])
 
 
-def create_init_file(dbt_resources: list[DbtSource], directory: str) -> None:
+def generate_init_file(dbt_resources: list[DbtSource], directory: str) -> None:
     file_path = os.path.join(directory, "__init__.py")
     all = []
     imports = []
@@ -223,12 +223,12 @@ def create_init_file(dbt_resources: list[DbtSource], directory: str) -> None:
     for dbt_resource in dbt_resources:
         class_name = dbt_resource.original_config.meta.python_class
 
-        model_filename = create_class_filename(class_name)
+        model_filename = make_class_filename(class_name)
         all.append(class_name)
         imports.append(f"from .{model_filename} import {class_name}")
 
-        factory_name = create_factory_name(class_name)
-        factory_filename = create_class_filename(factory_name)
+        factory_name = make_factory_name(class_name)
+        factory_filename = make_class_filename(factory_name)
         all.append(factory_name)
         imports.append(f"from .{factory_filename} import {factory_name}")
 

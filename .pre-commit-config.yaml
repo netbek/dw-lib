@@ -14,8 +14,14 @@ repos:
         language: system
         files: \.nix$
 
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.21.0
+    hooks:
+      - id: yamlfmt
+        files: \.ya?ml$
+
   - repo: https://github.com/PyCQA/autoflake
-    rev: v2.3.1
+    rev: v2.3.3
     hooks:
       - id: autoflake
         args: [--remove-all-unused-imports, --in-place]
@@ -28,13 +34,13 @@ repos:
         args: [--py313-plus]
 
   - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
+    rev: 8.0.1
     hooks:
       - id: isort
         args: [--settings-path, pyproject.toml]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.0
+    rev: v0.15.5
     hooks:
       - id: ruff-check
         args: [--config, pyproject.toml]

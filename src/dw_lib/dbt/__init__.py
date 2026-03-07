@@ -242,7 +242,7 @@ class Dbt:
         resource_types: list[DbtResourceType] | None = None,
         select: str | None = None,
     ) -> list[DbtModel | DbtSeed]:
-        valid_resource_types = RESOURCE_TYPE_TO_CLASS.keys()
+        valid_resource_types = sorted(RESOURCE_TYPE_TO_CLASS.keys())
 
         if resource_types is None:
             resource_types = valid_resource_types

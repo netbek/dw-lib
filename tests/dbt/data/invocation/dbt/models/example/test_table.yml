@@ -4,10 +4,16 @@ models:
   - name: test_table
     columns:
       - name: uint64
+        description: Short description
         data_type: UInt64
       - name: int64
         data_type: Int64
       - name: uint32
+        description: |
+          Description that spans
+          Multiple lines in a row,
+
+          Brief thoughts take their shape.
         data_type: UInt32
       - name: int32
         data_type: Int32

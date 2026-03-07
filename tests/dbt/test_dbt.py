@@ -115,7 +115,7 @@ class TestBundleDocs:
         assert dest_file.exists() is True
 
 
-class TestCreateModelCode(DatabaseTest):
+class CodeGenerationTest(DatabaseTest):
     @pytest.fixture(scope="function")
     def relation(
         self, clickhouse_adapter: ClickHouseAdapter
@@ -163,13 +163,12 @@ engine = MergeTree
 primary key `uint64`
 order by `uint64`
 """
-
         clickhouse_adapter.create_table(relation.table, create_table_statement)
-
         yield clickhouse_adapter.get_table(relation.table)
-
         clickhouse_adapter.drop_table(relation.table)
 
+
+class TestCreateModelCode(CodeGenerationTest):
     def test_ok(
         self,
         clickhouse_adapter: ClickHouseAdapter,
@@ -326,7 +325,6 @@ class {python_class}Factory(PeerDBFactoryMixin, SQLModelFactory[{python_class}])
     def uint64(cls) -> int:
         return int(pydash.unique_id())
 """
-
         result = create_model_code(clickhouse_adapter.settings, table.schema, dbt_source)
 
         assert result["model_code"].strip() == expected_model_code.strip()

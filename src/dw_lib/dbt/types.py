@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 
 class DbtCommand(StrEnum):
+    COMPILE = "compile"
     RUN = "run"
     RUN_OPERATION = "run-operation"
     SEED = "seed"

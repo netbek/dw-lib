@@ -1,10 +1,11 @@
 from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
+from dw_lib.dbt.types import DbtResourceType
 from pathlib import Path
 
 import pytest
 
 
-class TestAttributes:
+class InvocationTest:
     @pytest.fixture
     def profiles_dir(self) -> Path:
         return Path(__file__).parent / "data" / "invocation" / ".dbt"
@@ -17,6 +18,8 @@ class TestAttributes:
     def dbt(self, profiles_dir, project_dir) -> Dbt:
         return Dbt(profiles_dir=profiles_dir, project_dir=project_dir)
 
+
+class TestAttributes(InvocationTest):
     def test_profiles_file(self, profiles_dir: Path, dbt: Dbt):
         assert dbt.profiles_file == profiles_dir / "profiles.yml"
 
@@ -49,6 +52,34 @@ class TestAttributes:
 
     def test_models_dir(self, project_dir: Path, dbt: Dbt):
         assert dbt.models_dir == project_dir / "models"
+
+
+class TestListResources(InvocationTest):
+    def test_resource_types_one(self, dbt: Dbt):
+        resources = dbt.list_resources(resource_types=[DbtResourceType.SEED])
+        resource_names = [resource.name for resource in resources]
+        assert resource_names == ["my_first_dbt_seed"]
+
+    def test_resource_types_non_existant(self, dbt: Dbt):
+        with pytest.raises(
+            ValueError, match="'resource_types' must be any of: model, seed, source"
+        ):
+            dbt.list_resources(resource_types=["non_existant"])
+
+    def test_select_all(self, dbt: Dbt):
+        resources = dbt.list_resources()
+        resource_names = [resource.name for resource in resources]
+        assert resource_names == ["my_first_dbt_model", "my_first_dbt_seed", "my_second_dbt_model"]
+
+    def test_select_one(self, dbt: Dbt):
+        resources = dbt.list_resources(select="my_second_dbt_model")
+        resource_names = [resource.name for resource in resources]
+        assert resource_names == ["my_second_dbt_model"]
+
+    def test_select_non_existant(self, dbt: Dbt):
+        resources = dbt.list_resources(select="non_existant")
+        resource_names = [resource.name for resource in resources]
+        assert resource_names == []
 
 
 class TestBundleDocs:

@@ -20,6 +20,7 @@ from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
+from ruamel.yaml import YAML
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
 from typing import Literal
@@ -29,7 +30,6 @@ import os
 import pydash
 import rich
 import time
-import yaml
 
 TIMEOUT = httpx.Timeout(5.0)
 
@@ -399,7 +399,8 @@ class PeerDB:
             return node
 
         config = render_template(self._config_file)
-        config = yaml.safe_load(config)
+        yaml = YAML(typ="safe")
+        config = yaml.load(config)
 
         if not config:
             raise EmptyConfigException()

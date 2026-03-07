@@ -7,13 +7,13 @@ from dw_lib.peerdb import PeerDB
 from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
+from ruamel.yaml import YAML
 from sqlalchemy import Column
 from sqlmodel import Field, SQLModel, Table
 from typing import Any
 
 import httpx
 import pytest
-import yaml
 
 
 class TableWithoutSchema(SQLModel, table=True):
@@ -197,13 +197,13 @@ class PeerDBTest:
 
     @pytest.fixture(scope="function")
     def peerdb(
-        self, request, peerdb_config_path: str, docker_services
+        self, request, peerdb_config_path: Path, docker_services
     ) -> Generator[str, Any, None]:
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
-            with open(peerdb_config_path) as fp:
-                peerdb_config = yaml.safe_load(fp)
+            yaml = YAML(typ="safe")
+            peerdb_config = yaml.load(peerdb_config_path)
 
             url = f"{peerdb_config['peerdb_ui_url']}/api/v1/instance/info"
 

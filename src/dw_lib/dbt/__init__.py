@@ -20,7 +20,6 @@ from uuid import uuid4
 import json
 import os
 import pydash
-import yaml
 
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
@@ -217,9 +216,8 @@ class Dbt:
 
     @cached_property
     def project_config(self):
-        with open(self.project_config_file) as fp:
-            data = yaml.safe_load(fp)
-        return data
+        yaml = YAML(typ="safe")
+        return yaml.load(self.project_config_file)
 
     @cached_property
     def docs_dir(self) -> Path:

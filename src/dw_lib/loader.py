@@ -4,12 +4,12 @@ from .database.adapters import PostgresAdapter
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
 from .types import PostgresRelation, PostgresSettings, S3Settings
 from .utils.filesystem import find_up
-from .utils.yaml_utils import safe_load_file
 from chdb import session
 from enum import StrEnum
 from jinja2 import Template
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
+from ruamel.yaml import YAML
 from urllib.parse import urlparse
 
 import json
@@ -168,7 +168,7 @@ def detect_stream_class(source: str) -> type["BaseStream"]:
 
 class Loader:
     def __init__(self, config_file: Path | str) -> None:
-        self._config_file = config_file
+        self._config_file = Path(config_file)
         self._config = self._load_config()
         self._console = rich.console.Console()
 
@@ -177,7 +177,8 @@ class Loader:
         return self._config
 
     def _load_config(self) -> Config:
-        data = safe_load_file(self._config_file)
+        yaml = YAML(typ="safe")
+        data = yaml.load(self._config_file)
         return Config(**data)
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:

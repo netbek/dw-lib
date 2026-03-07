@@ -1,5 +1,6 @@
 from enum import StrEnum
 from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
 
 
 class DbtCommand(StrEnum):
@@ -96,9 +97,28 @@ class DbtModelConfig(BaseModel):
     unique_key: str | None = None
 
 
+class DbtModelColumnConfig(BaseModel):
+    meta: dict[str, Any] = {}
+    tags: list[str] = []
+
+
+class DbtModelColumn(BaseModel):
+    name: str
+    description: str = ""
+    meta: dict[str, Any] = {}
+    data_type: str
+    constraints: list[Any] = []
+    quote: bool | None = None
+    config: DbtModelColumnConfig
+    tags: list[str] = []
+    granularity: int | None = None
+    doc_blocks: list[Any] = []
+
+
 class DbtModel(DbtBaseResource):
     alias: str
     config: DbtModelConfig
+    columns: dict[str, DbtModelColumn]
     depends_on: DbtDependsOn
 
 

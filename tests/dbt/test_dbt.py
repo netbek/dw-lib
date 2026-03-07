@@ -1,12 +1,15 @@
 from .conftest import CodeGenerationTest
+from collections.abc import Generator
 from dw_lib.database.adapters import ClickHouseAdapter
 from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
 from dw_lib.dbt.types import DbtResourceType
 from dw_lib.types import ClickHouseRelation
 from pathlib import Path
 from sqlmodel import Table
+from typing import Any
 
 import pytest
+import shutil
 
 
 class InvocationTest:
@@ -19,8 +22,16 @@ class InvocationTest:
         return Path(__file__).parent / "data" / "invocation" / "dbt"
 
     @pytest.fixture
-    def dbt(self, profiles_dir, project_dir) -> Dbt:
-        return Dbt(profiles_dir=profiles_dir, project_dir=project_dir)
+    def dbt(self, profiles_dir: Path, project_dir: Path) -> Generator[Dbt, Any, None]:
+        target_dir = project_dir / "target"
+
+        if target_dir.exists() and target_dir.is_dir():
+            shutil.rmtree(target_dir)
+
+        yield Dbt(profiles_dir=profiles_dir, project_dir=project_dir)
+
+        if target_dir.exists() and target_dir.is_dir():
+            shutil.rmtree(target_dir)
 
 
 class TestAttributes(InvocationTest):

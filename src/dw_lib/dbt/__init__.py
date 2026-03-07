@@ -469,7 +469,9 @@ class Dbt:
                     if len(resource.description.strip()):
                         model["description"] = resource.description.strip()
 
-                    for i, column in enumerate(model["columns"]):
+                    columns = []
+
+                    for column in model["columns"]:
                         resource_column = pydash.find(
                             resource.columns,
                             lambda resource_column: resource_column.name == column["name"],
@@ -484,15 +486,14 @@ class Dbt:
                         if resource_column.meta:
                             column["meta"] = resource_column.meta
 
-                        model["columns"][i] = pydash.pick(
-                            column, ["name", "description", "meta", "data_type"]
+                        columns.append(
+                            pydash.pick(column, ["name", "description", "meta", "data_type"])
                         )
 
+                    model["columns"] = columns
                     data["models"][0] = pydash.pick(model, ["name", "description", "columns"])
 
-            result = {table_name: dump_model_yaml(data) for table_name, data in result.items()}
-
-        return result
+        return {table_name: dump_model_yaml(data) for table_name, data in result.items()}
 
     def docs_generate(
         self,

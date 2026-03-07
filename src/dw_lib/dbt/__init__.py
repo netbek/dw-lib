@@ -428,6 +428,7 @@ class Dbt:
         adapter: ClickHouseAdapter,
         database: str | None = None,
         table_pattern: str = "%",
+        replace: bool = True,
     ) -> dict[str, str]:
         """Generate the schema YAML for the given models."""
         if database is None:

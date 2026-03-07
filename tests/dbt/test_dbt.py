@@ -85,14 +85,14 @@ class TestListResources(InvocationTest):
 
 
 class TestGenerateModelYAML(InvocationTest, CodeGenerationTest):
-    def test_ok(
+    def test_replace(
         self,
         dbt: Dbt,
         clickhouse_adapter: ClickHouseAdapter,
         relation: ClickHouseRelation,
         table: Table,
     ):
-        actual = dbt.generate_model_yaml(clickhouse_adapter)
+        actual = dbt.generate_model_yaml(clickhouse_adapter, replace=True)
         expected_yaml = """
 version: 2
 

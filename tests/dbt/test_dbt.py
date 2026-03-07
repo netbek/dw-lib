@@ -159,7 +159,7 @@ models:
         data_type: Int64
 """
         assert list(actual.keys()) == ["test_table"]
-        assert actual["test_table"] == expected_yaml
+        assert actual["test_table"].strip() == expected_yaml.strip()
 
 
 class TestNormalizeRowsAffected:

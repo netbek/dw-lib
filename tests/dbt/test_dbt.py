@@ -1,6 +1,10 @@
+from .conftest import CodeGenerationTest
+from dw_lib.database.adapters import ClickHouseAdapter
 from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
 from dw_lib.dbt.types import DbtResourceType
+from dw_lib.types import ClickHouseRelation
 from pathlib import Path
+from sqlmodel import Table
 
 import pytest
 
@@ -78,6 +82,84 @@ class TestListResources(InvocationTest):
         resources = dbt.list_resources(select="non_existant")
         resource_names = [resource.name for resource in resources]
         assert resource_names == []
+
+
+class TestGenerateModelYAML(InvocationTest, CodeGenerationTest):
+    def test_ok(
+        self,
+        clickhouse_adapter: ClickHouseAdapter,
+        relation: ClickHouseRelation,
+        table: Table,
+        dbt: Dbt,
+    ):
+        actual = dbt.generate_model_yaml(clickhouse_adapter)
+        expected_yaml = """
+version: 2
+
+models:
+  - name: test_table
+    columns:
+      - name: uint64
+        data_type: UInt64
+      - name: int64
+        data_type: Int64
+      - name: uint32
+        data_type: UInt32
+      - name: int32
+        data_type: Int32
+      - name: uint16
+        data_type: UInt16
+      - name: int16
+        data_type: Int16
+      - name: uint8
+        data_type: UInt8
+      - name: int8
+        data_type: Int8
+      - name: decimal256
+        data_type: Decimal(76, 1)
+      - name: decimal128
+        data_type: Decimal(38, 1)
+      - name: decimal64
+        data_type: Decimal(18, 1)
+      - name: decimal32
+        data_type: Decimal(9, 1)
+      - name: decimal
+        data_type: Decimal(10, 0)
+      - name: float64
+        data_type: Float64
+      - name: float32
+        data_type: Float32
+      - name: bool
+        data_type: Bool
+      - name: nullable_bool
+        data_type: Nullable(Bool)
+      - name: date32
+        data_type: Date32
+      - name: datetime
+        data_type: DateTime
+      - name: nullable(datetime)
+        data_type: Nullable(DateTime)
+      - name: datetime64
+        data_type: DateTime64(9)
+      - name: nullable_datetime64
+        data_type: Nullable(DateTime64(9))
+      - name: string
+        data_type: String
+      - name: nullable_string
+        data_type: Nullable(String)
+      - name: uuid
+        data_type: UUID
+      - name: nullable_uuid
+        data_type: Nullable(UUID)
+      - name: _peerdb_synced_at
+        data_type: DateTime64(9)
+      - name: _peerdb_is_deleted
+        data_type: Int8
+      - name: _peerdb_version
+        data_type: Int64
+"""
+        assert list(actual.keys()) == ["test_table"]
+        assert actual["test_table"] == expected_yaml
 
 
 class TestNormalizeRowsAffected:

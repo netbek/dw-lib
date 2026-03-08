@@ -248,6 +248,7 @@ class Dbt:
         self,
         resource_types: list[DbtResourceType] | None = None,
         select: str | None = None,
+        force_compile: bool = False,
     ) -> list[DbtModel | DbtSeed]:
         valid_resource_types = sorted(RESOURCE_TYPE_TO_CLASS.keys())
 
@@ -262,7 +263,7 @@ class Dbt:
 
         manifest_file = self.project_dir / "target" / "manifest.json"
 
-        if not os.path.exists(manifest_file):
+        if not os.path.exists(manifest_file) or force_compile:
             self.compile(quiet=True)
 
             if not os.path.exists(manifest_file):
@@ -455,7 +456,10 @@ class Dbt:
 
         if result:
             if merge:
-                resources = self.list_resources(resource_types=[DbtResourceType.MODEL])
+                resources = self.list_resources(
+                    resource_types=[DbtResourceType.MODEL], force_compile=True
+                )
+
                 for table_name, data in result.items():
                     resource: DbtModel = pydash.find(
                         resources, lambda resource: resource.name == table_name

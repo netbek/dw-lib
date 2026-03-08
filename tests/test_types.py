@@ -107,6 +107,17 @@ class TestDuckDBSettings:
 
 
 class TestPostgresSettings:
+    def test_from_string(self):
+        settings = PostgresSettings.from_string("postgresql://guest:secret@localhost:5432/data")
+        assert settings.model_dump(by_alias=True) == {
+            "host": "localhost",
+            "port": 5432,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "schema": "public",
+        }
+
     def test_to_string(self):
         settings = PostgresSettings(
             host="localhost", port=5432, username="guest", password="secret", database="data"

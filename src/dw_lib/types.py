@@ -237,6 +237,21 @@ class PostgresSettings(BaseModel):
     database: str
     schema_: str = Field(default="public", serialization_alias="schema")
 
+    @classmethod
+    def from_url(cls, url: URL) -> Self:
+        """Creates a PostgresSettings instance from a SQLAlchemy URL object."""
+        return cls(
+            host=url.host,
+            port=url.port,
+            username=url.username,
+            password=url.password,
+            database=url.database,
+        )
+
+    @classmethod
+    def from_string(cls, url_string: str) -> Self:
+        return cls.from_url(make_url(url_string))
+
     def to_url(self) -> URL:
         return URL.create(
             "postgresql",

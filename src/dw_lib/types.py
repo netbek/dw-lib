@@ -144,8 +144,9 @@ class ClickHouseSettings(BaseModel):
     driver: Literal["http", "native"] = "http"
 
     @classmethod
-    def from_url(cls, url: URL) -> Self:
-        """Creates a ClickHouseSettings instance from a SQLAlchemy URL object."""
+    def from_url(cls, url: URL | str) -> Self:
+        url = make_url(url)
+
         given_driver = None
         if url.drivername and "+" in url.drivername:
             given_driver = url.drivername.split("+")[1]
@@ -171,11 +172,6 @@ class ClickHouseSettings(BaseModel):
             database=url.database,
             driver=driver,
         )
-
-    @classmethod
-    def from_string(cls, url: str) -> Self:
-        """Creates a ClickHouseSettings instance from a string URL."""
-        return cls.from_url(make_url(url))
 
     @model_validator(mode="after")
     def validate_ports_and_driver(self) -> Self:
@@ -221,14 +217,10 @@ class DuckDBSettings(BaseModel):
     settings: DuckDBSystemSettings | None = None
 
     @classmethod
-    def from_url(cls, url: URL) -> Self:
-        """Creates a DuckDBSettings instance from a SQLAlchemy URL object."""
-        return cls(database=url.database)
+    def from_url(cls, url: URL | str) -> Self:
+        url = make_url(url)
 
-    @classmethod
-    def from_string(cls, url: str) -> Self:
-        """Creates a DuckDBSettings instance from a string URL."""
-        return cls.from_url(make_url(url))
+        return cls(database=url.database)
 
     def to_url(self) -> URL:
         return URL.create("duckdb", database=self.database)
@@ -249,8 +241,9 @@ class PostgresSettings(BaseModel):
     schema_: str = Field(default="public", serialization_alias="schema")
 
     @classmethod
-    def from_url(cls, url: URL) -> Self:
-        """Creates a PostgresSettings instance from a SQLAlchemy URL object."""
+    def from_url(cls, url: URL | str) -> Self:
+        url = make_url(url)
+
         return cls(
             host=url.host,
             port=url.port,
@@ -258,11 +251,6 @@ class PostgresSettings(BaseModel):
             password=url.password,
             database=url.database,
         )
-
-    @classmethod
-    def from_string(cls, url: str) -> Self:
-        """Creates a PostgresSettings instance from a string URL."""
-        return cls.from_url(make_url(url))
 
     def to_url(self) -> URL:
         return URL.create(

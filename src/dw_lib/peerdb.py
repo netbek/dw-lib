@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, model_validator
 from ruamel.yaml import YAML
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
-from typing import Literal
+from typing import Literal, Self
 
 import httpx
 import os
@@ -277,7 +277,7 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
     root_ca: str | None = None
 
     @model_validator(mode="after")
-    def validate_tls_fields(self) -> "ConfigPeerPeerDBClickHouseConfig":
+    def validate_tls_fields(self) -> Self:
         tls_fields = [self.certificate, self.private_key, self.root_ca]
 
         if self.disable_tls:

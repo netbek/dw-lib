@@ -2,8 +2,6 @@ from ...types import DuckDBSettings
 from ..adapters.base import BaseAdapter
 from collections.abc import Generator
 from contextlib import contextmanager
-from pathlib import Path
-from sqlalchemy import URL
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import SQLModel, Table
 from typing import Any, Literal
@@ -15,14 +13,6 @@ class DuckDBAdapter(BaseAdapter):
     def __init__(self, settings: DuckDBSettings) -> None:
         self.dialect = Dialects.DUCKDB
         super().__init__(settings)
-
-    @classmethod
-    def create_url(cls, database: Path | str) -> URL:
-        return URL.create("duckdb", database=database)
-
-    @property
-    def url(self) -> URL:
-        return self.create_url(self.settings.database)
 
     @contextmanager
     def create_client(self) -> Generator[duckdb.DuckDBPyConnection, Any, None]:

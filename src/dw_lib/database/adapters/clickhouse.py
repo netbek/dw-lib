@@ -15,7 +15,6 @@ from clickhouse_connect.driver.exceptions import DatabaseError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from collections.abc import Generator
 from contextlib import contextmanager
-from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.sql.ddl import CreateTable
 from sqlglot import exp
@@ -32,48 +31,6 @@ class ClickHouseAdapter(BaseAdapter):
     def __init__(self, settings: ClickHouseSettings) -> None:
         self.dialect = Dialects.CLICKHOUSE
         super().__init__(settings)
-
-    @classmethod
-    def create_url(
-        cls,
-        host: str,
-        http_port: int,
-        tcp_port: int,
-        username: str,
-        password: str,
-        database: str,
-        driver: str | None = None,
-    ) -> URL:
-        if driver:
-            scheme = f"clickhouse+{driver}"
-        else:
-            scheme = "clickhouse"
-
-        if driver == "native":
-            port = tcp_port
-        else:
-            port = http_port
-
-        return URL.create(
-            scheme,
-            host=host,
-            port=port,
-            username=username,
-            password=password,
-            database=database,
-        )
-
-    @property
-    def url(self) -> URL:
-        return self.create_url(
-            self.settings.host,
-            self.settings.http_port,
-            self.settings.tcp_port,
-            self.settings.username,
-            self.settings.password,
-            self.settings.database,
-            self.settings.driver,
-        )
 
     @contextmanager
     def create_client(self) -> Generator[Client | None]:
@@ -319,7 +276,7 @@ class ClickHouseAdapter(BaseAdapter):
         if database is None:
             database = self.settings.database
 
-        url = self.create_url(**self.settings.model_dump())
+        url = self.settings.to_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=database)
@@ -354,7 +311,7 @@ class ClickHouseAdapter(BaseAdapter):
         if database is None:
             database = self.settings.database
 
-        url = self.create_url(**self.settings.model_dump())
+        url = self.settings.to_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=database)

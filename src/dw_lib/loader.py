@@ -189,7 +189,7 @@ class Loader:
                 adapter = PostgresAdapter(connection.settings)
                 can_connect = adapter.can_connect()
                 result[name] = {
-                    "URL": str(adapter.url),
+                    "URL": str(adapter.settings),
                     "Connection test": can_connect,
                 }
             elif connection.type == ConnectionType.S3:

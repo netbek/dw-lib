@@ -75,21 +75,7 @@ class TestClickHouseSettings:
             "driver": "native",
         }
 
-    def test_to_url_and_to_string(self):
-        settings = ClickHouseSettings(
-            host="clickhouse",
-            http_port=8123,
-            tcp_port=9000,
-            username="guest",
-            password="secret",
-            database="data",
-        )
-        assert str(settings) == "clickhouse+http://guest:***@clickhouse:8123/data"
-        assert (
-            settings.to_string(hide_password=False)
-            == "clickhouse+http://guest:secret@clickhouse:8123/data"
-        )
-
+    def test_to_string(self):
         settings = ClickHouseSettings(
             host="clickhouse",
             http_port=8123,
@@ -100,6 +86,7 @@ class TestClickHouseSettings:
             driver="http",
         )
         assert str(settings) == "clickhouse+http://guest:***@clickhouse:8123/data"
+        assert settings.to_string() == "clickhouse+http://guest:***@clickhouse:8123/data"
         assert (
             settings.to_string(hide_password=False)
             == "clickhouse+http://guest:secret@clickhouse:8123/data"
@@ -107,22 +94,25 @@ class TestClickHouseSettings:
 
 
 class TestDuckDBSettings:
-    def test_to_url_and_to_string(self):
+    def test_to_string(self):
         settings = DuckDBSettings(database=":memory:")
         assert str(settings) == "duckdb:///:memory:"
+        assert settings.to_string() == "duckdb:///:memory:"
         assert settings.to_url().database == ":memory:"
 
         settings = DuckDBSettings(database="/path/to/data.duckdb")
         assert str(settings) == "duckdb:////path/to/data.duckdb"
+        assert settings.to_string() == "duckdb:////path/to/data.duckdb"
         assert settings.to_url().database == "/path/to/data.duckdb"
 
 
 class TestPostgresSettings:
-    def test_to_url_and_to_string(self):
+    def test_to_string(self):
         settings = PostgresSettings(
             host="localhost", port=5432, username="guest", password="secret", database="data"
         )
         assert str(settings) == "postgresql://guest:***@localhost:5432/data"
+        assert settings.to_string() == "postgresql://guest:***@localhost:5432/data"
         assert (
             settings.to_string(hide_password=False)
             == "postgresql://guest:secret@localhost:5432/data"

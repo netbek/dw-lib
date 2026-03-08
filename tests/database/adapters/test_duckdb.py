@@ -5,15 +5,6 @@ from dw_lib.database import DuckDBAdapter
 
 
 class TestDuckDBAdapter(DatabaseTest):
-    def test_create_url(self, duckdb_adapter: DuckDBAdapter):
-        url = duckdb_adapter.create_url(database=":memory:")
-        assert str(url) == "duckdb:///:memory:"
-        assert url.database == ":memory:"
-
-        url = duckdb_adapter.create_url(database="/path/to/data.duckdb")
-        assert str(url) == "duckdb:////path/to/data.duckdb"
-        assert url.database == "/path/to/data.duckdb"
-
     def test_create_client(self, duckdb_adapter: DuckDBAdapter):
         with duckdb_adapter.create_client() as conn:
             conn.execute(

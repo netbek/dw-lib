@@ -175,11 +175,7 @@ class PostgresAdapter(BaseAdapter):
         if schema is None:
             schema = self.settings.schema_
 
-        url = self.create_url(
-            **self.settings.model_copy(update={"database": database}).model_dump(
-                by_alias=True, exclude=["schema_"]
-            )
-        )
+        url = self.settings.model_copy(update={"database": database}).to_url()
         table_metadata = self.get_table(table, database=database, schema=schema)
 
         columns = [
@@ -291,11 +287,7 @@ class PostgresAdapter(BaseAdapter):
         if schema is None:
             schema = self.settings.schema_
 
-        url = self.create_url(
-            **self.settings.model_copy(update={"database": database}).model_dump(
-                by_alias=True, exclude=["schema_"]
-            )
-        )
+        url = self.settings.model_copy(update={"database": database}).to_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=schema)
@@ -386,11 +378,7 @@ class PostgresAdapter(BaseAdapter):
         if schema is None:
             schema = self.settings.schema_
 
-        url = self.create_url(
-            **self.settings.model_copy(update={"database": database}).model_dump(
-                by_alias=True, exclude=["schema_"]
-            )
-        )
+        url = self.settings.model_copy(update={"database": database}).to_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=schema)

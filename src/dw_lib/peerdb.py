@@ -567,14 +567,14 @@ class PeerDB:
                 "Connection test": create_message(api_can_connect),
             },
             "Source peer": {
-                "URL": str(source_adapter.url),
+                "URL": str(source_adapter.settings),
                 "Connection test": create_message(source_can_connect),
                 "max_replication_slots >= 4": create_message(max_replication_slots_is_valid),
                 "max_wal_senders >= 1": create_message(max_wal_senders_is_valid),
                 "wal_level = logical": create_message(wal_level_is_valid),
             },
             "Destination peer": {
-                "URL": str(destination_adapter.url),
+                "URL": str(destination_adapter.settings),
                 "Connection test": create_message(destination_can_connect),
             },
         }

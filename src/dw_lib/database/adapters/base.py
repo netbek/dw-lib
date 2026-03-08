@@ -12,16 +12,13 @@ class BaseAdapter(ABC):
     def __init__(self, settings: BaseModel) -> None:
         self.settings = settings
 
-    @property
-    def url(self) -> URL:
-        return self.settings.to_url()
-
     @abstractmethod
     def create_client(): ...
 
     @contextmanager
     def create_engine(self, url: URL | None = None) -> Generator[Engine, Any, None]:
-        engine = create_engine((url or self.url).render_as_string(hide_password=False), echo=False)
+        url = url or self.settings.to_url()
+        engine = create_engine(url.render_as_string(hide_password=False), echo=False)
 
         yield engine
 

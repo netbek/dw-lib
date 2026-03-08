@@ -94,6 +94,14 @@ class TestClickHouseSettings:
 
 
 class TestDuckDBSettings:
+    def test_from_string_has_memory_database(self):
+        settings = DuckDBSettings.from_string("duckdb:///:memory:")
+        assert settings.database == ":memory:"
+
+    def test_from_string_has_file_database(self):
+        settings = DuckDBSettings.from_string("duckdb:////path/to/data.duckdb")
+        assert settings.database == "/path/to/data.duckdb"
+
     def test_to_string(self):
         settings = DuckDBSettings(database=":memory:")
         assert str(settings) == "duckdb:///:memory:"

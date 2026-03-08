@@ -219,6 +219,15 @@ class DuckDBSettings(BaseModel):
     extensions: list[str] | None = None
     settings: DuckDBSystemSettings | None = None
 
+    @classmethod
+    def from_url(cls, url: URL) -> Self:
+        """Creates a DuckDBSettings instance from a SQLAlchemy URL object."""
+        return cls(database=url.database)
+
+    @classmethod
+    def from_string(cls, url_string: str) -> Self:
+        return cls.from_url(make_url(url_string))
+
     def to_url(self) -> URL:
         return URL.create("duckdb", database=self.database)
 

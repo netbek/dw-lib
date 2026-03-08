@@ -174,6 +174,7 @@ class ClickHouseSettings(BaseModel):
 
     @classmethod
     def from_string(cls, url_string: str) -> Self:
+        """Creates a ClickHouseSettings instance from a string URL."""
         return cls.from_url(make_url(url_string))
 
     @model_validator(mode="after")
@@ -226,6 +227,7 @@ class DuckDBSettings(BaseModel):
 
     @classmethod
     def from_string(cls, url_string: str) -> Self:
+        """Creates a DuckDBSettings instance from a string URL."""
         return cls.from_url(make_url(url_string))
 
     def to_url(self) -> URL:
@@ -259,6 +261,7 @@ class PostgresSettings(BaseModel):
 
     @classmethod
     def from_string(cls, url_string: str) -> Self:
+        """Creates a PostgresSettings instance from a string URL."""
         return cls.from_url(make_url(url_string))
 
     def to_url(self) -> URL:

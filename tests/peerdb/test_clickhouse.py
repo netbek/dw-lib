@@ -63,7 +63,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
                             "username": "default",
                             "password": "default",
                             "database": "default",
-                            "driver": None,
+                            "driver": "http",
                         },
                     },
                     "peerdb": {
@@ -170,7 +170,7 @@ class TestDebug(PeerDBClickHouseTest):
                 "wal_level = logical": "OK",
             },
             "Destination peer": {
-                "URL": "clickhouse://default:***@localhost:28123/default",
+                "URL": "clickhouse+http://default:***@localhost:28123/default",
                 "Connection test": "OK",
             },
         }

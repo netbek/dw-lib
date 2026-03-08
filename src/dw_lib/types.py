@@ -1,8 +1,8 @@
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
-from typing import ClassVar
+from typing import ClassVar, Literal, Self
 
 import math
 import psutil
@@ -32,7 +32,7 @@ class ClickHouseRelation(BaseRelation):
     table: str
 
     @classmethod
-    def from_string(cls, identifier: str) -> "ClickHouseRelation":
+    def from_string(cls, identifier: str) -> Self:
         parts = cls._parse_to_parts(identifier)
         if len(parts) == 2:
             return cls(database=parts[0], table=parts[1])
@@ -53,7 +53,7 @@ class PostgresRelation(BaseRelation):
     table: str
 
     @classmethod
-    def from_string(cls, identifier: str) -> "PostgresRelation":
+    def from_string(cls, identifier: str) -> Self:
         parts = cls._parse_to_parts(identifier)
         if len(parts) == 3:
             return cls(database=parts[0], schema_=parts[1], table=parts[2])
@@ -77,7 +77,7 @@ class DuckDBRelation(BaseRelation):
     table: str
 
     @classmethod
-    def from_string(cls, identifier: str) -> "DuckDBRelation":
+    def from_string(cls, identifier: str) -> Self:
         parts = cls._parse_to_parts(identifier)
         if len(parts) == 3:
             return cls(database=parts[0], schema_=parts[1], table=parts[2])
@@ -135,12 +135,25 @@ class DuckDBSystemSettings(BaseModel):
 
 class ClickHouseSettings(BaseModel):
     host: str
-    http_port: int
-    tcp_port: int
+    http_port: int | None = None
+    tcp_port: int | None = None
     username: str
     password: str
     database: str
-    driver: str | None = Field(default=None)
+    driver: Literal["http", "native"] = "http"
+
+    @model_validator(mode="after")
+    def validate_ports_and_driver(self) -> Self:
+        if self.http_port is None and self.tcp_port is None:
+            raise ValueError("At least one of http_port or tcp_port must be provided")
+
+        if self.driver == "http" and self.http_port is None:
+            raise ValueError("Driver set to 'http' but http_port is missing")
+
+        if self.driver == "native" and self.tcp_port is None:
+            raise ValueError("Driver set to 'native' but tcp_port is missing")
+
+        return self
 
 
 class DuckDBSettings(BaseModel):

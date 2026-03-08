@@ -11,7 +11,6 @@ from ..adapters.base import BaseAdapter
 from ..utils import quote_identifier
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
-from sqlalchemy import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.schema import ForeignKeyConstraint
@@ -27,27 +26,6 @@ class PostgresAdapter(BaseAdapter):
     def __init__(self, settings: PostgresSettings) -> None:
         self.dialect = Dialects.POSTGRES
         super().__init__(settings)
-
-    @classmethod
-    def create_url(cls, host: str, port: int, username: str, password: str, database: str) -> URL:
-        return URL.create(
-            "postgresql",
-            host=host,
-            port=port,
-            username=username,
-            password=password,
-            database=database,
-        )
-
-    @property
-    def url(self) -> URL:
-        return self.create_url(
-            self.settings.host,
-            self.settings.port,
-            self.settings.username,
-            self.settings.password,
-            self.settings.database,
-        )
 
     @contextmanager
     def create_client(

@@ -12,34 +12,9 @@ class BaseAdapter(ABC):
     def __init__(self, settings: BaseModel) -> None:
         self.settings = settings
 
-    @overload
-    @classmethod
-    @abstractmethod
-    def create_url(
-        cls,
-        host: str,
-        port: int,
-        username: str,
-        password: str,
-        database: str,
-        driver: str | None = None,
-    ) -> URL: ...
-
-    @overload
-    @classmethod
-    @abstractmethod
-    def create_url(cls, database: str) -> URL: ...
-
-    @overload
-    @classmethod
-    @abstractmethod
-    def create_url(
-        cls, host: str, port: int, username: str, password: str, database: str
-    ) -> URL: ...
-
-    @classmethod
-    @abstractmethod
-    def create_url(cls, *args, **kwargs) -> URL: ...
+    @property
+    def url(self) -> URL:
+        return self.settings.to_url()
 
     @abstractmethod
     def create_client(): ...

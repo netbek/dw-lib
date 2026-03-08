@@ -51,6 +51,7 @@ class TestClickHouseAdapter(DatabaseTest):
             password="secret",
             database="data",
         )
+
         assert str(url) == "clickhouse://guest:***@clickhouse:8123/data"
         assert (
             url.render_as_string(hide_password=False)

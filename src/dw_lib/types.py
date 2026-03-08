@@ -1,5 +1,6 @@
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from sqlalchemy import URL
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
 from typing import ClassVar, Literal, Self
@@ -155,12 +156,44 @@ class ClickHouseSettings(BaseModel):
 
         return self
 
+    def to_url(self) -> URL:
+        scheme = f"clickhouse+{self.driver}"
+
+        if self.driver == "native":
+            port = self.tcp_port
+        else:
+            port = self.http_port
+
+        return URL.create(
+            scheme,
+            host=self.host,
+            port=port,
+            username=self.username,
+            password=self.password,
+            database=self.database,
+        )
+
+    def to_string(self, hide_password: bool = True) -> str:
+        return self.to_url().render_as_string(hide_password=hide_password)
+
+    def __str__(self) -> str:
+        return self.to_string()
+
 
 class DuckDBSettings(BaseModel):
     database: Path | str
     schema_: str = Field(default="main", serialization_alias="schema")
     extensions: list[str] | None = None
     settings: DuckDBSystemSettings | None = None
+
+    def to_url(self) -> URL:
+        return URL.create("duckdb", database=self.database)
+
+    def to_string(self, hide_password: bool = True) -> str:
+        return self.to_url().render_as_string(hide_password=hide_password)
+
+    def __str__(self) -> str:
+        return self.to_string()
 
 
 class PostgresSettings(BaseModel):
@@ -170,6 +203,22 @@ class PostgresSettings(BaseModel):
     password: str
     database: str
     schema_: str = Field(default="public", serialization_alias="schema")
+
+    def to_url(self) -> URL:
+        return URL.create(
+            "postgresql",
+            host=self.host,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            database=self.database,
+        )
+
+    def to_string(self, hide_password: bool = True) -> str:
+        return self.to_url().render_as_string(hide_password=hide_password)
+
+    def __str__(self) -> str:
+        return self.to_string()
 
 
 class S3Settings(BaseModel):

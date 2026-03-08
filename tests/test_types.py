@@ -47,7 +47,7 @@ class TestClickHouseSettings:
             "driver": "http",
         }
 
-    def test_from_string_has_http_driver(self):
+    def test_from_string_has_http_driver_and_default_port(self):
         settings = ClickHouseSettings.from_string(
             "clickhouse+http://guest:secret@clickhouse:8123/data"
         )
@@ -61,7 +61,21 @@ class TestClickHouseSettings:
             "driver": "http",
         }
 
-    def test_from_string_has_native_driver(self):
+    def test_from_string_has_http_driver_and_other_port(self):
+        settings = ClickHouseSettings.from_string(
+            "clickhouse+http://guest:secret@clickhouse:28123/data"
+        )
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": 28123,
+            "tcp_port": None,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "http",
+        }
+
+    def test_from_string_has_native_driver_and_default_port(self):
         settings = ClickHouseSettings.from_string(
             "clickhouse+native://guest:secret@clickhouse:9000/data"
         )
@@ -69,6 +83,20 @@ class TestClickHouseSettings:
             "host": "clickhouse",
             "http_port": None,
             "tcp_port": 9000,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "native",
+        }
+
+    def test_from_string_has_native_driver_and_other_port(self):
+        settings = ClickHouseSettings.from_string(
+            "clickhouse+native://guest:secret@clickhouse:29000/data"
+        )
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": None,
+            "tcp_port": 29000,
             "username": "guest",
             "password": "secret",
             "database": "data",

@@ -51,13 +51,6 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     direnv allow
     ```
 
-## Development: Usage
-
-| Command                    | Description                                                         |
-|----------------------------|---------------------------------------------------------------------|
-| `./scripts/run.sh clean`   | Delete temporary files and directories, e.g. `__pycache__`          |
-| `./scripts/run.sh test`    | Run the unit tests.                                                 |
-
 ## License
 
 Copyright (c) 2025 Hein Bekker. Licensed under the GNU Affero General Public License, version 3.

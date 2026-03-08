@@ -7,7 +7,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.types import PostgresRelation
+from dw_lib.types import PostgresRelation, PostgresSettings
 from sqlmodel import Table, text
 from typing import Any
 
@@ -25,6 +25,16 @@ class TestPostgresAdapter(DatabaseTest):
         yield username
 
         postgres_adapter.drop_user(username)
+
+    def test_instantiation_with_url(self, postgres_settings: PostgresSettings):
+        adapter = PostgresAdapter(postgres_settings.to_url())
+        assert isinstance(adapter.settings, PostgresSettings)
+        assert postgres_settings.model_dump() == adapter.settings.model_dump()
+
+    def test_instantiation_with_string_url(self, postgres_settings: PostgresSettings):
+        adapter = PostgresAdapter(postgres_settings.to_string(hide_password=False))
+        assert isinstance(adapter.settings, PostgresSettings)
+        assert postgres_settings.model_dump() == adapter.settings.model_dump()
 
     @pytest.fixture(scope="function")
     def postgres_table(self, postgres_adapter: PostgresAdapter) -> Generator[Table, Any, None]:

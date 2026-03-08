@@ -72,8 +72,8 @@ class DatabaseTest:
     #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="module")
-    def clickhouse_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any, None]:
-        clickhouse_settings = ClickHouseSettings(
+    def clickhouse_settings(self) -> ClickHouseSettings:
+        return ClickHouseSettings(
             host="localhost",
             http_port=18123,
             tcp_port=19000,
@@ -82,6 +82,11 @@ class DatabaseTest:
             database="default",
             driver="http",
         )
+
+    @pytest.fixture(scope="module")
+    def clickhouse_adapter(
+        self, docker_services, clickhouse_settings: ClickHouseSettings
+    ) -> Generator[ClickHouseAdapter, Any, None]:
         clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
 
         def is_responsive():
@@ -97,22 +102,31 @@ class DatabaseTest:
         yield clickhouse_adapter
 
     @pytest.fixture(scope="function")
-    def duckdb_adapter(self) -> Generator[DuckDBAdapter, Any, None]:
+    def duckdb_settings(self) -> DuckDBSettings:
         file = Path(__file__).parent / "temp" / "test.duckdb"
-        duckdb_settings = DuckDBSettings(database=file)
-        duckdb_adapter = DuckDBAdapter(duckdb_settings)
+        return DuckDBSettings(database=file)
 
+    @pytest.fixture(scope="function")
+    def duckdb_adapter(
+        self, duckdb_settings: DuckDBSettings
+    ) -> Generator[DuckDBAdapter, Any, None]:
+        duckdb_adapter = DuckDBAdapter(duckdb_settings)
         yield duckdb_adapter
 
     @pytest.fixture(scope="module")
-    def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
-        postgres_settings = PostgresSettings(
+    def postgres_settings(self) -> PostgresSettings:
+        return PostgresSettings(
             host="localhost",
             port=15432,
             username="postgres",
             password="postgres",
             database="test",
         )
+
+    @pytest.fixture(scope="module")
+    def postgres_adapter(
+        self, docker_services, postgres_settings: PostgresSettings
+    ) -> Generator[PostgresAdapter, Any, None]:
         postgres_adapter = PostgresAdapter(postgres_settings)
 
         def is_responsive():

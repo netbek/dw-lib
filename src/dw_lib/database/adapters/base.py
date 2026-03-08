@@ -4,13 +4,22 @@ from contextlib import contextmanager
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
 from sqlalchemy.sql.schema import ForeignKeyConstraint
+from sqlglot.dialects.dialect import Dialects
 from sqlmodel import SQLModel, Table
-from typing import Any, Literal, overload
+from typing import Any, Generic, Literal, overload, TypeVar
+
+T = TypeVar("T", bound=BaseModel)
 
 
-class BaseAdapter(ABC):
-    def __init__(self, settings: BaseModel) -> None:
-        self.settings = settings
+class BaseAdapter(ABC, Generic[T]):
+    dialect: Dialects
+    settings_class: type[T]
+
+    def __init__(self, settings: T | URL | str) -> None:
+        if not isinstance(settings, self.settings_class):
+            self.settings: T = self.settings_class.from_url(settings)
+        else:
+            self.settings: T = settings
 
     @abstractmethod
     def create_client(): ...

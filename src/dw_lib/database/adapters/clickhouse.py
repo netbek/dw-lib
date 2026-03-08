@@ -27,10 +27,9 @@ import pydash
 import sqlglot
 
 
-class ClickHouseAdapter(BaseAdapter):
-    def __init__(self, settings: ClickHouseSettings) -> None:
-        self.dialect = Dialects.CLICKHOUSE
-        super().__init__(settings)
+class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
+    dialect = Dialects.CLICKHOUSE
+    settings_class = ClickHouseSettings
 
     @contextmanager
     def create_client(self) -> Generator[Client | None]:

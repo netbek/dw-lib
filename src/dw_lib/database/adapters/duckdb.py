@@ -9,10 +9,9 @@ from typing import Any, Literal
 import duckdb
 
 
-class DuckDBAdapter(BaseAdapter):
-    def __init__(self, settings: DuckDBSettings) -> None:
-        self.dialect = Dialects.DUCKDB
-        super().__init__(settings)
+class DuckDBAdapter(BaseAdapter[DuckDBSettings]):
+    dialect = Dialects.DUCKDB
+    settings_class = DuckDBSettings
 
     @contextmanager
     def create_client(self) -> Generator[duckdb.DuckDBPyConnection, Any, None]:

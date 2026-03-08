@@ -13,7 +13,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.types import ClickHouseRelation
+from dw_lib.types import ClickHouseRelation, ClickHouseSettings
 from sqlmodel import Table, text
 from typing import Any
 
@@ -41,6 +41,22 @@ class TestClickHouseAdapter(DatabaseTest):
         yield clickhouse_adapter.get_table(table)
 
         clickhouse_adapter.drop_table(table)
+
+    def test_instantiation_with_url(self, clickhouse_settings: ClickHouseSettings):
+        adapter = ClickHouseAdapter(clickhouse_settings.to_url())
+        assert isinstance(adapter.settings, ClickHouseSettings)
+        # Exclude tcp_port from assertion because its value is lost when casting as URL with http driver
+        assert clickhouse_settings.model_dump(exclude=["tcp_port"]) == adapter.settings.model_dump(
+            exclude=["tcp_port"]
+        )
+
+    def test_instantiation_with_string_url(self, clickhouse_settings: ClickHouseSettings):
+        adapter = ClickHouseAdapter(clickhouse_settings.to_string(hide_password=False))
+        assert isinstance(adapter.settings, ClickHouseSettings)
+        # Exclude tcp_port from assertion because its value is lost when casting as string URL with http driver
+        assert clickhouse_settings.model_dump(exclude=["tcp_port"]) == adapter.settings.model_dump(
+            exclude=["tcp_port"]
+        )
 
     def test_create_client(self, clickhouse_adapter: ClickHouseAdapter):
         with clickhouse_adapter.create_client() as client:

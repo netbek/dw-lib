@@ -223,7 +223,7 @@ class DuckDBSettings(BaseModel):
         return cls(database=url.database)
 
     def to_url(self) -> URL:
-        return URL.create("duckdb", database=self.database)
+        return URL.create("duckdb", database=str(self.database))
 
     def to_string(self, hide_password: bool = True) -> str:
         return self.to_url().render_as_string(hide_password=hide_password)

@@ -22,10 +22,9 @@ import psycopg2
 import pydash
 
 
-class PostgresAdapter(BaseAdapter):
-    def __init__(self, settings: PostgresSettings) -> None:
-        self.dialect = Dialects.POSTGRES
-        super().__init__(settings)
+class PostgresAdapter(BaseAdapter[PostgresSettings]):
+    dialect = Dialects.POSTGRES
+    settings_class = PostgresSettings
 
     @contextmanager
     def create_client(

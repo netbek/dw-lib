@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from sqlalchemy import URL
+from sqlalchemy.engine import make_url, URL
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
 from typing import ClassVar, Literal, Self
@@ -142,6 +142,39 @@ class ClickHouseSettings(BaseModel):
     password: str
     database: str
     driver: Literal["http", "native"] = "http"
+
+    @classmethod
+    def from_url(cls, url: URL) -> Self:
+        """Creates a ClickHouseSettings instance from a SQLAlchemy URL object."""
+        given_driver = None
+        if url.drivername and "+" in url.drivername:
+            given_driver = url.drivername.split("+")[1]
+
+        given_port = url.port
+
+        if given_driver in ["http", "native"]:
+            driver = given_driver
+        elif given_port == 9000:
+            driver = "native"
+        else:
+            driver = "http"
+
+        http_port = given_port if driver == "http" else None
+        tcp_port = given_port if driver == "native" else None
+
+        return cls(
+            host=url.host,
+            http_port=http_port,
+            tcp_port=tcp_port,
+            username=url.username,
+            password=url.password,
+            database=url.database,
+            driver=driver,
+        )
+
+    @classmethod
+    def from_string(cls, url_string: str) -> Self:
+        return cls.from_url(make_url(url_string))
 
     @model_validator(mode="after")
     def validate_ports_and_driver(self) -> Self:

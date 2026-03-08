@@ -11,6 +11,70 @@ import pytest
 
 
 class TestClickHouseSettings:
+    def test_from_string_has_no_driver_and_http_port(self):
+        settings = ClickHouseSettings.from_string("clickhouse://guest:secret@clickhouse:8123/data")
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": 8123,
+            "tcp_port": None,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "http",
+        }
+
+    def test_from_string_has_no_driver_and_tcp_port(self):
+        settings = ClickHouseSettings.from_string("clickhouse://guest:secret@clickhouse:9000/data")
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": None,
+            "tcp_port": 9000,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "native",
+        }
+
+    def test_from_string_has_no_driver_and_other_port(self):
+        settings = ClickHouseSettings.from_string("clickhouse://guest:secret@clickhouse:9001/data")
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": 9001,
+            "tcp_port": None,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "http",
+        }
+
+    def test_from_string_has_http_driver(self):
+        settings = ClickHouseSettings.from_string(
+            "clickhouse+http://guest:secret@clickhouse:8123/data"
+        )
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": 8123,
+            "tcp_port": None,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "http",
+        }
+
+    def test_from_string_has_native_driver(self):
+        settings = ClickHouseSettings.from_string(
+            "clickhouse+native://guest:secret@clickhouse:9000/data"
+        )
+        assert settings.model_dump() == {
+            "host": "clickhouse",
+            "http_port": None,
+            "tcp_port": 9000,
+            "username": "guest",
+            "password": "secret",
+            "database": "data",
+            "driver": "native",
+        }
+
     def test_to_url_and_to_string(self):
         settings = ClickHouseSettings(
             host="clickhouse",
@@ -20,10 +84,10 @@ class TestClickHouseSettings:
             password="secret",
             database="data",
         )
-        assert str(settings) == "clickhouse://guest:***@clickhouse:8123/data"
+        assert str(settings) == "clickhouse+http://guest:***@clickhouse:8123/data"
         assert (
             settings.to_string(hide_password=False)
-            == "clickhouse://guest:secret@clickhouse:8123/data"
+            == "clickhouse+http://guest:secret@clickhouse:8123/data"
         )
 
         settings = ClickHouseSettings(

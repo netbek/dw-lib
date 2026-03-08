@@ -236,8 +236,8 @@ class Dbt:
     def models_dir(self) -> Path:
         return self._project_dir / "models"
 
-    def get_resource(self, name: str) -> DbtModel | DbtSeed | None:
-        resources = self.list_resources(select=name)
+    def get_resource(self, name: str, invalidate_cache: bool = False) -> DbtModel | DbtSeed | None:
+        resources = self.list_resources(select=name, invalidate_cache=invalidate_cache)
 
         if not resources:
             return None
@@ -248,7 +248,7 @@ class Dbt:
         self,
         resource_types: list[DbtResourceType] | None = None,
         select: str | None = None,
-        force_compile: bool = False,
+        invalidate_cache: bool = False,
     ) -> list[DbtModel | DbtSeed]:
         valid_resource_types = sorted(RESOURCE_TYPE_TO_CLASS.keys())
 
@@ -263,7 +263,7 @@ class Dbt:
 
         manifest_file = self.project_dir / "target" / "manifest.json"
 
-        if not os.path.exists(manifest_file) or force_compile:
+        if not os.path.exists(manifest_file) or invalidate_cache:
             self.compile(quiet=True)
 
             if not os.path.exists(manifest_file):
@@ -457,7 +457,7 @@ class Dbt:
         if result:
             if merge:
                 resources = self.list_resources(
-                    resource_types=[DbtResourceType.MODEL], force_compile=True
+                    resource_types=[DbtResourceType.MODEL], invalidate_cache=True
                 )
 
                 for table_name, data in result.items():

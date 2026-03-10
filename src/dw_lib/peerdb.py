@@ -399,7 +399,7 @@ class PeerDB:
             return node
 
         config = render_template(self._config_file)
-        yaml = YAML(typ="safe")
+        yaml = YAML(typ="safe", pure=True)
         config = yaml.load(config)
 
         if not config:

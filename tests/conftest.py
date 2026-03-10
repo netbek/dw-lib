@@ -216,7 +216,7 @@ class PeerDBTest:
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
-            yaml = YAML(typ="safe")
+            yaml = YAML(typ="safe", pure=True)
             peerdb_config = yaml.load(peerdb_config_path)
 
             url = f"{peerdb_config['peerdb_ui_url']}/api/v1/instance/info"

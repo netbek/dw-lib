@@ -225,7 +225,7 @@ class Dbt:
 
     @cached_property
     def project_config(self):
-        yaml = YAML(typ="safe")
+        yaml = YAML(typ="safe", pure=True)
         return yaml.load(self.project_config_file)
 
     @cached_property

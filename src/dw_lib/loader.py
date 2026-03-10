@@ -177,7 +177,7 @@ class Loader:
         return self._config
 
     def _load_config(self) -> Config:
-        yaml = YAML(typ="safe")
+        yaml = YAML(typ="safe", pure=True)
         data = yaml.load(self._config_file)
         return Config(**data)
 

@@ -92,4 +92,4 @@ markers = ["docker_skip_wait_until_responsive"]
 
 [tool.uv.sources]
 clickhouse-sqlalchemy = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git", rev = "datetime-uuid" }
-dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.9.8-batch" }
+dbt-clickhouse = { git = "https://github.com/netbek/dbt-clickhouse.git", rev = "v1.10.0-batch" }

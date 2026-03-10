@@ -209,7 +209,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.8-batch" },
+    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
     { name = "dbt-core", specifier = ">=1.10.0,<1.11" },
     { name = "example-cli", editable = "packages/example_cli" },
     { name = "livereload", specifier = ">=2.7.1" },
@@ -305,7 +305,7 @@ wheels = [
 
 [[package]]
 name = "dbt-adapters"
-version = "1.16.7"
+version = "1.22.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agate" },
@@ -316,21 +316,20 @@ dependencies = [
     { name = "pytz" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/48/96586bc87cf9641f03d531764ee0c098ee991c687355bbbd6da6df9e262e/dbt_adapters-1.16.7.tar.gz", hash = "sha256:2376c4e913f451da786cef8e5e545d5ccd87f93697bcd14988722baa06f48b80", size = 130798, upload-time = "2025-09-11T14:21:12.959Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/97/db1e12f37f13dc4fc93396a347f9ba5f84069aa88127293c54b7840a91b6/dbt_adapters-1.22.5.tar.gz", hash = "sha256:80dfcd5a6e7936dbcfa7a860e18b6966cce99949a3251487bcf028bb47b51842", size = 136383, upload-time = "2026-01-14T19:53:45.733Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/04/3a2db52db9c0e44e43080ef244f473eb78c975733663dbb5242d6627c994/dbt_adapters-1.16.7-py3-none-any.whl", hash = "sha256:a4f0bf69633f0b326b7a6d39d1b70857f9964db15b506e16ef50d05e8dc696db", size = 167666, upload-time = "2025-09-11T14:21:11.329Z" },
+    { url = "https://files.pythonhosted.org/packages/04/9a/481d96d74024f3685efb4d9656a2b3f15da84e041235e3f35ba324d6fb78/dbt_adapters-1.22.5-py3-none-any.whl", hash = "sha256:ca1f758f002f0ea0d62796a530e0bd6b46b87c9c266f3d2f343d570da42b33ff", size = 172762, upload-time = "2026-01-14T19:53:44.548Z" },
 ]
 
 [[package]]
 name = "dbt-clickhouse"
-version = "1.9.8"
-source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.8-batch#615f7d11be075c6ec21a68884defdfcf74e5b7f2" }
+version = "1.10.0"
+source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch#43d7c41b0c3aef8ffd368424dede83cbcd2e76a7" }
 dependencies = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-driver" },
     { name = "dbt-adapters" },
     { name = "dbt-core" },
-    { name = "setuptools" },
 ]
 
 [[package]]
@@ -551,7 +550,7 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.9.8-batch" },
+    { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
     { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", specifier = ">=1.4.2" },
     { name = "duckdb-engine", specifier = ">=0.17.0" },
@@ -1465,15 +1464,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/05/04/74127fc843314818edfa81b5540e26dd537353b123a4edc563109d8f17dd/s3transfer-0.16.0.tar.gz", hash = "sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920", size = 153827, upload-time = "2025-12-01T02:30:59.114Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/51/727abb13f44c1fcf6d145979e1535a35794db0f6e450a0cb46aa24732fe2/s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe", size = 86830, upload-time = "2025-12-01T02:30:57.729Z" },
-]
-
-[[package]]
-name = "setuptools"
-version = "82.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4f/db/cfac1baf10650ab4d1c111714410d2fbb77ac5a616db26775db562c8fab2/setuptools-82.0.1.tar.gz", hash = "sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9", size = 1152316, upload-time = "2026-03-09T12:47:17.221Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl", hash = "sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb", size = 1006223, upload-time = "2026-03-09T12:47:15.026Z" },
 ]
 
 [[package]]

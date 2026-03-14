@@ -1,3 +1,4 @@
+from packaging import version
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import SQLModel, Table
 
@@ -74,6 +75,8 @@ SQLGLOT_TO_PYTHON_TYPE = {
     sqlglot.expressions.DataType.Type.UUID: uuid.UUID,  # UUID
 }
 
+SQLGLOT_GTE_28_6 = version.parse(sqlglot.__version__) >= version.parse("28.6")
+
 
 def get_model_schema(model: type[SQLModel]) -> str | None:
     table = getattr(model, "__table__", None)
@@ -135,8 +138,13 @@ def parse_create_table_statement(statement: str) -> dict:
             # Primary key
             elif isinstance(prop, sqlglot.exp.PrimaryKey):
                 for primary_key_expr in prop.expressions:
-                    if isinstance(primary_key_expr, sqlglot.exp.Identifier):
-                        result["primary_key"].append(primary_key_expr.name)
+                    if SQLGLOT_GTE_28_6:
+                        if isinstance(primary_key_expr, sqlglot.exp.Identifier):
+                            result["primary_key"].append(primary_key_expr.name)
+                    else:
+                        identifier = primary_key_expr.this.this
+                        if isinstance(identifier, sqlglot.exp.Identifier):
+                            result["primary_key"].append(identifier.name)
 
             # Order by
             elif isinstance(prop, sqlglot.exp.Order):

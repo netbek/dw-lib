@@ -58,6 +58,10 @@ peerdb = [
 ]
 
 [dependency-groups]
+dagster = [
+    "dagster>=1.12.19",
+    "dagster-dbt>=0.28.19",
+]
 dev = [
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",

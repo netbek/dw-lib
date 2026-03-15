@@ -641,6 +641,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+dagster = [
+    { name = "dagster" },
+    { name = "dagster-dbt" },
+]
 dbt = [
     { name = "dbt-clickhouse" },
     { name = "dbt-core" },
@@ -674,10 +678,6 @@ peerdb = [
 ]
 
 [package.dev-dependencies]
-dagster = [
-    { name = "dagster" },
-    { name = "dagster-dbt" },
-]
 dev = [
     { name = "pre-commit" },
     { name = "pytest" },
@@ -694,6 +694,8 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
+    { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
+    { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
     { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
     { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", specifier = ">=1.4.2" },
@@ -730,13 +732,9 @@ requires-dist = [
     { name = "sqlmodel", marker = "extra == 'peerdb'", specifier = ">=0.0.27" },
     { name = "sqlparse", specifier = ">=0.5.3" },
 ]
-provides-extras = ["dbt", "loader", "peerdb"]
+provides-extras = ["dagster", "dbt", "loader", "peerdb"]
 
 [package.metadata.requires-dev]
-dagster = [
-    { name = "dagster", specifier = ">=1.12.19" },
-    { name = "dagster-dbt", specifier = ">=0.28.19" },
-]
 dev = [
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pytest", specifier = ">=9.0.2" },

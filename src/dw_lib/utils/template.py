@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 
 
-def env_var(var: str, default: str | None = None) -> str:
+def env_var(var: str, default: str | None = None) -> str | None:
     return os.environ.get(var, default=default)
 
 

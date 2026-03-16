@@ -64,6 +64,7 @@ peerdb = [
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
+    "pyright>=1.1.408",
     "pytest>=9.0.2",
     "pytest-docker>=3.2.5",
     "ruff>=0.15.0",
@@ -86,6 +87,11 @@ extend-exclude = ["./vendor"]
 
 [tool.ruff.lint]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
 
 [tool.pytest]
 addopts = ["-x", "--no-header", "--container-scope=module"]

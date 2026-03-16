@@ -32,7 +32,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
     settings_class = ClickHouseSettings
 
     @contextmanager
-    def create_client(self) -> Generator[Client | None]:
+    def create_client(self) -> Generator[Client, Any, None]:
         if self.settings.driver == "native":
             port = self.settings.tcp_port
         else:
@@ -40,7 +40,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
         client = clickhouse_connect.get_client(
             host=self.settings.host,
-            port=port,
+            port=port or 0,
             username=self.settings.username,
             password=self.settings.password,
             database=self.settings.database,
@@ -151,7 +151,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
     def make_create_table_statement_from_table(
         self, table: str, database: str | None = None
-    ) -> None:
+    ) -> str:
         if database is None:
             database = self.settings.database
 
@@ -162,7 +162,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 statement = client.command(
                     statement, parameters={"database": database, "table": table}
                 )
-                statement = statement.replace("\\n", "\n")
+                statement = str(statement).replace("\\n", "\n")
             except DatabaseError as exc:
                 if f"Table `{table}` doesn't exist" in str(exc):
                     raise TableNotFoundException()
@@ -282,7 +282,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
             try:
                 metadata.reflect(bind=engine, views=True, only=[table])
-                table_metadata = metadata.tables.get(f"{database}.{table}")
+                table_metadata = metadata.tables[f"{database}.{table}"]
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
                     raise TableNotFoundException()

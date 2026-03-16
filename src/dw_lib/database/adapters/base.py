@@ -108,7 +108,7 @@ class BaseAdapter(ABC, Generic[T]):
     @abstractmethod
     def make_create_table_statement_from_table(
         self, table: str, database: str | None = None
-    ) -> None: ...
+    ) -> str: ...
 
     @overload
     @abstractmethod
@@ -123,10 +123,10 @@ class BaseAdapter(ABC, Generic[T]):
         include_primary_key_constraint: bool | None = False,
         include_foreign_key_constraints: Sequence[ForeignKeyConstraint] | None = None,
         include_unique_constraint: bool | None = False,
-    ) -> None: ...
+    ) -> str: ...
 
     @abstractmethod
-    def make_create_table_statement_from_table(self, *args, **kwargs) -> None: ...
+    def make_create_table_statement_from_table(self, *args, **kwargs) -> str: ...
 
     @overload
     @abstractmethod

@@ -5,6 +5,7 @@ from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresA
 from dw_lib.loader import Loader
 from dw_lib.peerdb import PeerDB
 from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
+from dw_lib.utils.pydantic_utils import join_url
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from ruamel.yaml import YAML
@@ -212,18 +213,18 @@ class PeerDBTest:
     @pytest.fixture(scope="function")
     def peerdb(
         self, request, peerdb_config_path: Path, docker_services
-    ) -> Generator[str, Any, None]:
+    ) -> Generator[PeerDB, Any, None]:
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
             yaml = YAML(typ="safe", pure=True)
             peerdb_config = yaml.load(peerdb_config_path)
 
-            url = f"{peerdb_config['peerdb_ui_url']}/api/v1/instance/info"
+            url = join_url(peerdb_config["peerdb_ui_url"], "api/v1/instance/info")
 
             def is_responsive():
                 try:
-                    response = httpx.get(url, headers={"Content-Type": "application/json"})
+                    response = httpx.get(str(url), headers={"Content-Type": "application/json"})
                     if response.status_code == 200 and response.json() == {
                         "status": "INSTANCE_STATUS_READY"
                     }:

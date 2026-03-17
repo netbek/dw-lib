@@ -21,6 +21,8 @@ from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
+from rich.console import Console
+from rich.table import Table
 from ruamel.yaml import YAML
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
@@ -29,7 +31,6 @@ from typing import Literal, Self
 import httpx
 import os
 import pydash
-import rich
 import time
 
 TIMEOUT = httpx.Timeout(5.0)
@@ -376,7 +377,7 @@ class PeerDB:
     def __init__(self, config_file: Path | str | None = None) -> None:
         self._config_file = config_file or find_config_file()
         self._headers = {"Content-Type": "application/json"}
-        self._console = rich.console.Console()
+        self._console = Console()
 
     @cached_property
     def config(self) -> Config:
@@ -507,8 +508,8 @@ class PeerDB:
                 else:
                     return "Not OK"
 
-        def render_table(data, title: str | None = None) -> rich.table.Table:
-            table = rich.table.Table(title=title, show_header=True, min_width=80)
+        def render_table(data, title: str | None = None) -> Table:
+            table = Table(title=title, show_header=True, min_width=80)
 
             headers = data[0].keys()
             for header in headers:
@@ -546,9 +547,9 @@ class PeerDB:
             max_wal_senders_is_valid = max_wal_senders >= 1
             wal_level_is_valid = wal_level == "logical"
         else:
-            max_replication_slots_is_valid = None
-            max_wal_senders_is_valid = None
-            wal_level_is_valid = None
+            max_replication_slots_is_valid = False
+            max_wal_senders_is_valid = False
+            wal_level_is_valid = False
 
         result = {
             "API": {
@@ -949,7 +950,7 @@ class PeerDB:
         if not self.has_mirror(flow_job_name):
             if if_exists:
                 return DropMirrorResponse(
-                    f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
+                    message=f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
                 )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
@@ -988,7 +989,7 @@ class PeerDB:
         if not self.has_mirror(flow_job_name):
             if if_exists:
                 return ResyncMirrorResponse(
-                    f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
+                    message=f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
                 )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")

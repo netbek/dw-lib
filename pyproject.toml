@@ -5,7 +5,7 @@ description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
 requires-python = "==3.13.*"
 
-# sqlglot pinned for compatibility with dagster https://github.com/dagster-io/dagster/blob/1.12.19/python_modules/libraries/dagster-dbt/pyproject.toml#L33
+# sqlglot pinned for compatibility with dagster-dbt https://github.com/dagster-io/dagster/blob/1.12.19/python_modules/libraries/dagster-dbt/pyproject.toml#L33
 dependencies = [
     "boto3>=1.41.1",
     "clickhouse-connect>=0.10.0",

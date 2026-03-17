@@ -4,8 +4,7 @@ from dw_lib.cloud.adapters import S3Adapter
 from dw_lib.database.adapters import ClickHouseAdapter, DuckDBAdapter, PostgresAdapter
 from dw_lib.loader import Loader
 from dw_lib.peerdb import PeerDB
-from dw_lib.types import ClickHouseSettings, DuckDBSettings, PostgresSettings, S3Settings
-from dw_lib.utils.pydantic_utils import join_url
+from dw_lib.types import ClickHouseSettings, DuckDBSettings, HttpUrl, PostgresSettings, S3Settings
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from ruamel.yaml import YAML
@@ -220,7 +219,7 @@ class PeerDBTest:
             yaml = YAML(typ="safe", pure=True)
             peerdb_config = yaml.load(peerdb_config_path)
 
-            url = join_url(peerdb_config["peerdb_ui_url"], "api/v1/instance/info")
+            url = HttpUrl(peerdb_config["peerdb_ui_url"]).join("api/v1/instance/info")
 
             def is_responsive():
                 try:

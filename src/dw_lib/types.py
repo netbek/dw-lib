@@ -1,12 +1,47 @@
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+)
+from pydantic import HttpUrl as _HttpUrl
+from pydantic import (
+    model_validator,
+    TypeAdapter,
+)
 from sqlalchemy.engine import make_url, URL
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
 from typing import ClassVar, Literal, Self
+from urllib.parse import urljoin
 
 import math
 import psutil
+import re
+
+
+class HttpUrl(_HttpUrl):
+    def join(self, path: str) -> "HttpUrl":
+        """Return a HttpUrl, using this URL as the base."""
+        base = str(self)
+
+        # Ensure base behaves like a directory
+        if not base.endswith("/"):
+            base = base + "/"
+
+        # Normalize the path:
+        # 1. Remove leading slashes (avoid network-location override)
+        # 2. Collapse multiple slashes into one
+        normalized_path = re.sub(r"/+", "/", path.lstrip("/"))
+
+        url_str = urljoin(base, normalized_path)
+
+        # Normalize trailing slash (except root)
+        if url_str != "/" and url_str.endswith("/"):
+            url_str = url_str.rstrip("/")
+
+        return TypeAdapter(HttpUrl).validate_python(url_str)
 
 
 class BaseRelation(BaseModel):

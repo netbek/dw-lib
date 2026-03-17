@@ -9,8 +9,8 @@ from dw_lib.exceptions import (
     TableNotFoundException,
 )
 from dw_lib.peerdb import MirrorStatusResponse, PeerDB
+from dw_lib.types import HttpUrl
 from pathlib import Path
-from pydantic import HttpUrl
 from sqlmodel import Table
 
 import pydash

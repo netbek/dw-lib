@@ -41,6 +41,11 @@ class TestJoinUrl:
         result = join_url(base)
         assert str(result) == "https://example.com/"
 
+    def test_root_path_segment(self):
+        base = HttpUrl("https://example.com")
+        result = join_url(base, "/")
+        assert str(result) == "https://example.com/"
+
     def test_empty_path_segments(self):
         base = HttpUrl("https://example.com")
         result = join_url(base, "", "api", "", "v1")

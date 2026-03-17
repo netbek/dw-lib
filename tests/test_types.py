@@ -11,48 +11,48 @@ from pydantic_core import ValidationError
 import pytest
 
 
-class TestHttpUrlJoin:
-    def test_single_segment(self):
+class TestHttpUrl:
+    def test_join_single_segment(self):
         result = HttpUrl("https://example.com").join("api")
         assert str(result) == "https://example.com/api"
 
-    def test_multiple_segment(self):
+    def test_join_multiple_segment(self):
         result = HttpUrl("https://example.com").join("api/v1/users")
         assert str(result) == "https://example.com/api/v1/users"
 
-    def test_path_with_leading_slash(self):
+    def test_join_path_with_leading_slash(self):
         result = HttpUrl("https://example.com").join("/api/v1/users")
         assert str(result) == "https://example.com/api/v1/users"
 
-    def test_path_with_trailing_slash(self):
+    def test_join_path_with_trailing_slash(self):
         result = HttpUrl("https://example.com").join("api/v1/users/")
         assert str(result) == "https://example.com/api/v1/users"
 
-    def test_path_with_mixed_slashes(self):
+    def test_join_path_with_mixed_slashes(self):
         result = HttpUrl("https://example.com").join("/api/v1/users/")
         assert str(result) == "https://example.com/api/v1/users"
 
-    def test_base_with_trailing_slash(self):
+    def test_join_base_with_trailing_slash(self):
         result = HttpUrl("https://example.com/").join("/")
         assert str(result) == "https://example.com/"
 
-    def test_empty_path(self):
+    def test_join_empty_path(self):
         result = HttpUrl("https://example.com").join("")
         assert str(result) == "https://example.com/"
 
-    def test_dot_segment(self):
+    def test_join_dot_segment(self):
         result = HttpUrl("https://example.com/api/").join("../v1")
         assert str(result) == "https://example.com/v1"
 
-    def test_dot_current_directory(self):
+    def test_join_dot_current_directory(self):
         result = HttpUrl("https://example.com/api/").join("./v1")
         assert str(result) == "https://example.com/api/v1"
 
-    def test_base_with_query_params(self):
+    def test_join_base_with_query_params(self):
         result = HttpUrl("https://example.com?x=1").join("api")
         assert str(result) == "https://example.com/api"
 
-    def test_path_with_query_params(self):
+    def test_join_path_with_query_params(self):
         result = HttpUrl("https://example.com").join("api?x=1")
         assert str(result) == "https://example.com/api?x=1"
 

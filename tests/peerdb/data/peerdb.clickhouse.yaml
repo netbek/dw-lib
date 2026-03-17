@@ -36,13 +36,6 @@ peers:
       password: default
       database: default
 
-# publications:
-#   publication_1:
-#   - public.table_1
-#   - public.table_2
-#   publication_2:
-#   - public.table_3
-
 mirrors:
   +do_initial_snapshot: false
   +resync: false
@@ -51,15 +44,15 @@ mirrors:
     source_name: source
     destination_name: destination
     table_mappings:
-    - source_table_identifier: public.table_1
-      destination_table_identifier: table_1
+      - source_table_identifier: public.table_1
+        destination_table_identifier: table_1
     resync: true
 
   cdc_many:
     source_name: source
     destination_name: destination
     table_mappings:
-    - source_table_identifier: public.table_2
-      destination_table_identifier: table_2
-    - source_table_identifier: public.table_3
-      destination_table_identifier: table_3
+      - source_table_identifier: public.table_2
+        destination_table_identifier: table_2
+      - source_table_identifier: public.table_3
+        destination_table_identifier: table_3

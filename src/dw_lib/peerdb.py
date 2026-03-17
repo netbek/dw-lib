@@ -361,17 +361,11 @@ class ConfigMirror(BaseModel):
     synced_at_col_name: str | None = "_peerdb_synced_at"
 
 
-# class ConfigPublication(BaseModel):
-#     name: str
-#     table_identifiers: list[str]
-
-
 class Config(BaseModel):
     peerdb_ui_url: HttpUrl
     settings: list[ConfigSetting]
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
-    # publications: list[ConfigPublication]
 
     @property
     def peerdb_api_url(self) -> HttpUrl:
@@ -409,7 +403,6 @@ class PeerDB:
         settings = []
         peers = []
         mirrors = []
-        # publications = []
 
         if "settings" in config:
             settings = [{"name": key, "value": value} for key, value in config["settings"].items()]
@@ -481,16 +474,11 @@ class PeerDB:
 
             mirrors = list(config["mirrors"].values())
 
-        # if "publications" in config:
-        #     for key, value in config["publications"].items():
-        #         publications.append({"name": key, "table_identifiers": value})
-
         return Config(
             peerdb_ui_url=config.get("peerdb_ui_url"),
             settings=settings,
             peers=peers,
             mirrors=mirrors,
-            # publications=publications,
         )
 
     def can_connect(self) -> bool:

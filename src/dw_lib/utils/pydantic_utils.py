@@ -20,5 +20,5 @@ def join_url(base: HttpUrl, *segments: str) -> HttpUrl:
             title="Invalid URL during join", line_errors=[]
         ) from e
 
-    final_url = url_str.rstrip("/")
-    return URL_ADAPTER.validate_python(final_url)
+    url_str = url_str.rstrip("/")
+    return URL_ADAPTER.validate_python(url_str)

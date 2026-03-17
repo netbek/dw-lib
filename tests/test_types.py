@@ -32,6 +32,14 @@ class TestHttpUrl:
         result = HttpUrl("https://example.com").join("/api/v1/users/")
         assert str(result) == "https://example.com/api/v1/users"
 
+    def test_join_double_slashes(self):
+        result = HttpUrl("https://example.com").join("//api//v1//users")
+        assert str(result) == "https://example.com/api/v1/users"
+
+    def test_join_does_not_override_host_with_double_slash(self):
+        result = HttpUrl("https://example.com").join("//evil.com/path")
+        assert str(result) == "https://example.com/evil.com/path"
+
     def test_join_base_with_trailing_slash(self):
         result = HttpUrl("https://example.com/").join("/")
         assert str(result) == "https://example.com/"
@@ -46,6 +54,10 @@ class TestHttpUrl:
 
     def test_join_dot_current_directory(self):
         result = HttpUrl("https://example.com/api/").join("./v1")
+        assert str(result) == "https://example.com/api/v1"
+
+    def test_join_base_with_path(self):
+        result = HttpUrl("https://example.com/api").join("v1")
         assert str(result) == "https://example.com/api/v1"
 
     def test_join_base_with_query_params(self):

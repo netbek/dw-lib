@@ -719,7 +719,7 @@ class PeerDB:
         return bool(matched)
 
     def get_peer_info(self, peer_name: str) -> PeerInfoResponse:
-        url = join_url(self.config.peerdb_api_url, "v1/peers/info/{peer_name}")
+        url = join_url(self.config.peerdb_api_url, f"v1/peers/info/{peer_name}")
 
         try:
             response = httpx.get(str(url), headers=self._headers, timeout=TIMEOUT)
@@ -730,7 +730,7 @@ class PeerDB:
         return PeerInfoResponse(**response.json())
 
     def get_peer_type(self, peer_name: str) -> PeerTypeResponse:
-        url = join_url(self.config.peerdb_api_url, "v1/peers/type/{peer_name}")
+        url = join_url(self.config.peerdb_api_url, f"v1/peers/type/{peer_name}")
 
         try:
             response = httpx.get(str(url), headers=self._headers, timeout=TIMEOUT)

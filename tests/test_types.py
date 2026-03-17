@@ -2,12 +2,59 @@ from dw_lib.types import (
     ClickHouseRelation,
     ClickHouseSettings,
     DuckDBSettings,
+    HttpUrl,
     PostgresRelation,
     PostgresSettings,
 )
 from pydantic_core import ValidationError
 
 import pytest
+
+
+class TestHttpUrlJoin:
+    def test_single_segment(self):
+        result = HttpUrl("https://example.com").join("api")
+        assert str(result) == "https://example.com/api"
+
+    def test_multiple_segment(self):
+        result = HttpUrl("https://example.com").join("api/v1/users")
+        assert str(result) == "https://example.com/api/v1/users"
+
+    def test_path_with_leading_slash(self):
+        result = HttpUrl("https://example.com").join("/api/v1/users")
+        assert str(result) == "https://example.com/api/v1/users"
+
+    def test_path_with_trailing_slash(self):
+        result = HttpUrl("https://example.com").join("api/v1/users/")
+        assert str(result) == "https://example.com/api/v1/users"
+
+    def test_path_with_mixed_slashes(self):
+        result = HttpUrl("https://example.com").join("/api/v1/users/")
+        assert str(result) == "https://example.com/api/v1/users"
+
+    def test_base_with_trailing_slash(self):
+        result = HttpUrl("https://example.com/").join("/")
+        assert str(result) == "https://example.com/"
+
+    def test_empty_path(self):
+        result = HttpUrl("https://example.com").join("")
+        assert str(result) == "https://example.com/"
+
+    def test_dot_segment(self):
+        result = HttpUrl("https://example.com/api/").join("../v1")
+        assert str(result) == "https://example.com/v1"
+
+    def test_dot_current_directory(self):
+        result = HttpUrl("https://example.com/api/").join("./v1")
+        assert str(result) == "https://example.com/api/v1"
+
+    def test_base_with_query_params(self):
+        result = HttpUrl("https://example.com?x=1").join("api")
+        assert str(result) == "https://example.com/api"
+
+    def test_path_with_query_params(self):
+        result = HttpUrl("https://example.com").join("api?x=1")
+        assert str(result) == "https://example.com/api?x=1"
 
 
 class TestClickHouseSettings:
@@ -169,7 +216,7 @@ class TestPostgresSettings:
 class TestClickHouseRelation:
     def test_init_without_table(self):
         with pytest.raises(ValidationError):
-            ClickHouseRelation()
+            ClickHouseRelation()  # type: ignore
 
     def test_from_string_database_and_table(self):
         relation = ClickHouseRelation.from_string("my_database.my_table")
@@ -197,7 +244,7 @@ class TestClickHouseRelation:
 class TestPostgresRelation:
     def test_init_without_table(self):
         with pytest.raises(ValidationError):
-            PostgresRelation()
+            PostgresRelation()  # type: ignore
 
     def test_from_string_database_and_schema_and_table(self):
         relation = PostgresRelation.from_string("my_database.my_schema.my_table")

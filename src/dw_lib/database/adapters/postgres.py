@@ -177,21 +177,29 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         url = self.settings.model_copy(update={"database": database}).to_url()
         table_metadata = self.get_table(table, database=database, schema=schema)
 
-        columns = [
-            Column(
-                name=column.name,
-                type_=column.type,
-                autoincrement=column.autoincrement if include_autoincrement else None,
-                # default=column.default,
-                index=column.index if include_index else None,
-                unique=column.unique if include_unique_constraint else None,
-                nullable=column.nullable,
-                primary_key=column.primary_key if include_primary_key_constraint else None,
-                server_default=column.server_default,
-                # server_onupdate=column.server_onupdate,
+        columns = []
+        for column in table_metadata.columns:
+            kwargs = {}
+            if include_autoincrement:
+                kwargs["autoincrement"] = column.autoincrement
+            if include_index:
+                kwargs["index"] = column.index
+            if include_primary_key_constraint:
+                kwargs["primary_key"] = column.primary_key
+            if include_unique_constraint:
+                kwargs["unique"] = column.unique
+
+            columns.append(
+                Column(
+                    name=column.name,
+                    type_=column.type,
+                    # default=column.default,
+                    nullable=column.nullable,
+                    server_default=column.server_default,
+                    # server_onupdate=column.server_onupdate,
+                    **kwargs,
+                )
             )
-            for column in table_metadata.columns
-        ]
         table_metadata = Table(table_metadata.name, MetaData(schema), *columns)
 
         with self.create_engine(url=url) as engine:
@@ -293,7 +301,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
             try:
                 metadata.reflect(bind=engine, views=True, only=[table])
-                table_metadata = metadata.tables.get(f"{schema}.{table}")
+                table_metadata = metadata.tables[f"{schema}.{table}"]
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
                     raise TableNotFoundException()
@@ -307,7 +315,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         table: str,
         database: str | None = None,
         schema: str | None = None,
-    ) -> None:
+    ) -> str | None:
         if database is None:
             database = self.settings.database
 
@@ -335,9 +343,12 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement, {"database": database, "schema": schema, "table": table})
-            result = cur.fetchone()[0]
+            result = cur.fetchone()
 
-        return result
+        if not result:
+            return None
+
+        return result[0]
 
     def set_table_replica_identity(
         self,

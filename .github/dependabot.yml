@@ -17,3 +17,9 @@ updates:
     schedule:
       interval: daily
     target-branch: main
+
+  - package-ecosystem: pip
+    directory: /examples/cli
+    schedule:
+      interval: daily
+    target-branch: main

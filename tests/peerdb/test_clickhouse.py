@@ -10,6 +10,7 @@ from dw_lib.exceptions import (
 )
 from dw_lib.peerdb import MirrorStatusResponse, PeerDB
 from pathlib import Path
+from pydantic import HttpUrl
 from sqlmodel import Table
 
 import pydash
@@ -19,7 +20,7 @@ import pytest
 class TestLoadConfig(PeerDBIntegrationTest):
     def test_valid_config(self, all_postgres_tables: list[Table]):
         expected = {
-            "peerdb_ui_url": "http://localhost:3000",
+            "peerdb_ui_url": HttpUrl("http://localhost:3000"),
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",
@@ -159,7 +160,7 @@ class TestDebug(PeerDBClickHouseTest):
         actual = peerdb.debug()
         expected = {
             "API": {
-                "URL": "http://localhost:3000/api",
+                "URL": HttpUrl("http://localhost:3000/api"),
                 "Connection test": "OK",
             },
             "Source peer": {

@@ -406,7 +406,9 @@ class PeerDB:
         mirrors = []
 
         if "settings" in config:
-            settings = [{"name": key, "value": value} for key, value in config["settings"].items()]
+            settings = [
+                ConfigSetting(name=key, value=value) for key, value in config["settings"].items()
+            ]
 
         if "peers" in config:
             config["peers"] = process_node(config["peers"])

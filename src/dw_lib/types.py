@@ -14,7 +14,7 @@ from sqlalchemy.engine import make_url, URL
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
 from typing import ClassVar, Literal, Self
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, urlunparse
 
 import math
 import psutil
@@ -30,16 +30,20 @@ class HttpUrl(_HttpUrl):
         if not base.endswith("/"):
             base = base + "/"
 
+        parsed_path = urlparse(path)
+
         # Normalize the path:
         # 1. Remove leading slashes (avoid network-location override)
         # 2. Collapse multiple slashes into one
-        normalized_path = re.sub(r"/+", "/", path.lstrip("/"))
+        normalized_path = (parsed_path.netloc + "/" + parsed_path.path).strip("/")
+        normalized_path = re.sub(r"/+", "/", normalized_path)
+
+        # Reconstruct the relative URL (path + query + fragment)
+        normalized_path = urlunparse(
+            ("", "", normalized_path, parsed_path.params, parsed_path.query, parsed_path.fragment)
+        )
 
         url_str = urljoin(base, normalized_path)
-
-        # Normalize trailing slash (except root)
-        if url_str != "/" and url_str.endswith("/"):
-            url_str = url_str.rstrip("/")
 
         return TypeAdapter(HttpUrl).validate_python(url_str)
 

@@ -170,7 +170,7 @@ class TestClickHouseSettings:
             "driver": "http",
         }
 
-    def test_to_url(self):
+    def test_to_sqlalchemy_url(self):
         settings = ClickHouseSettings(
             host="clickhouse",
             http_port=8123,
@@ -180,7 +180,7 @@ class TestClickHouseSettings:
             database="data",
             driver="http",
         )
-        url = settings.to_url()
+        url = settings.to_sqlalchemy_url()
         assert isinstance(url, URL)
         assert url == make_url("clickhouse+http://guest:secret@clickhouse:8123/data")
 
@@ -215,12 +215,12 @@ class TestDuckDBSettings:
         settings = DuckDBSettings(database=":memory:")
         assert str(settings) == "duckdb:///:memory:"
         assert settings.to_string() == "duckdb:///:memory:"
-        assert settings.to_url().database == ":memory:"
+        assert settings.to_sqlalchemy_url().database == ":memory:"
 
         settings = DuckDBSettings(database="/path/to/data.duckdb")
         assert str(settings) == "duckdb:////path/to/data.duckdb"
         assert settings.to_string() == "duckdb:////path/to/data.duckdb"
-        assert settings.to_url().database == "/path/to/data.duckdb"
+        assert settings.to_sqlalchemy_url().database == "/path/to/data.duckdb"
 
 
 class TestPostgresSettings:
@@ -263,11 +263,11 @@ class TestPostgresSettings:
             "schema": "public",
         }
 
-    def test_to_url(self):
+    def test_to_sqlalchemy_url(self):
         settings = PostgresSettings(
             host="localhost", port=5432, username="guest", password="secret", database="data"
         )
-        url = settings.to_url()
+        url = settings.to_sqlalchemy_url()
         assert isinstance(url, URL)
         assert url == make_url("postgresql://guest:secret@localhost:5432/data")
 

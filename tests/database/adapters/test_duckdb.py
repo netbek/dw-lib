@@ -6,8 +6,8 @@ from dw_lib.types import DuckDBSettings
 
 
 class TestDuckDBAdapter(DatabaseTest):
-    def test_instantiation_with_url(self, duckdb_settings: DuckDBSettings):
-        adapter = DuckDBAdapter(duckdb_settings.to_url())
+    def test_instantiation_with_sqlalchemy_url(self, duckdb_settings: DuckDBSettings):
+        adapter = DuckDBAdapter(duckdb_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, DuckDBSettings)
         assert str(duckdb_settings.database) == adapter.settings.database
 

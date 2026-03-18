@@ -26,8 +26,8 @@ class TestPostgresAdapter(DatabaseTest):
 
         postgres_adapter.drop_user(username)
 
-    def test_instantiation_with_url(self, postgres_settings: PostgresSettings):
-        adapter = PostgresAdapter(postgres_settings.to_url())
+    def test_instantiation_with_sqlalchemy_url(self, postgres_settings: PostgresSettings):
+        adapter = PostgresAdapter(postgres_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, PostgresSettings)
         assert postgres_settings.model_dump() == adapter.settings.model_dump()
 

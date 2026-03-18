@@ -42,8 +42,8 @@ class TestClickHouseAdapter(DatabaseTest):
 
         clickhouse_adapter.drop_table(table)
 
-    def test_instantiation_with_url(self, clickhouse_settings: ClickHouseSettings):
-        adapter = ClickHouseAdapter(clickhouse_settings.to_url())
+    def test_instantiation_with_sqlalchemy_url(self, clickhouse_settings: ClickHouseSettings):
+        adapter = ClickHouseAdapter(clickhouse_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, ClickHouseSettings)
         # Exclude tcp_port from assertion because its value is lost when casting as URL with http driver
         assert clickhouse_settings.model_dump(exclude=["tcp_port"]) == adapter.settings.model_dump(

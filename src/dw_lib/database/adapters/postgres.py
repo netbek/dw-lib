@@ -174,7 +174,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if schema is None:
             schema = self.settings.schema_
 
-        url = self.settings.model_copy(update={"database": database}).to_url()
+        url = self.settings.model_copy(update={"database": database}).to_sqlalchemy_url()
         table_metadata = self.get_table(table, database=database, schema=schema)
 
         columns = []
@@ -294,7 +294,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if schema is None:
             schema = self.settings.schema_
 
-        url = self.settings.model_copy(update={"database": database}).to_url()
+        url = self.settings.model_copy(update={"database": database}).to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=schema)
@@ -388,7 +388,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if schema is None:
             schema = self.settings.schema_
 
-        url = self.settings.model_copy(update={"database": database}).to_url()
+        url = self.settings.model_copy(update={"database": database}).to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=schema)

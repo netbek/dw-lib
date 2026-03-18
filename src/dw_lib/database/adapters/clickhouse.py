@@ -275,7 +275,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         if database is None:
             database = self.settings.database
 
-        url = self.settings.to_url()
+        url = self.settings.to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=database)
@@ -310,7 +310,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         if database is None:
             database = self.settings.database
 
-        url = self.settings.to_url()
+        url = self.settings.to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=database)

@@ -26,7 +26,7 @@ class BaseAdapter(ABC, Generic[T]):
 
     @contextmanager
     def create_engine(self, url: URL | None = None) -> Generator[Engine, Any, None]:
-        url = url or self.settings.to_url()
+        url = url or self.settings.to_sqlalchemy_url()
         engine = create_engine(url.render_as_string(hide_password=False), echo=False)
 
         yield engine

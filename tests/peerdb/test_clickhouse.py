@@ -11,6 +11,7 @@ from dw_lib.exceptions import (
 from dw_lib.peerdb import MirrorStatusResponse, PeerDB
 from dw_lib.types import HttpUrl
 from pathlib import Path
+from sqlalchemy import make_url
 from sqlmodel import Table
 
 import pydash
@@ -164,14 +165,14 @@ class TestDebug(PeerDBClickHouseTest):
                 "Connection test": "OK",
             },
             "Source peer": {
-                "URL": "postgresql://postgres:***@localhost:25432/test",
+                "URL": make_url("postgresql://postgres:postgres@localhost:25432/test"),
                 "Connection test": "OK",
                 "max_replication_slots >= 4": "OK",
                 "max_wal_senders >= 1": "OK",
                 "wal_level = logical": "OK",
             },
             "Destination peer": {
-                "URL": "clickhouse+http://default:***@localhost:28123/default",
+                "URL": make_url("clickhouse+http://default:default@localhost:28123/default"),
                 "Connection test": "OK",
             },
         }

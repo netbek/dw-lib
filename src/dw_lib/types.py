@@ -237,7 +237,7 @@ class ClickHouseSettings(BaseModel):
 
         return self
 
-    def to_url(self) -> URL:
+    def to_sqlalchemy_url(self) -> URL:
         scheme = f"clickhouse+{self.driver}"
 
         if self.driver == "native":
@@ -255,7 +255,7 @@ class ClickHouseSettings(BaseModel):
         )
 
     def to_string(self, hide_password: bool = True) -> str:
-        return self.to_url().render_as_string(hide_password=hide_password)
+        return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
 
     def __str__(self) -> str:
         return self.to_string()
@@ -273,11 +273,11 @@ class DuckDBSettings(BaseModel):
 
         return cls(database=url.database)
 
-    def to_url(self) -> URL:
+    def to_sqlalchemy_url(self) -> URL:
         return URL.create("duckdb", database=str(self.database))
 
     def to_string(self, hide_password: bool = True) -> str:
-        return self.to_url().render_as_string(hide_password=hide_password)
+        return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
 
     def __str__(self) -> str:
         return self.to_string()
@@ -312,7 +312,7 @@ class PostgresSettings(BaseModel):
             database=_url.database,
         )
 
-    def to_url(self) -> URL:
+    def to_sqlalchemy_url(self) -> URL:
         return URL.create(
             "postgresql",
             host=self.host,
@@ -323,7 +323,7 @@ class PostgresSettings(BaseModel):
         )
 
     def to_string(self, hide_password: bool = True) -> str:
-        return self.to_url().render_as_string(hide_password=hide_password)
+        return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
 
     def __str__(self) -> str:
         return self.to_string()

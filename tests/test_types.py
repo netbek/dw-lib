@@ -12,61 +12,37 @@ import pytest
 
 
 class TestHttpUrl:
-    def test_join_single_segment(self):
-        result = HttpUrl("https://example.com").join("api")
-        assert str(result) == "https://example.com/api"
-
-    def test_join_multiple_segment(self):
-        result = HttpUrl("https://example.com").join("api/v1/users")
-        assert str(result) == "https://example.com/api/v1/users"
-
-    def test_join_path_with_leading_slash(self):
-        result = HttpUrl("https://example.com").join("/api/v1/users")
-        assert str(result) == "https://example.com/api/v1/users"
-
-    def test_join_path_with_trailing_slash(self):
-        result = HttpUrl("https://example.com").join("api/v1/users/")
-        assert str(result) == "https://example.com/api/v1/users"
-
-    def test_join_path_with_mixed_slashes(self):
-        result = HttpUrl("https://example.com").join("/api/v1/users/")
-        assert str(result) == "https://example.com/api/v1/users"
-
-    def test_join_double_slashes(self):
-        result = HttpUrl("https://example.com").join("//api//v1//users")
-        assert str(result) == "https://example.com/api/v1/users"
-
-    def test_join_does_not_override_host_with_double_slash(self):
-        result = HttpUrl("https://example.com").join("//evil.com/path")
-        assert str(result) == "https://example.com/evil.com/path"
-
-    def test_join_base_with_trailing_slash(self):
-        result = HttpUrl("https://example.com/").join("/")
-        assert str(result) == "https://example.com/"
-
-    def test_join_empty_path(self):
-        result = HttpUrl("https://example.com").join("")
-        assert str(result) == "https://example.com/"
-
-    def test_join_dot_segment(self):
-        result = HttpUrl("https://example.com/api/").join("../v1")
-        assert str(result) == "https://example.com/v1"
-
-    def test_join_dot_current_directory(self):
-        result = HttpUrl("https://example.com/api/").join("./v1")
-        assert str(result) == "https://example.com/api/v1"
-
-    def test_join_base_with_path(self):
-        result = HttpUrl("https://example.com/api").join("v1")
-        assert str(result) == "https://example.com/api/v1"
-
-    def test_join_base_with_query_params(self):
-        result = HttpUrl("https://example.com?x=1").join("api")
-        assert str(result) == "https://example.com/api"
-
-    def test_join_path_with_query_params(self):
-        result = HttpUrl("https://example.com").join("api?x=1")
-        assert str(result) == "https://example.com/api?x=1"
+    @pytest.mark.parametrize(
+        "base, path, expected",
+        [
+            ("https://example.com", "", "https://example.com/"),
+            ("https://example.com", "/", "https://example.com/"),
+            ("https://example.com", "api", "https://example.com/api"),
+            ("https://example.com/", "api", "https://example.com/api"),
+            ("https://example.com/api", "v1/users", "https://example.com/api/v1/users"),
+            # Leading and trailing slashes
+            ("https://example.com", "/api/", "https://example.com/api"),
+            ("https://example.com", "//api//v1//users", "https://example.com/api/v1/users"),
+            # Check that slashes inside query params aren't collapsed
+            (
+                "https://example.com",
+                "callback?url=https://other.com/login",
+                "https://example.com/callback?url=https://other.com/login",
+            ),
+            # Check that base query params are dropped
+            ("https://example.com?auth=true", "api", "https://example.com/api"),
+            # Fragment
+            ("https://example.com", "api#section1", "https://example.com/api#section1"),
+            # Navigation
+            ("https://example.com/api/v2", "../v1", "https://example.com/api/v1"),
+            ("https://example.com/api/v2", "./users", "https://example.com/api/v2/users"),
+            # Security: Prevent domain override
+            ("https://example.com", "//evil.com/path", "https://example.com/evil.com/path"),
+        ],
+    )
+    def test_join(self, base, path, expected):
+        result = HttpUrl(base).join(path)
+        assert str(result) == expected
 
 
 class TestClickHouseSettings:

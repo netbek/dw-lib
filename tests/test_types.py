@@ -228,7 +228,7 @@ class TestPostgresSettings:
 class TestClickHouseRelation:
     def test_init_without_table(self):
         with pytest.raises(ValidationError):
-            ClickHouseRelation()  # type: ignore
+            ClickHouseRelation()  # ty: ignore[missing-argument]
 
     def test_from_string_database_and_table(self):
         relation = ClickHouseRelation.from_string("my_database.my_table")
@@ -256,7 +256,7 @@ class TestClickHouseRelation:
 class TestPostgresRelation:
     def test_init_without_table(self):
         with pytest.raises(ValidationError):
-            PostgresRelation()  # type: ignore
+            PostgresRelation()  # ty: ignore[missing-argument]
 
     def test_from_string_database_and_schema_and_table(self):
         relation = PostgresRelation.from_string("my_database.my_schema.my_table")

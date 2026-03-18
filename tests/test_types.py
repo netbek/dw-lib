@@ -51,97 +51,98 @@ class TestClickHouseSettings:
         with pytest.raises(ValidationError, match="URL scheme should be"):
             ClickHouseSettings.from_url("clickhouse+foo404://guest:secret@clickhouse:8123/data")
 
-    def test_from_url_string_has_no_driver_and_http_port(self):
-        settings = ClickHouseSettings.from_url("clickhouse://guest:secret@clickhouse:8123/data")
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": 8123,
-            "tcp_port": None,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "http",
-        }
-
-    def test_from_url_string_has_no_driver_and_tcp_port(self):
-        settings = ClickHouseSettings.from_url("clickhouse://guest:secret@clickhouse:9000/data")
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": None,
-            "tcp_port": 9000,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "native",
-        }
-
-    def test_from_url_string_has_no_driver_and_other_port(self):
-        settings = ClickHouseSettings.from_url("clickhouse://guest:secret@clickhouse:9001/data")
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": 9001,
-            "tcp_port": None,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "http",
-        }
-
-    def test_from_url_string_has_http_driver_and_default_port(self):
-        settings = ClickHouseSettings.from_url(
-            "clickhouse+http://guest:secret@clickhouse:8123/data"
-        )
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": 8123,
-            "tcp_port": None,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "http",
-        }
-
-    def test_from_url_string_has_http_driver_and_other_port(self):
-        settings = ClickHouseSettings.from_url(
-            "clickhouse+http://guest:secret@clickhouse:28123/data"
-        )
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": 28123,
-            "tcp_port": None,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "http",
-        }
-
-    def test_from_url_string_has_native_driver_and_default_port(self):
-        settings = ClickHouseSettings.from_url(
-            "clickhouse+native://guest:secret@clickhouse:9000/data"
-        )
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": None,
-            "tcp_port": 9000,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "native",
-        }
-
-    def test_from_url_string_has_native_driver_and_other_port(self):
-        settings = ClickHouseSettings.from_url(
-            "clickhouse+native://guest:secret@clickhouse:29000/data"
-        )
-        assert settings.model_dump() == {
-            "host": "clickhouse",
-            "http_port": None,
-            "tcp_port": 29000,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "driver": "native",
-        }
+    @pytest.mark.parametrize(
+        "url, expected",
+        [
+            (
+                "clickhouse://guest:secret@clickhouse:8123/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": 8123,
+                    "tcp_port": None,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "http",
+                },
+            ),
+            (
+                "clickhouse://guest:secret@clickhouse:9000/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": None,
+                    "tcp_port": 9000,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "native",
+                },
+            ),
+            (
+                "clickhouse://guest:secret@clickhouse:9001/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": 9001,
+                    "tcp_port": None,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "http",
+                },
+            ),
+            (
+                "clickhouse+http://guest:secret@clickhouse:8123/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": 8123,
+                    "tcp_port": None,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "http",
+                },
+            ),
+            (
+                "clickhouse+http://guest:secret@clickhouse:28123/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": 28123,
+                    "tcp_port": None,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "http",
+                },
+            ),
+            (
+                "clickhouse+native://guest:secret@clickhouse:9000/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": None,
+                    "tcp_port": 9000,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "native",
+                },
+            ),
+            (
+                "clickhouse+native://guest:secret@clickhouse:29000/data",
+                {
+                    "host": "clickhouse",
+                    "http_port": None,
+                    "tcp_port": 29000,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "driver": "native",
+                },
+            ),
+        ],
+    )
+    def test_from_url_string(self, url, expected):
+        settings = ClickHouseSettings.from_url(url)
+        assert settings.model_dump(by_alias=True) == expected
 
     def test_from_url_sqlalchemy(self):
         url = make_url("clickhouse+http://guest:secret@clickhouse:8123/data")

@@ -26,7 +26,7 @@ from rich.table import Table
 from ruamel.yaml import YAML
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import text
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 import httpx
 import os
@@ -494,7 +494,7 @@ class PeerDB:
         except httpx.HTTPError:
             return False
 
-    def debug(self, echo: bool = False) -> dict[str, dict[str, str]] | None:
+    def debug(self, echo: bool = False) -> dict[str, dict[str, Any]]:
         # TODO Add to result: missing publications, unused publications, replication slots
         # TODO Table mappings: check whether the source schema and table exists, check whether the destination schema exists
 

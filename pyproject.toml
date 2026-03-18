@@ -31,6 +31,7 @@ dagster = [
     "dagster>=1.12.19",
     "dagster-dbt>=0.28.19",
 ]
+
 # dbt-core pinned for compatibility with dbt-clickhouse https://github.com/netbek/dbt-clickhouse/blob/v1.10.0-batch/pyproject.toml#L26
 dbt = [
     "dbt-clickhouse",
@@ -42,6 +43,7 @@ dbt = [
     "pydash>=8.0.5",
     "ruamel-yaml>=0.19.1",
 ]
+
 loader = [
     "boto3>=1.41.1",
     "chdb>=3.7.2",
@@ -50,6 +52,7 @@ loader = [
     "pydantic>=2.12.4",
     "rich>=14.2.0",
 ]
+
 peerdb = [
     "clickhouse-connect>=0.10.0",
     "clickhouse-sqlalchemy",
@@ -67,10 +70,10 @@ peerdb = [
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
-    "pyright>=1.1.408",
     "pytest>=9.0.2",
     "pytest-docker>=3.2.5",
     "ruff>=0.15.0",
+    "ty>=0.0.23",
 ]
 
 [build-system]
@@ -91,11 +94,17 @@ extend-exclude = ["./vendor"]
 [tool.ruff.lint]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
-[tool.pyright]
+# [tool.pyright]
+# include = ["src", "tests"]
+# pythonVersion = "3.13"
+# typeCheckingMode = "basic"
+# reportPrivateImportUsage = "none"
+
+[tool.ty.rules]
+invalid-method-override = "ignore" # https://github.com/astral-sh/ty/issues/2154
+
+[tool.ty.src]
 include = ["src", "tests"]
-pythonVersion = "3.13"
-typeCheckingMode = "basic"
-reportPrivateImportUsage = "none"
 
 [tool.pytest]
 addopts = ["-x", "--no-header", "--container-scope=module"]

@@ -17,6 +17,7 @@ uv-sync-all:
 	uv sync --all-extras --all-groups
 	cd examples/cli && uv sync --all-extras --all-groups
 	cd examples/cli/packages/example_cli && uv sync --all-extras --all-groups
+	uv sync --all-extras --all-groups
 
 uv-lock-upgrade-all:
 	uv lock --upgrade

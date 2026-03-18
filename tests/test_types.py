@@ -46,6 +46,10 @@ class TestHttpUrl:
 
 
 class TestClickHouseSettings:
+    def test_from_url_has_invalid_scheme(self):
+        with pytest.raises(ValidationError, match="URL scheme should be"):
+            ClickHouseSettings.from_url("clickhouse+foo404://guest:secret@clickhouse:8123/data")
+
     def test_from_url_has_no_driver_and_http_port(self):
         settings = ClickHouseSettings.from_url("clickhouse://guest:secret@clickhouse:8123/data")
         assert settings.model_dump() == {
@@ -178,6 +182,10 @@ class TestDuckDBSettings:
 
 
 class TestPostgresSettings:
+    def test_from_url_has_invalid_scheme(self):
+        with pytest.raises(ValidationError, match="URL scheme should be"):
+            PostgresSettings.from_url("postgresql+foo404://guest:secret@localhost:5432/data")
+
     def test_from_url(self):
         settings = PostgresSettings.from_url("postgresql://guest:secret@localhost:5432/data")
         assert settings.model_dump(by_alias=True) == {

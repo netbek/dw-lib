@@ -1,6 +1,8 @@
+from dw_lib.utils.python_utils import validate_clickhouse_dsn, validate_postgres_dsn
 from pathlib import Path
 from pydantic import (
     BaseModel,
+    ClickHouseDsn,
     ConfigDict,
     Field,
     field_validator,
@@ -8,6 +10,7 @@ from pydantic import (
 from pydantic import HttpUrl as _HttpUrl
 from pydantic import (
     model_validator,
+    PostgresDsn,
     TypeAdapter,
 )
 from sqlalchemy.engine import make_url, URL
@@ -183,14 +186,23 @@ class ClickHouseSettings(BaseModel):
     driver: Literal["http", "native"] = "http"
 
     @classmethod
-    def from_url(cls, url: URL | str) -> Self:
-        url = make_url(url)
+    def from_url(cls, url: ClickHouseDsn | URL | str) -> Self:
+        if isinstance(url, ClickHouseDsn):
+            _url = make_url(str(url))
+        elif isinstance(url, URL):
+            validate_clickhouse_dsn(url.render_as_string(hide_password=False))
+            _url = url
+        elif isinstance(url, str):
+            validate_clickhouse_dsn(url)
+            _url = make_url(url)
+        else:
+            raise TypeError("url must be one of: Pydantic ClickHouseDsn, SQLAlchemy URL, str")
 
         given_driver = None
-        if url.drivername and "+" in url.drivername:
-            given_driver = url.drivername.split("+")[1]
+        if _url.drivername and "+" in _url.drivername:
+            given_driver = _url.drivername.split("+")[1]
 
-        given_port = url.port
+        given_port = _url.port
 
         if given_driver in ["http", "native"]:
             driver = given_driver
@@ -203,12 +215,12 @@ class ClickHouseSettings(BaseModel):
         tcp_port = given_port if driver == "native" else None
 
         return cls(
-            host=url.host,
+            host=_url.host,
             http_port=http_port,
             tcp_port=tcp_port,
-            username=url.username,
-            password=url.password,
-            database=url.database,
+            username=_url.username,
+            password=_url.password,
+            database=_url.database,
             driver=driver,
         )
 
@@ -280,15 +292,24 @@ class PostgresSettings(BaseModel):
     schema_: str = Field(default="public", serialization_alias="schema")
 
     @classmethod
-    def from_url(cls, url: URL | str) -> Self:
-        url = make_url(url)
+    def from_url(cls, url: PostgresDsn | URL | str) -> Self:
+        if isinstance(url, PostgresDsn):
+            _url = make_url(str(url))
+        elif isinstance(url, URL):
+            validate_postgres_dsn(url.render_as_string(hide_password=False))
+            _url = url
+        elif isinstance(url, str):
+            validate_postgres_dsn(url)
+            _url = make_url(url)
+        else:
+            raise TypeError("url must be one of: Pydantic PostgresDsn, SQLAlchemy URL, str")
 
         return cls(
-            host=url.host,
-            port=url.port,
-            username=url.username,
-            password=url.password,
-            database=url.database,
+            host=_url.host,
+            port=_url.port,
+            username=_url.username,
+            password=_url.password,
+            database=_url.database,
         )
 
     def to_url(self) -> URL:

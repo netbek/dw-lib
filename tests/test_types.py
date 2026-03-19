@@ -271,6 +271,7 @@ class TestPostgresSettings:
             "password": "secret",
             "database": "data",
             "schema": "public",
+            "driver": "psycopg2",
         }
 
     def test_from_url_pydantic(self):
@@ -283,6 +284,7 @@ class TestPostgresSettings:
             "password": "secret",
             "database": "data",
             "schema": "public",
+            "driver": "psycopg2",
         }
 
     def test_to_sqlalchemy_url(self):

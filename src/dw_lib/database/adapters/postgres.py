@@ -26,7 +26,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
     settings_class = PostgresSettings
 
     @contextmanager
-    def create_client(self, autocommit: bool = True):
+    def create_client(self, autocommit: bool = False):
         if self.settings.driver == "psycopg":
             import psycopg
 
@@ -165,6 +165,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def make_create_table_statement_from_table(
         self,
@@ -275,6 +276,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def truncate_table(
         self, table: str, database: str | None = None, schema: str | None = None
@@ -294,6 +296,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def get_table(
         self, table: str, database: str | None = None, schema: str | None = None
@@ -380,6 +383,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def drop_tables(self, database: str | None = None, schema: str | None = None) -> None:
         if database is None:
@@ -453,6 +457,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def drop_user(self, username: str, if_exists: bool | None = False) -> None:
         if not self.has_user(username):
@@ -469,6 +474,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def grant_user_privileges(self, username: str, schema: str) -> None:
         if not self.has_user(username):
@@ -484,6 +490,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def revoke_user_privileges(self, username: str, schema: str) -> None:
         if not self.has_user(username):
@@ -500,6 +507,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def list_user_privileges(self, username: str) -> list[tuple] | None:
         if not self.has_user(username):
@@ -546,6 +554,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def drop_publication(self, publication: str, if_exists: bool | None = False) -> None:
         if not self.has_publication(publication):
@@ -559,6 +568,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
+            conn.commit()
 
     def list_publications(self) -> list[str]:
         statement = """

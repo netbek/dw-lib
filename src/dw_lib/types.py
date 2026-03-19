@@ -291,7 +291,7 @@ class PostgresSettings(BaseModel):
     password: str
     database: str
     schema_: str = Field(default="public", serialization_alias="schema")
-    driver: Literal["psycopg", "psycopg2"] = "psycopg"
+    driver: Literal["psycopg", "psycopg2"] = "psycopg2"
 
     @classmethod
     def from_url(cls, url: PostgresDsn | URL | str) -> Self:
@@ -313,7 +313,7 @@ class PostgresSettings(BaseModel):
         if given_driver in ["psycopg", "psycopg2"]:
             driver = given_driver
         else:
-            driver = "psycopg"
+            driver = "psycopg2"
 
         return cls(
             host=_url.host,

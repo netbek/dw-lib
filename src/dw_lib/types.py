@@ -241,15 +241,13 @@ class ClickHouseSettings(BaseModel):
         return self
 
     def to_sqlalchemy_url(self) -> URL:
-        scheme = f"clickhouse+{self.driver}"
-
         if self.driver == "native":
             port = self.tcp_port
         else:
             port = self.http_port
 
         return URL.create(
-            scheme,
+            f"clickhouse+{self.driver}",
             host=self.host,
             port=port,
             username=self.username,
@@ -293,6 +291,7 @@ class PostgresSettings(BaseModel):
     password: str
     database: str
     schema_: str = Field(default="public", serialization_alias="schema")
+    driver: Literal["psycopg2"] = "psycopg2"
 
     @classmethod
     def from_url(cls, url: PostgresDsn | URL | str) -> Self:
@@ -307,17 +306,27 @@ class PostgresSettings(BaseModel):
         else:
             raise TypeError("url must be one of: Pydantic PostgresDsn, SQLAlchemy URL, str")
 
+        given_driver = None
+        if _url.drivername and "+" in _url.drivername:
+            given_driver = _url.drivername.split("+")[1]
+
+        if given_driver in ["psycopg2"]:
+            driver = given_driver
+        else:
+            driver = "psycopg2"
+
         return cls(
             host=_url.host,
             port=_url.port,
             username=_url.username,
             password=_url.password,
             database=_url.database,
+            driver=driver,
         )
 
     def to_sqlalchemy_url(self) -> URL:
         return URL.create(
-            "postgresql",
+            f"postgresql+{self.driver}",
             host=self.host,
             port=self.port,
             username=self.username,

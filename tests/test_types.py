@@ -228,19 +228,41 @@ class TestPostgresSettings:
         with pytest.raises(ValidationError, match="URL scheme should be"):
             PostgresSettings.from_url("postgresql+foo404://guest:secret@localhost:5432/data")
 
-    def test_from_url_string(self):
-        settings = PostgresSettings.from_url("postgresql://guest:secret@localhost:5432/data")
-        assert settings.model_dump(by_alias=True) == {
-            "host": "localhost",
-            "port": 5432,
-            "username": "guest",
-            "password": "secret",
-            "database": "data",
-            "schema": "public",
-        }
+    @pytest.mark.parametrize(
+        "url, expected",
+        [
+            (
+                "postgresql://guest:secret@localhost:5432/data",
+                {
+                    "host": "localhost",
+                    "port": 5432,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "schema": "public",
+                    "driver": "psycopg2",
+                },
+            ),
+            (
+                "postgresql+psycopg2://guest:secret@localhost:5432/data",
+                {
+                    "host": "localhost",
+                    "port": 5432,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "schema": "public",
+                    "driver": "psycopg2",
+                },
+            ),
+        ],
+    )
+    def test_from_url_string(self, url, expected):
+        settings = PostgresSettings.from_url(url)
+        assert settings.model_dump(by_alias=True) == expected
 
     def test_from_url_sqlalchemy(self):
-        url = make_url("postgresql://guest:secret@localhost:5432/data")
+        url = make_url("postgresql+psycopg2://guest:secret@localhost:5432/data")
         settings = PostgresSettings.from_url(url)
         assert settings.model_dump(by_alias=True) == {
             "host": "localhost",
@@ -249,10 +271,11 @@ class TestPostgresSettings:
             "password": "secret",
             "database": "data",
             "schema": "public",
+            "driver": "psycopg2",
         }
 
     def test_from_url_pydantic(self):
-        url = PostgresDsn("postgresql://guest:secret@localhost:5432/data")
+        url = PostgresDsn("postgresql+psycopg2://guest:secret@localhost:5432/data")
         settings = PostgresSettings.from_url(url)
         assert settings.model_dump(by_alias=True) == {
             "host": "localhost",
@@ -261,25 +284,36 @@ class TestPostgresSettings:
             "password": "secret",
             "database": "data",
             "schema": "public",
+            "driver": "psycopg2",
         }
 
     def test_to_sqlalchemy_url(self):
         settings = PostgresSettings(
-            host="localhost", port=5432, username="guest", password="secret", database="data"
+            host="localhost",
+            port=5432,
+            username="guest",
+            password="secret",
+            database="data",
+            driver="psycopg2",
         )
         url = settings.to_sqlalchemy_url()
         assert isinstance(url, URL)
-        assert url == make_url("postgresql://guest:secret@localhost:5432/data")
+        assert url == make_url("postgresql+psycopg2://guest:secret@localhost:5432/data")
 
     def test_to_string(self):
         settings = PostgresSettings(
-            host="localhost", port=5432, username="guest", password="secret", database="data"
+            host="localhost",
+            port=5432,
+            username="guest",
+            password="secret",
+            database="data",
+            driver="psycopg2",
         )
-        assert str(settings) == "postgresql://guest:***@localhost:5432/data"
-        assert settings.to_string() == "postgresql://guest:***@localhost:5432/data"
+        assert str(settings) == "postgresql+psycopg2://guest:***@localhost:5432/data"
+        assert settings.to_string() == "postgresql+psycopg2://guest:***@localhost:5432/data"
         assert (
             settings.to_string(hide_password=False)
-            == "postgresql://guest:secret@localhost:5432/data"
+            == "postgresql+psycopg2://guest:secret@localhost:5432/data"
         )
 
 

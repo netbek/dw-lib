@@ -468,7 +468,7 @@ wheels = [
 
 [[package]]
 name = "dw-lib"
-version = "1.25.9"
+version = "1.26.0"
 source = { editable = "../../../../" }
 dependencies = [
     { name = "boto3" },

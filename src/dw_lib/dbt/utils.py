@@ -1,6 +1,6 @@
 from ..database.adapters import ClickHouseAdapter
 from ..types import ClickHouseSettings
-from ..utils.python_utils import is_python_keyword
+from ..utils.python_utils import is_python_reserved_word
 from ..utils.sqlmodel_utils import parse_create_table_statement
 from .types import DbtSource
 
@@ -30,8 +30,8 @@ def get_class_import_string(class_) -> str | None:
 def make_class_filename(class_name: str) -> str:
     filename = pydash.snake_case(class_name)
 
-    # Fix keywords
-    if is_python_keyword(filename):
+    # Fix reserved words
+    if is_python_reserved_word(filename):
         filename = filename + "_"
 
     return filename

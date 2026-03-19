@@ -1,4 +1,7 @@
-from dw_lib.utils.python_utils import validate_clickhouse_dsn, validate_postgres_dsn
+from dw_lib.utils.python_utils import (
+    validate_pydantic_clickhouse_dsn,
+    validate_pydantic_postgres_dsn,
+)
 from pathlib import Path
 from pydantic import (
     BaseModel,
@@ -190,10 +193,10 @@ class ClickHouseSettings(BaseModel):
         if isinstance(url, ClickHouseDsn):
             _url = make_url(str(url))
         elif isinstance(url, URL):
-            validate_clickhouse_dsn(url.render_as_string(hide_password=False))
+            validate_pydantic_clickhouse_dsn(url.render_as_string(hide_password=False))
             _url = url
         elif isinstance(url, str):
-            validate_clickhouse_dsn(url)
+            validate_pydantic_clickhouse_dsn(url)
             _url = make_url(url)
         else:
             raise TypeError("url must be one of: Pydantic ClickHouseDsn, SQLAlchemy URL, str")
@@ -296,10 +299,10 @@ class PostgresSettings(BaseModel):
         if isinstance(url, PostgresDsn):
             _url = make_url(str(url))
         elif isinstance(url, URL):
-            validate_postgres_dsn(url.render_as_string(hide_password=False))
+            validate_pydantic_postgres_dsn(url.render_as_string(hide_password=False))
             _url = url
         elif isinstance(url, str):
-            validate_postgres_dsn(url)
+            validate_pydantic_postgres_dsn(url)
             _url = make_url(url)
         else:
             raise TypeError("url must be one of: Pydantic PostgresDsn, SQLAlchemy URL, str")

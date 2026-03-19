@@ -38,7 +38,6 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
                 dbname=self.settings.database,
                 autocommit=autocommit,
             )
-
         else:
             import psycopg2
 

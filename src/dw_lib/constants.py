@@ -1,4 +1,4 @@
-PYTHON_KEYWORDS = [
+PYTHON_RESERVED_WORDS = [
     "false",
     "none",
     "true",

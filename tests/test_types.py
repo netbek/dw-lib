@@ -244,6 +244,18 @@ class TestPostgresSettings:
                 },
             ),
             (
+                "postgresql+psycopg://guest:secret@localhost:5432/data",
+                {
+                    "host": "localhost",
+                    "port": 5432,
+                    "username": "guest",
+                    "password": "secret",
+                    "database": "data",
+                    "schema": "public",
+                    "driver": "psycopg",
+                },
+            ),
+            (
                 "postgresql+psycopg2://guest:secret@localhost:5432/data",
                 {
                     "host": "localhost",

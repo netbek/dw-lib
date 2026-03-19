@@ -269,8 +269,13 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             else:
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-        statement = (
-            f"drop table {PostgresRelation(database=database, schema_=schema, table=table)};"
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        statement = sql.SQL("drop table {table};").format(
+            table=sql.Identifier(database, schema, table)
         )
 
         with self.create_client() as (conn, cur):
@@ -289,8 +294,13 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if not self.has_table(table=table, database=database, schema=schema):
             return
 
-        statement = (
-            f"truncate table {PostgresRelation(database=database, schema_=schema, table=table)};"
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        statement = sql.SQL("truncate table {table};").format(
+            table=sql.Identifier(database, schema, table)
         )
 
         with self.create_client() as (conn, cur):
@@ -378,7 +388,15 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if not self.has_table(table=table, database=database, schema=schema):
             return
 
-        statement = f"alter table {PostgresRelation(database=database, schema_=schema, table=table)} replica identity {replica_identity};"
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        statement = sql.SQL("alter table {table} replica identity {replica_identity};").format(
+            table=sql.Identifier(database, schema, table),
+            replica_identity=sql.SQL(replica_identity),
+        )
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)

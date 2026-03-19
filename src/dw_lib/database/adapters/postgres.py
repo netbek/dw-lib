@@ -8,7 +8,6 @@ from ...exceptions import (
 )
 from ...types import PostgresRelation, PostgresSettings
 from ..adapters.base import BaseAdapter
-from ..utils import quote_identifier
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from sqlalchemy.exc import InvalidRequestError
@@ -466,11 +465,15 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             else:
                 raise UserNotFoundException(f"User '{username}' not found")
 
-        quoted_username = quote_identifier(username, dialect=self.dialect)
-        statement = f"""
-        drop owned by {quoted_username} cascade;
-        drop user {quoted_username};
-        """
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        statement = sql.SQL("""
+        drop owned by {username} cascade;
+        drop user {username};
+        """).format(username=sql.Identifier(username))
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -480,13 +483,16 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if not self.has_user(username):
             raise Exception()
 
-        quoted_username = quote_identifier(username, dialect=self.dialect)
-        quoted_schema = quote_identifier(schema, dialect=self.dialect)
-        statement = f"""
-        grant usage on schema {quoted_schema} to {quoted_username};
-        grant select on all tables in schema {quoted_schema} to {quoted_username};
-        alter default privileges in schema {quoted_schema} grant select on tables to {quoted_username};
-        """
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        statement = sql.SQL("""
+        grant usage on schema {schema} to {username};
+        grant select on all tables in schema {schema} to {username};
+        alter default privileges in schema {schema} grant select on tables to {username};
+        """).format(schema=sql.Identifier(schema), username=sql.Identifier(username))
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -496,14 +502,17 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         if not self.has_user(username):
             return
 
-        quoted_username = quote_identifier(username, dialect=self.dialect)
-        quoted_schema = quote_identifier(schema, dialect=self.dialect)
-        statement = f"""
-        alter default privileges for user {quoted_username} in schema {quoted_schema} revoke select on tables from {quoted_username};
-        revoke select on all tables in schema {quoted_schema} from {quoted_username};
-        revoke usage on schema {quoted_schema} from {quoted_username};
-        -- reassign owned by {quoted_username} to postgres;
-        """
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        # TODO Consider adding `reassign owned by {username} to {new_owner};`
+        statement = sql.SQL("""
+        alter default privileges for user {username} in schema {schema} revoke select on tables from {username};
+        revoke select on all tables in schema {schema} from {username};
+        revoke usage on schema {schema} from {username};
+        """).format(schema=sql.Identifier(schema), username=sql.Identifier(username))
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -548,9 +557,15 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             else:
                 raise PublicationExistsException(f"Publication '{publication}' exists")
 
-        quoted_publication = quote_identifier(publication, dialect=self.dialect)
-        tables = [str(PostgresRelation.from_string(table)) for table in tables]
-        statement = f"create publication {quoted_publication} for table {', '.join(tables)};"
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        tables = [sql.SQL(str(PostgresRelation.from_string(table))) for table in tables]
+        statement = sql.SQL("""
+        create publication {publication} for table {tables};
+        """).format(publication=sql.Identifier(publication), tables=sql.SQL(", ").join(tables))
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)
@@ -563,8 +578,14 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             else:
                 raise PublicationNotFoundException(f"Publication '{publication}' not found")
 
-        quoted_publication = quote_identifier(publication, dialect=self.dialect)
-        statement = f"drop publication {quoted_publication};"
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
+
+        statement = sql.SQL("""
+        drop publication {publication};
+        """).format(publication=sql.Identifier(publication))
 
         with self.create_client() as (conn, cur):
             cur.execute(statement)

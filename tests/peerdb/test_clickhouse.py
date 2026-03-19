@@ -40,6 +40,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
                             "password": "postgres",
                             "database": "test",
                             "schema": "public",
+                            "driver": "psycopg2",
                         },
                     },
                     "peerdb": {

@@ -71,7 +71,7 @@ class TestIntegration(LoaderTest):
         actual = loader.debug()
         expected = {
             "source_1": {
-                "URL": "postgresql+psycopg2://postgres:***@localhost:25432/test",
+                "URL": "postgresql+psycopg://postgres:***@localhost:25432/test",
                 "Connection test": True,
             },
             "destination_1": {

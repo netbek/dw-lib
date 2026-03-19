@@ -18,7 +18,6 @@ from sqlglot.dialects.dialect import Dialects
 from sqlmodel import Column, MetaData, Session, SQLModel, Table
 from typing import Any, Literal
 
-import psycopg2
 import pydash
 
 
@@ -27,18 +26,30 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
     settings_class = PostgresSettings
 
     @contextmanager
-    def create_client(
-        self, autocommit: bool = True
-    ) -> Generator[tuple[psycopg2.extensions.connection, psycopg2.extensions.cursor], Any, None]:
-        conn = psycopg2.connect(
-            host=self.settings.host,
-            port=self.settings.port,
-            user=self.settings.username,
-            password=self.settings.password,
-            database=self.settings.database,
-        )
+    def create_client(self, autocommit: bool = True):
+        if self.settings.driver == "psycopg":
+            import psycopg
 
-        conn.autocommit = autocommit
+            conn = psycopg.connect(
+                host=self.settings.host,
+                port=self.settings.port,
+                user=self.settings.username,
+                password=self.settings.password,
+                dbname=self.settings.database,
+                autocommit=autocommit,
+            )
+
+        else:
+            import psycopg2
+
+            conn = psycopg2.connect(
+                host=self.settings.host,
+                port=self.settings.port,
+                user=self.settings.username,
+                password=self.settings.password,
+                dbname=self.settings.database,
+            )
+            conn.autocommit = autocommit
 
         with conn.cursor() as cur:
             yield (conn, cur)
@@ -423,22 +434,26 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             else:
                 raise UserExistsException(f"User '{username}' exists")
 
-        quoted_username = quote_identifier(username, dialect=self.dialect)
+        if self.settings.driver == "psycopg":
+            from psycopg import sql
+        else:
+            from psycopg2 import sql
 
         computed_options = []
         if options:
             if options.get("login"):
-                computed_options.append("login")
+                computed_options.append(sql.SQL("login"))
             if options.get("replication"):
-                computed_options.append("replication")
+                computed_options.append(sql.SQL("replication"))
 
-        statement = f"""
-        create user {quoted_username}
-        with {" ".join(computed_options)} password %(password)s;
-        """
+        statement = sql.SQL("create user {username} with {options} password {password}").format(
+            username=sql.Identifier(username),
+            options=sql.SQL(" ").join(computed_options),
+            password=sql.Literal(password),
+        )
 
         with self.create_client() as (conn, cur):
-            cur.execute(statement, {"password": password})
+            cur.execute(statement)
 
     def drop_user(self, username: str, if_exists: bool | None = False) -> None:
         if not self.has_user(username):

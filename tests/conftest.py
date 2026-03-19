@@ -121,7 +121,7 @@ class DatabaseTest:
             username="postgres",
             password="postgres",
             database="test",
-            driver="psycopg2",
+            driver="psycopg",
         )
 
     @pytest.fixture(scope="module")
@@ -197,7 +197,7 @@ class PeerDBTest:
             username="postgres",
             password="postgres",
             database="test",
-            driver="psycopg2",
+            driver="psycopg",
         )
         postgres_adapter = PostgresAdapter(postgres_settings)
 
@@ -361,7 +361,7 @@ class LoaderTest:
             username="postgres",
             password="postgres",
             database="test",
-            driver="psycopg2",
+            driver="psycopg",
         )
         postgres_adapter = PostgresAdapter(postgres_settings)
 

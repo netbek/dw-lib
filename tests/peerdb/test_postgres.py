@@ -161,14 +161,14 @@ class TestDebug(PeerDBPostgresTest):
                 "Connection test": "OK",
             },
             "Source peer": {
-                "URL": make_url("postgresql://postgres:postgres@localhost:25432/test"),
+                "URL": make_url("postgresql+psycopg2://postgres:postgres@localhost:25432/test"),
                 "Connection test": "OK",
                 "max_replication_slots >= 4": "OK",
                 "max_wal_senders >= 1": "OK",
                 "wal_level = logical": "OK",
             },
             "Destination peer": {
-                "URL": make_url("postgresql://postgres:postgres@localhost:25432/test"),
+                "URL": make_url("postgresql+psycopg2://postgres:postgres@localhost:25432/test"),
                 "Connection test": "OK",
             },
         }

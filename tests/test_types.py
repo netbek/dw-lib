@@ -287,7 +287,12 @@ class TestPostgresSettings:
 
     def test_to_sqlalchemy_url(self):
         settings = PostgresSettings(
-            host="localhost", port=5432, username="guest", password="secret", database="data"
+            host="localhost",
+            port=5432,
+            username="guest",
+            password="secret",
+            database="data",
+            driver="psycopg2",
         )
         url = settings.to_sqlalchemy_url()
         assert isinstance(url, URL)
@@ -295,7 +300,12 @@ class TestPostgresSettings:
 
     def test_to_string(self):
         settings = PostgresSettings(
-            host="localhost", port=5432, username="guest", password="secret", database="data"
+            host="localhost",
+            port=5432,
+            username="guest",
+            password="secret",
+            database="data",
+            driver="psycopg2",
         )
         assert str(settings) == "postgresql+psycopg2://guest:***@localhost:5432/data"
         assert settings.to_string() == "postgresql+psycopg2://guest:***@localhost:5432/data"

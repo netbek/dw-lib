@@ -25,7 +25,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
     settings_class = PostgresSettings
 
     @contextmanager
-    def create_client(self, autocommit: bool = False):
+    def create_client(self, autocommit: bool = False, row_factory: Any = None):
         if self.settings.driver == "psycopg":
             import psycopg
 
@@ -37,7 +37,13 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
                 dbname=self.settings.database,
                 autocommit=autocommit,
             )
+
+            with conn.cursor(row_factory=row_factory) as cur:
+                yield (conn, cur)
         else:
+            if row_factory is not None:
+                raise NotImplementedError()
+
             import psycopg2
 
             conn = psycopg2.connect(
@@ -49,8 +55,8 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             )
             conn.autocommit = autocommit
 
-        with conn.cursor() as cur:
-            yield (conn, cur)
+            with conn.cursor() as cur:
+                yield (conn, cur)
 
         cur.close()
         conn.close()

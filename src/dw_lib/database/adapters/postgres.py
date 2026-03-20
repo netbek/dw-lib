@@ -25,7 +25,17 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
     settings_class = PostgresSettings
 
     @contextmanager
-    def create_client(self, autocommit: bool = False):
+    def create_client(self, autocommit: bool = False, row_factory: Any = None):
+        """
+        Creates and yields a PostgreSQL connection and cursor.
+
+        Args:
+            autocommit (bool, optional): If True, database operations are committed immediately. Defaults to False.
+            row_factory (Any, optional): The strategy used to shape the resulting rows. Pass `psycopg.rows.dict_row` for psycopg 3 or `psycopg2.extras.RealDictCursor` for psycopg2. Defaults to None.
+
+        Yields:
+            tuple: A tuple containing (connection, cursor).
+        """
         if self.settings.driver == "psycopg":
             import psycopg
 
@@ -37,6 +47,9 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
                 dbname=self.settings.database,
                 autocommit=autocommit,
             )
+
+            with conn.cursor(row_factory=row_factory) as cur:
+                yield (conn, cur)
         else:
             import psycopg2
 
@@ -49,8 +62,8 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             )
             conn.autocommit = autocommit
 
-        with conn.cursor() as cur:
-            yield (conn, cur)
+            with conn.cursor(cursor_factory=row_factory) as cur:
+                yield (conn, cur)
 
         cur.close()
         conn.close()

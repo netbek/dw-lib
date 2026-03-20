@@ -73,8 +73,8 @@ class TestPostgresAdapter(DatabaseTest):
             actual = cur.fetchall()
         assert actual == [(1,)]
 
-    # TODO Turn on this test after separating fixtures for psycopg and psycopg2. row_factory is not implemented in psycopg2.
-    # def test_create_client_row_factory(self, postgres_adapter: PostgresAdapter):
+    # TODO Turn on this test after separating fixtures for psycopg and psycopg2
+    # def test_create_client_psycopg_row_factory(self, postgres_adapter: PostgresAdapter):
     #     from psycopg.rows import dict_row
 
     #     with postgres_adapter.create_client(row_factory=dict_row) as (conn, cur):
@@ -85,6 +85,18 @@ class TestPostgresAdapter(DatabaseTest):
     #         actual = cur.fetchall()
 
     #     assert actual == [{"found": 1}]
+
+    def test_create_client_psycopg2_row_factory(self, postgres_adapter: PostgresAdapter):
+        from psycopg2.extras import RealDictCursor
+
+        with postgres_adapter.create_client(row_factory=RealDictCursor) as (conn, cur):
+            cur.execute(
+                "select 1 as found from information_schema.schemata where catalog_name = %s limit 1;",
+                [postgres_adapter.settings.database],
+            )
+            actual = cur.fetchall()
+
+        assert actual == [{"found": 1}]
 
     def test_create_session(self, postgres_adapter: PostgresAdapter):
         with postgres_adapter.create_session() as session:

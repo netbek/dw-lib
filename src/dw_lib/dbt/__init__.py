@@ -481,14 +481,12 @@ class Dbt:
                             lambda resource_column: resource_column.name == column["name"],
                         )
 
-                        if not resource_column:
-                            continue
+                        if resource_column:
+                            if len(resource_column.description.strip()):
+                                column["description"] = resource_column.description.strip()
 
-                        if len(resource_column.description.strip()):
-                            column["description"] = resource_column.description.strip()
-
-                        if resource_column.meta:
-                            column["meta"] = resource_column.meta
+                            if resource_column.meta:
+                                column["meta"] = resource_column.meta
 
                         columns.append(
                             pydash.pick(column, ["name", "description", "meta", "data_type"])

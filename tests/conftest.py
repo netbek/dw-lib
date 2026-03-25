@@ -12,8 +12,8 @@ from sqlalchemy import Column
 from sqlmodel import Field, SQLModel, Table
 from typing import Any
 
-import httpx
 import pytest
+import requests
 
 
 class TableWithoutSchema(SQLModel, table=True):
@@ -225,7 +225,7 @@ class PeerDBTest:
 
             def is_responsive():
                 try:
-                    response = httpx.get(str(url), headers={"Content-Type": "application/json"})
+                    response = requests.get(str(url), headers={"Content-Type": "application/json"})
                     if response.status_code == 200 and response.json() == {
                         "status": "INSTANCE_STATUS_READY"
                     }:

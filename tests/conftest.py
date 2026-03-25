@@ -148,7 +148,7 @@ class DatabaseTest:
 
     #     def is_responsive():
     #         try:
-    #             response = httpx.get(url)
+    #             response = requests.get(url)
     #             return response.status_code == 200
     #         except Exception:
     #             return False

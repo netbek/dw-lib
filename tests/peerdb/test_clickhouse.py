@@ -367,7 +367,7 @@ class TestPauseMirror(PeerDBClickHouseTest):
 
             text = ""
 
-        monkeypatch.setattr("dw_lib.peerdb.httpx.post", lambda *a, **k: _Response())
+        monkeypatch.setattr("dw_lib.peerdb.requests.post", lambda *a, **k: _Response())
         monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_PAUSED")
 
         response = peerdb.pause_mirror(mirror.flow_job_name)
@@ -411,7 +411,7 @@ class TestResumeMirror(PeerDBClickHouseTest):
 
             text = ""
 
-        monkeypatch.setattr("dw_lib.peerdb.httpx.post", lambda *a, **k: _Response())
+        monkeypatch.setattr("dw_lib.peerdb.requests.post", lambda *a, **k: _Response())
         monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_RUNNING")
 
         response = peerdb.resume_mirror(mirror.flow_job_name)

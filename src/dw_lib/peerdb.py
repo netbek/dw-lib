@@ -491,7 +491,7 @@ class PeerDB:
             response = requests.get(str(url), headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
             return True
-        except requests.HTTPError:
+        except (requests.HTTPError, requests.ConnectionError):
             return False
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, Any]]:
@@ -684,7 +684,7 @@ class PeerDB:
         try:
             response = requests.get(str(url), headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to get dynamic settings ({exc})")
 
         return GetDynamicSettingsResponse(**response.json())
@@ -702,7 +702,7 @@ class PeerDB:
                     str(url), json=data, headers=self._headers, timeout=TIMEOUT
                 )
                 response.raise_for_status()
-            except requests.HTTPError as exc:
+            except (requests.HTTPError, requests.ConnectionError) as exc:
                 raise Exception(f"Failed to set {key}={value} ({exc})")
 
     def has_peer(self, peer_name: str) -> bool:
@@ -717,7 +717,7 @@ class PeerDB:
         try:
             response = requests.get(str(url), headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to peer info of '{peer_name}' ({exc})")
 
         return PeerInfoResponse(**response.json())
@@ -728,7 +728,7 @@ class PeerDB:
         try:
             response = requests.get(str(url), headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to peer type of '{peer_name}' ({exc})")
 
         return PeerTypeResponse(**response.json())
@@ -754,7 +754,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to create peer '{peer['name']}' ({exc})")
 
         deserialized = RawCreatePeerResponse(**response.json())
@@ -797,7 +797,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to drop peer '{peer_name}' ({exc})")
 
         return DropPeerResponse(message=f"Dropped peer '{peer_name}'")
@@ -815,7 +815,7 @@ class PeerDB:
         try:
             response = requests.get(str(url), headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to list peers ({exc})")
 
         return ListPeersResponse(**response.json())
@@ -923,7 +923,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to create mirror '{mirror['flow_job_name']}' ({exc})")
 
         workflow_id = response.json().get("workflowId")
@@ -970,7 +970,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to drop mirror '{flow_job_name}' ({exc})")
 
         for _ in range(timeout):
@@ -1008,7 +1008,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to resync mirror '{flow_job_name}' ({exc})")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
@@ -1038,7 +1038,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to pause mirror '{flow_job_name}' ({exc})")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_PAUSED"}, timeout=timeout)
@@ -1066,7 +1066,7 @@ class PeerDB:
         try:
             response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to resume mirror '{flow_job_name}' ({exc})")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RUNNING"}, timeout=timeout)
@@ -1114,7 +1114,7 @@ class PeerDB:
         try:
             response = requests.get(str(url), headers=self._headers, timeout=TIMEOUT)
             response.raise_for_status()
-        except requests.HTTPError as exc:
+        except (requests.HTTPError, requests.ConnectionError) as exc:
             raise Exception(f"Failed to list mirrors ({exc})")
 
         return ListMirrorsResponse(mirrors=pydash.sort_by(response.json()["mirrors"], "name"))

@@ -17,7 +17,7 @@ services:
     stop_grace_period: 0s
 
   clickhouse:
-    image: clickhouse/clickhouse-server:25.8.18.1-alpine
+    image: clickhouse/clickhouse-server:25.8.20.4-alpine
     environment:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=default

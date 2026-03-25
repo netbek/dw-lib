@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18.1-alpine3.23
+    image: postgres:18.3-alpine3.23
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -20,16 +20,10 @@ services:
     container_name: minio
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     entrypoint: >
-      /bin/sh -c "
-      minio server /data --console-address=:9001 &
-      sleep 2;
-      /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
-      case \"$(/usr/bin/mc ls local)\" in
+      /bin/sh -c " minio server /data --console-address=:9001 & sleep 2; /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; case \"$(/usr/bin/mc ls local)\" in
         *loader*) echo 'Bucket loader already exists';;
         *) /usr/bin/mc mb local/loader;;
-      esac;
-      wait
-      "
+      esac; wait "
     environment:
       - MINIO_ROOT_USER=admin
       - MINIO_ROOT_PASSWORD=password

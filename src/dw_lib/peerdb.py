@@ -33,7 +33,7 @@ import pydash
 import requests
 import time
 
-TIMEOUT = requests.Timeout(5.0)
+TIMEOUT = 5
 
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"

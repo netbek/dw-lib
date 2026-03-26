@@ -363,3 +363,20 @@ class PeerDBSettings(BaseModel):
 
 class NotebookSettings(BaseModel):
     directory: Path | str
+
+
+class ColumnStats(BaseModel):
+    name: str
+    data_type: str
+    nullable: bool | None = None
+    cardinality: int
+    null_count: int
+    null_pct: float
+
+
+class TableStats(BaseModel):
+    columns: list[ColumnStats]
+
+    @property
+    def columns_sorted_by_cardinality(self) -> list[ColumnStats]:
+        return sorted(self.columns, key=lambda x: (x.cardinality, x.name))

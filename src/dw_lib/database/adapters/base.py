@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
+from dw_lib.types import TableStats
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
 from sqlalchemy.sql.schema import ForeignKeyConstraint
@@ -240,6 +241,23 @@ class BaseAdapter(ABC, Generic[T]):
 
     @abstractmethod
     def get_table(self, *args, **kwargs) -> Table: ...
+
+    @overload
+    @abstractmethod
+    def get_table_stats(self, table: str, database: str | None = None) -> TableStats: ...
+
+    @overload
+    @abstractmethod
+    def get_table_stats(
+        self,
+        table: str,
+        database: str | None = None,
+        schema: str | None = None,
+    ) -> TableStats: ...
+
+    @abstractmethod
+    def get_table_stats(self, *args, **kwargs) -> TableStats:
+        """Get statistics about every column in the table."""
 
     @overload
     @abstractmethod

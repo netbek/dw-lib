@@ -7,7 +7,7 @@ from ...exceptions import (
     UserNotFoundException,
 )
 from ...types import PostgresRelation, PostgresSettings
-from ..adapters.base import BaseAdapter
+from ..adapters.base import BaseAdapter, TableStats
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from sqlalchemy.exc import InvalidRequestError
@@ -16,8 +16,6 @@ from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlglot.dialects.dialect import Dialects
 from sqlmodel import Column, MetaData, Session, SQLModel, Table
 from typing import Any, Literal
-
-import pydash
 
 
 class PostgresAdapter(BaseAdapter[PostgresSettings]):
@@ -339,11 +337,16 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
                 table_metadata = metadata.tables[f"{schema}.{table}"]
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
-                    raise TableNotFoundException()
+                    raise TableNotFoundException(f"Table '{table}' not found")
                 else:
                     raise exc
 
         return table_metadata
+
+    def get_table_stats(
+        self, table: str, database: str | None = None, schema: str | None = None
+    ) -> TableStats:
+        raise NotImplementedError()
 
     def get_table_replica_identity(
         self,
@@ -437,7 +440,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=schema)
             metadata.reflect(bind=engine, views=True)
-            tables = pydash.sort_by(list(metadata.tables.values()), lambda table: table.name)
+            tables = sorted(metadata.tables.values(), key=lambda table: table.name)
 
         return tables
 

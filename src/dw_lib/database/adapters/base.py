@@ -11,6 +11,23 @@ from typing import Any, Generic, Literal, overload, TypeVar
 T = TypeVar("T", bound=BaseModel)
 
 
+class ColumnStats(BaseModel):
+    name: str
+    data_type: str
+    nullable: bool | None = None
+    cardinality: int
+    null_count: int
+    null_pct: float
+
+
+class TableStats(BaseModel):
+    columns: list[ColumnStats]
+
+    @property
+    def columns_sorted_by_cardinality(self) -> list[ColumnStats]:
+        return sorted(self.columns, key=lambda x: (x.cardinality, x.name))
+
+
 class BaseAdapter(ABC, Generic[T]):
     dialect: Dialects
     settings_class: type[T]
@@ -240,6 +257,23 @@ class BaseAdapter(ABC, Generic[T]):
 
     @abstractmethod
     def get_table(self, *args, **kwargs) -> Table: ...
+
+    @overload
+    @abstractmethod
+    def get_table_stats(self, table: str, database: str | None = None) -> TableStats: ...
+
+    @overload
+    @abstractmethod
+    def get_table_stats(
+        self,
+        table: str,
+        database: str | None = None,
+        schema: str | None = None,
+    ) -> TableStats: ...
+
+    @abstractmethod
+    def get_table_stats(self, *args, **kwargs) -> TableStats:
+        """Get statistics about every column in the table."""
 
     @overload
     @abstractmethod

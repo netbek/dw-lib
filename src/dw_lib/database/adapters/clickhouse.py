@@ -8,7 +8,7 @@ from ...exceptions import (
 )
 from ...types import ClickHouseRelation, ClickHouseSettings
 from ...utils.sqlmodel_utils import get_model_schema
-from ..adapters.base import BaseAdapter
+from ..adapters.base import BaseAdapter, ColumnStats, TableStats
 from ..utils import quote_identifier
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
@@ -23,7 +23,6 @@ from sqlmodel import MetaData, Session, SQLModel, Table
 from typing import Any, Literal
 
 import clickhouse_connect
-import pydash
 import sqlglot
 
 
@@ -165,7 +164,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 statement = str(statement).replace("\\n", "\n")
             except DatabaseError as exc:
                 if f"Table `{table}` doesn't exist" in str(exc):
-                    raise TableNotFoundException()
+                    raise TableNotFoundException(f"Table '{table}' not found")
                 else:
                     raise exc
 
@@ -285,11 +284,46 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 table_metadata = metadata.tables[f"{database}.{table}"]
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
-                    raise TableNotFoundException()
+                    raise TableNotFoundException(f"Table '{table}' not found")
                 else:
                     raise exc
 
         return table_metadata
+
+    def get_table_stats(self, table: str, database: str | None = None) -> TableStats:
+        table_metadata = self.get_table(table, database=database)
+
+        measures = []
+        for column in table_metadata.columns:
+            name = column.name
+            measures.append(f"uniqCombined(`{name}`) as `{name}_cardinality`")
+            measures.append(f"countIf(isNull(`{name}`)) as `{name}_null_count`")
+            measures.append(f"count(*) as `{name}_count`")
+
+        query = f"select {', '.join(measures)} from {ClickHouseRelation(database=database, table=table)}"
+
+        with self.create_client() as client:
+            row = client.query(query).result_rows[0]
+
+        column_stats = []
+        for i, column in enumerate(table_metadata.columns):
+            idx = i * 3
+            cardinality = row[idx]
+            null_count = row[idx + 1]
+            count = row[idx + 2]
+            null_pct = (null_count / count * 100) if count > 0 else 0
+            column_stats.append(
+                ColumnStats(
+                    name=column.name,
+                    data_type=str(column.type),
+                    nullable=column.nullable,
+                    cardinality=cardinality,
+                    null_count=null_count,
+                    null_pct=round(null_pct, 2),
+                )
+            )
+
+        return TableStats(columns=column_stats)
 
     def get_table_replica_identity(self, table: str, database: str | None = None) -> None:
         raise NotImplementedError()
@@ -315,7 +349,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         with self.create_engine(url=url) as engine:
             metadata = MetaData(schema=database)
             metadata.reflect(bind=engine, views=True)
-            tables = pydash.sort_by(list(metadata.tables.values()), lambda table: table.name)
+            tables = sorted(metadata.tables.values(), key=lambda table: table.name)
 
         return tables
 

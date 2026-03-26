@@ -1,5 +1,5 @@
 from ...types import DuckDBSettings
-from ..adapters.base import BaseAdapter
+from ..adapters.base import BaseAdapter, TableStats
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlglot.dialects.dialect import Dialects
@@ -142,6 +142,11 @@ class DuckDBAdapter(BaseAdapter[DuckDBSettings]):
     def get_table(
         self, table: str, database: str | None = None, schema: str | None = None
     ) -> Table:
+        raise NotImplementedError()
+
+    def get_table_stats(
+        self, table: str, database: str | None = None, schema: str | None = None
+    ) -> TableStats:
         raise NotImplementedError()
 
     def get_table_replica_identity(

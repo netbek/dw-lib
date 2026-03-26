@@ -7,7 +7,7 @@ from ...conftest import (
     ViewWithSchema,
 )
 from collections.abc import Generator
-from dw_lib.database.adapters import ClickHouseAdapter
+from dw_lib.database.adapters import ClickHouseAdapter, ColumnStats, TableStats
 from dw_lib.exceptions import (
     DatabaseNotFoundException,
     TableNotFoundException,
@@ -35,7 +35,6 @@ class TestClickHouseAdapter(DatabaseTest):
         engine = MergeTree
         order by id
         """
-
         clickhouse_adapter.create_table(table, statement)
 
         yield clickhouse_adapter.get_table(table)
@@ -163,6 +162,65 @@ class TestClickHouseAdapter(DatabaseTest):
             clickhouse_adapter.make_create_table_statement_from_table(clickhouse_table.name),
             expected,
         )
+
+    def test_get_table_stats_non_existent_table(self, clickhouse_adapter: ClickHouseAdapter):
+        with pytest.raises(TableNotFoundException):
+            clickhouse_adapter.get_table_stats("non_existent_table")
+
+    def test_get_table_stats_empty_table(
+        self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
+    ):
+        actual = clickhouse_adapter.get_table_stats(clickhouse_table.name)
+        expected = TableStats(
+            columns=[
+                ColumnStats(
+                    name="id",
+                    data_type="UInt64",
+                    nullable=False,
+                    cardinality=0,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="updated_at",
+                    data_type="DateTime",
+                    nullable=False,
+                    cardinality=0,
+                    null_count=0,
+                    null_pct=0,
+                ),
+            ]
+        )
+        assert actual == expected
+
+    def test_get_table_stats_populated_table(
+        self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
+    ):
+        with clickhouse_adapter.create_client() as client:
+            client.insert(clickhouse_table.name, [(1,), (2,), (3,)], column_names=["id"])
+
+        actual = clickhouse_adapter.get_table_stats(clickhouse_table.name)
+        expected = TableStats(
+            columns=[
+                ColumnStats(
+                    name="id",
+                    data_type="UInt64",
+                    nullable=False,
+                    cardinality=3,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="updated_at",
+                    data_type="DateTime",
+                    nullable=False,
+                    cardinality=1,
+                    null_count=0,
+                    null_pct=0,
+                ),
+            ]
+        )
+        assert actual == expected
 
     def test_list_tables_empty_database(self, clickhouse_adapter: ClickHouseAdapter):
         assert clickhouse_adapter.list_tables() == []

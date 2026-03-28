@@ -74,6 +74,7 @@ peerdb = [
 
 [dependency-groups]
 dev = [
+    "docker>=7.1.0",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-docker>=3.2.5",

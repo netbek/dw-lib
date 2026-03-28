@@ -2,11 +2,6 @@ class EmptyConfigException(Exception):
     pass
 
 
-class ListReplicationSlotsException(Exception):
-    def __init__(self, message="Failed to list replication slots"):
-        super().__init__(message)
-
-
 class PeerExistsException(Exception):
     pass
 

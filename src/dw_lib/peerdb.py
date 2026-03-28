@@ -2,7 +2,6 @@ from .database.adapters.clickhouse import ClickHouseAdapter
 from .database.adapters.postgres import PostgresAdapter
 from .exceptions import (
     EmptyConfigException,
-    ListReplicationSlotsException,
     MirrorExistsException,
     MirrorNotFoundException,
     PeerExistsException,
@@ -1247,13 +1246,8 @@ class PeerDB:
                         {stats_join})
                 WHERE prs.database = :database
             """
-            try:
-                result = session.exec(text(query), params={"database": database})
-                rows = result.fetchall()
-            except Exception as exc:
-                raise ListReplicationSlotsException(f"Failed to list replication slots: {exc}")
-
-            for row in rows:
+            result = session.exec(text(query), params={"database": database})
+            for row in result.fetchall():
                 row_dict = row._asdict()
                 row_dict["active"] = bool(row.active) if row.active is not None else False
                 row_dict["lag_mb"] = row.lag_mb or 0

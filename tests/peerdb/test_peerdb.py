@@ -52,6 +52,8 @@ class TestServicesOffline(PeerDBTest):
             peerdb.update_settings({"PEERDB_NULLABLE": "false"})
 
 
+# TODO Add tests for wal_status "extended" and "unreserved"
+# https://www.postgresql.org/docs/17/view-pg-replication-slots.html
 class TestListReplicationSlots:
     @pytest.fixture(scope="function")
     def docker_compose_file(self) -> Path:

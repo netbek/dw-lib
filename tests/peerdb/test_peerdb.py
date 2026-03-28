@@ -170,11 +170,11 @@ class TestListReplicationSlots:
         peerdb: PeerDB,
     ):
         with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table stress (id serial primary key, data text);")
-            cur.execute("create publication test_publication for table stress;")
+            cur.execute("create table test_table (id serial primary key, data text);")
+            cur.execute("create publication test_publication for table test_table;")
 
         with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table stress (id serial primary key, data text);")
+            cur.execute("create table test_table (id serial primary key, data text);")
             cur.execute(
                 "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
             )
@@ -193,40 +193,42 @@ class TestListReplicationSlots:
         assert pydash.omit(
             replication_slot.model_dump(),
             [
+                "confirmed_flush_lsn",
+                "confirmed_to_current_mb",
+                "current_lsn",
+                "inactive_since",
                 "redo_lsn",
                 "restart_lsn",
-                "current_lsn",
-                "confirmed_flush_lsn",
-                "sent_lsn",
-                "confirmed_to_current_mb",
-                "inactive_since",
                 "safe_wal_size",
+                "sent_lsn",
+                "wait_event_type",
+                "wait_event",
             ],
         ) == {
-            "slot_name": "test_subscription",
             "active": True,
-            "lag_mb": 0,
-            "restart_to_confirmed_mb": 0,
-            "wal_status": "reserved",
-            "wait_event_type": None,
-            "wait_event": None,
             "backend_state": "active",
-            "logical_decoding_work_mem_mb": 64,
-            "stats_reset": None,
-            "spill_txns": 0,
-            "spill_count": 0,
-            "spill_bytes": 0,
             "failover": False,
+            "lag_mb": 0,
+            "logical_decoding_work_mem_mb": 64,
+            "restart_to_confirmed_mb": 0,
+            "slot_name": "test_subscription",
+            "spill_bytes": 0,
+            "spill_count": 0,
+            "spill_txns": 0,
+            "stats_reset": None,
             "synced": False,
+            # "wait_event_type": None,
+            # "wait_event": None,
+            "wal_status": "reserved",
         }
+        assert replication_slot.confirmed_flush_lsn is not None
+        assert replication_slot.confirmed_to_current_mb == 0
+        assert replication_slot.current_lsn is not None
+        assert replication_slot.inactive_since is None
         assert replication_slot.redo_lsn is not None
         assert replication_slot.restart_lsn is not None
-        assert replication_slot.current_lsn is not None
-        assert replication_slot.confirmed_flush_lsn is not None
-        assert replication_slot.sent_lsn is not None
-        assert replication_slot.confirmed_to_current_mb == 0
-        assert replication_slot.inactive_since is None
         assert replication_slot.safe_wal_size is not None
+        assert replication_slot.sent_lsn is not None
 
     def test_wal_status_lost(
         self,
@@ -236,11 +238,11 @@ class TestListReplicationSlots:
         peerdb: PeerDB,
     ):
         with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table stress (id serial primary key, data text);")
-            cur.execute("create publication test_publication for table stress;")
+            cur.execute("create table test_table (id serial primary key, data text);")
+            cur.execute("create publication test_publication for table test_table;")
 
         with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table stress (id serial primary key, data text);")
+            cur.execute("create table test_table (id serial primary key, data text);")
             cur.execute(
                 "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
             )
@@ -255,7 +257,7 @@ class TestListReplicationSlots:
 
         with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
             cur.execute(
-                "insert into stress (data) select repeat('a', 1000) from generate_series(1, 100000);"
+                "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 100000);"
             )
             cur.execute("checkpoint;")  # Ensure that WAL status updates immediately
             cur.execute(
@@ -271,37 +273,39 @@ class TestListReplicationSlots:
         assert pydash.omit(
             replication_slot.model_dump(),
             [
+                "confirmed_flush_lsn",
+                "confirmed_to_current_mb",
+                "current_lsn",
+                "inactive_since",
                 "redo_lsn",
                 "restart_lsn",
-                "current_lsn",
-                "confirmed_flush_lsn",
-                "sent_lsn",
-                "confirmed_to_current_mb",
-                "inactive_since",
                 "safe_wal_size",
+                "sent_lsn",
+                "wait_event_type",
+                "wait_event",
             ],
         ) == {
-            "slot_name": "test_subscription",
             "active": False,
-            "lag_mb": 0,
-            "restart_to_confirmed_mb": 0,
-            "wal_status": "lost",
-            "wait_event_type": None,
-            "wait_event": None,
             "backend_state": None,
-            "logical_decoding_work_mem_mb": 64,
-            "stats_reset": None,
-            "spill_txns": 0,
-            "spill_count": 0,
-            "spill_bytes": 0,
             "failover": False,
+            "lag_mb": 0,
+            "logical_decoding_work_mem_mb": 64,
+            "restart_to_confirmed_mb": 0,
+            "slot_name": "test_subscription",
+            "spill_bytes": 0,
+            "spill_count": 0,
+            "spill_txns": 0,
+            "stats_reset": None,
             "synced": False,
+            # "wait_event_type": None,
+            # "wait_event": None,
+            "wal_status": "lost",
         }
+        assert replication_slot.confirmed_flush_lsn is not None
+        assert replication_slot.confirmed_to_current_mb > 0
+        assert replication_slot.current_lsn is not None
+        assert replication_slot.inactive_since is not None
         assert replication_slot.redo_lsn is not None
         assert replication_slot.restart_lsn is None
-        assert replication_slot.current_lsn is not None
-        assert replication_slot.confirmed_flush_lsn is not None
-        assert replication_slot.sent_lsn is None
-        assert replication_slot.confirmed_to_current_mb > 0
-        assert replication_slot.inactive_since is not None
         assert replication_slot.safe_wal_size is None
+        assert replication_slot.sent_lsn is None

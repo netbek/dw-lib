@@ -231,15 +231,16 @@ class ListPublicationsItem(BaseModel):
     relation: PostgresRelation
 
 
+# https://www.postgresql.org/docs/17/view-pg-replication-slots.html
 class ListReplicationSlotsItem(BaseModel):
     slot_name: str
     redo_lsn: str
-    restart_lsn: str
+    restart_lsn: str | None = None
     current_lsn: str
     active: bool
     inactive_since: datetime | None = None
     lag_mb: int
-    confirmed_flush_lsn: str
+    confirmed_flush_lsn: str | None = None
     sent_lsn: str | None = None
     restart_to_confirmed_mb: int
     confirmed_to_current_mb: int

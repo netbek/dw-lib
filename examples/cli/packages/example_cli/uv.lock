@@ -456,7 +456,7 @@ wheels = [
 
 [[package]]
 name = "dw-lib"
-version = "1.29.1"
+version = "1.29.2"
 source = { editable = "../../../../" }
 dependencies = [
     { name = "boto3" },
@@ -558,6 +558,7 @@ provides-extras = ["psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "docker", specifier = ">=7.1.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-docker", specifier = ">=3.2.5" },

@@ -264,10 +264,12 @@ class Dbt:
         manifest_file = self.project_dir / "target" / "manifest.json"
 
         if not os.path.exists(manifest_file) or invalidate_cache:
-            self.compile(quiet=True)
+            self.parse(quiet=True)
 
             if not os.path.exists(manifest_file):
-                raise Exception(f"'{manifest_file}' not found. Run 'dbt compile' first.")
+                raise Exception(
+                    f"'{manifest_file}' not found. Run 'dbt parse' or 'dbt compile' first."
+                )
 
         with open(manifest_file) as f:
             data = json.load(f)
@@ -294,6 +296,25 @@ class Dbt:
             selected_resources = list(resources.values())
 
         return pydash.sort_by(selected_resources, lambda resource: resource.name)
+
+    def parse(
+        self,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+    ) -> dbtRunnerResult:
+        cmd = self._parse_command(
+            debug=debug,
+            fail_fast=fail_fast,
+            quiet=quiet,
+            target=target,
+            use_colors=use_colors,
+        )
+        runner_result = dbtRunner().invoke(cmd[1:])
+
+        return runner_result
 
     def compile(
         self,
@@ -552,6 +573,55 @@ class Dbt:
         for path in watch_paths:
             server.watch(path, lambda: self.docs_generate())
         server.serve(host="0.0.0.0", port=8080, root=self.docs_dir)
+
+    def _parse_command(
+        self,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "parse",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+        ]
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+
+        return cmd
 
     def _compile_command(
         self,

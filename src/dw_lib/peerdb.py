@@ -237,19 +237,19 @@ class ListReplicationSlotsItem(BaseModel):
     redo_lsn: str
     restart_lsn: str | None = None
     current_lsn: str
-    active: bool
+    active: bool | None = None
     inactive_since: datetime | None = None
-    lag_mb: int
+    lag_mb: int | None = None
     confirmed_flush_lsn: str | None = None
     sent_lsn: str | None = None
-    restart_to_confirmed_mb: int
-    confirmed_to_current_mb: int
+    restart_to_confirmed_mb: int | None = None
+    confirmed_to_current_mb: int | None = None
     wal_status: str
     safe_wal_size: int | None = None
     wait_event_type: str | None = None
     wait_event: str | None = None
     backend_state: str | None = None
-    logical_decoding_work_mem_mb: int
+    logical_decoding_work_mem_mb: int | None = None
     stats_reset: int | None = None
     spill_txns: int | None = None
     spill_count: int | None = None
@@ -1175,7 +1175,6 @@ class PeerDB:
 
         source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
         database = source_adapter.settings.database
-        data = []
 
         with source_adapter.create_session() as session:
             pg_version_str = session.exec(text("SHOW server_version_num")).scalar()
@@ -1250,14 +1249,7 @@ class PeerDB:
                 WHERE prs.database = :database
             """
             result = session.exec(text(query), params={"database": database})
-            for row in result.fetchall():
-                row_dict = row._asdict()
-                row_dict["active"] = bool(row.active) if row.active is not None else False
-                row_dict["lag_mb"] = row.lag_mb or 0
-                row_dict["restart_to_confirmed_mb"] = row.restart_to_confirmed_mb or 0
-                row_dict["confirmed_to_current_mb"] = row.confirmed_to_current_mb or 0
-                row_dict["logical_decoding_work_mem_mb"] = row.logical_decoding_work_mem_mb or 0
-                data.append(ListReplicationSlotsItem(**row_dict))
+            data = [ListReplicationSlotsItem(**row._asdict()) for row in result.fetchall()]
 
         return data
 

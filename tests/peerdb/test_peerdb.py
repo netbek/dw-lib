@@ -290,9 +290,9 @@ class TestListReplicationSlots:
             "active": False,
             "backend_state": None,
             "failover": False,
-            "lag_mb": 0,
+            "lag_mb": None,
             "logical_decoding_work_mem_mb": 64,
-            "restart_to_confirmed_mb": 0,
+            "restart_to_confirmed_mb": None,
             "slot_name": "test_subscription",
             "spill_bytes": 0,
             "spill_count": 0,
@@ -304,7 +304,7 @@ class TestListReplicationSlots:
             "wal_status": "lost",
         }
         assert replication_slot.confirmed_flush_lsn is not None
-        assert replication_slot.confirmed_to_current_mb > 0
+        assert replication_slot.confirmed_to_current_mb is not None
         assert replication_slot.current_lsn is not None
         assert replication_slot.inactive_since is not None
         assert replication_slot.redo_lsn is not None

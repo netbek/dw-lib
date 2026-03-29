@@ -1,6 +1,6 @@
 from collections.abc import Generator, Iterator
 from dw_lib.database import PostgresAdapter
-from dw_lib.peerdb import PeerDB
+from dw_lib.peerdb import ListReplicationSlotsItem, PeerDB
 from dw_lib.types import HttpUrl, PostgresSettings
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
@@ -18,10 +18,6 @@ class TestReplicationSlots:
     def docker_compose_file(self, request) -> Path:
         marker = request.node.get_closest_marker("docker_compose_file")
         return Path(__file__).parent.parent / marker.args[0]
-
-    @pytest.fixture(scope="function")
-    def docker_compose_project_name(self) -> str:
-        return "dw-lib-test-replication-slots"  # Pin the project name to avoid creating multiple stacks
 
     @pytest.fixture(scope="function")
     def docker_api(self) -> docker.client.DockerClient:
@@ -121,12 +117,8 @@ class TestReplicationSlots:
 
         yield postgres_adapter
 
-    @pytest.mark.docker_compose_file("docker-compose.peerdb.wal_status_reserved.yml")
-    def test_wal_status_reserved(
-        self,
-        postgres_primary_adapter: PostgresAdapter,
-        postgres_replica_adapter: PostgresAdapter,
-        peerdb: PeerDB,
+    def setup_replication(
+        self, postgres_primary_adapter: PostgresAdapter, postgres_replica_adapter: PostgresAdapter
     ):
         with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
             cur.execute("create table test_table (id serial primary key, data text);")
@@ -135,14 +127,17 @@ class TestReplicationSlots:
         with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
             cur.execute("create table test_table (id serial primary key, data text);")
             cur.execute(
-                "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
+                """
+                create subscription test_subscription
+                connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test'
+                publication test_publication;
+                """
             )
 
-        replication_slot = pydash.find(
-            peerdb.list_replication_slots(), lambda x: x.slot_name == "test_subscription"
-        )
-        assert replication_slot is not None
-        assert pydash.omit(
+    def assert_replication_slot(
+        self, replication_slot: ListReplicationSlotsItem, expected: dict[str, Any]
+    ) -> None:
+        actual = pydash.omit(
             replication_slot.model_dump(),
             [
                 "confirmed_flush_lsn",
@@ -158,19 +153,38 @@ class TestReplicationSlots:
                 "wait_event_type",
                 "wait_event",
             ],
-        ) == {
-            "active": True,
-            "backend_state": "active",
-            "failover": False,
-            "logical_decoding_work_mem_mb": 64,
-            "slot_name": "test_subscription",
-            "spill_bytes": 0,
-            "spill_count": 0,
-            "spill_txns": 0,
-            "stats_reset": None,
-            "synced": False,
-            "wal_status": "reserved",
-        }
+        )
+        assert actual == expected
+
+    @pytest.mark.docker_compose_file("docker-compose.peerdb.wal_status_reserved.yml")
+    def test_wal_status_reserved(
+        self,
+        postgres_primary_adapter: PostgresAdapter,
+        postgres_replica_adapter: PostgresAdapter,
+        peerdb: PeerDB,
+    ):
+        self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
+
+        replication_slot = pydash.find(
+            peerdb.list_replication_slots(), lambda x: x.slot_name == "test_subscription"
+        )
+        assert replication_slot is not None
+        self.assert_replication_slot(
+            replication_slot,
+            {
+                "active": True,
+                "backend_state": "active",
+                "failover": False,
+                "logical_decoding_work_mem_mb": 64,
+                "slot_name": "test_subscription",
+                "spill_bytes": 0,
+                "spill_count": 0,
+                "spill_txns": 0,
+                "stats_reset": None,
+                "synced": False,
+                "wal_status": "reserved",
+            },
+        )
         assert replication_slot.confirmed_flush_lsn is not None
         assert replication_slot.confirmed_to_current_mb == 0
         assert replication_slot.current_lsn is not None
@@ -190,15 +204,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table test_table (id serial primary key, data text);")
-            cur.execute("create publication test_publication for table test_table;")
-
-        with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table test_table (id serial primary key, data text);")
-            cur.execute(
-                "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
-            )
+        self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL
         postgres_replica_container = docker_api.containers.list(
@@ -221,35 +227,22 @@ class TestReplicationSlots:
             peerdb.list_replication_slots(), lambda x: x.slot_name == "test_subscription"
         )
         assert replication_slot is not None
-        assert pydash.omit(
-            replication_slot.model_dump(),
-            [
-                "confirmed_flush_lsn",
-                "confirmed_to_current_mb",
-                "current_lsn",
-                "inactive_since",
-                "lag_mb",
-                "redo_lsn",
-                "restart_lsn",
-                "restart_to_confirmed_mb",
-                "safe_wal_size",
-                "sent_lsn",
-                "wait_event_type",
-                "wait_event",
-            ],
-        ) == {
-            "active": False,
-            "backend_state": None,
-            "failover": False,
-            "logical_decoding_work_mem_mb": 64,
-            "slot_name": "test_subscription",
-            "spill_bytes": 0,
-            "spill_count": 0,
-            "spill_txns": 0,
-            "stats_reset": None,
-            "synced": False,
-            "wal_status": "extended",
-        }
+        self.assert_replication_slot(
+            replication_slot,
+            {
+                "active": False,
+                "backend_state": None,
+                "failover": False,
+                "logical_decoding_work_mem_mb": 64,
+                "slot_name": "test_subscription",
+                "spill_bytes": 0,
+                "spill_count": 0,
+                "spill_txns": 0,
+                "stats_reset": None,
+                "synced": False,
+                "wal_status": "extended",
+            },
+        )
         assert replication_slot.confirmed_flush_lsn is not None
         assert replication_slot.confirmed_to_current_mb is not None
         assert replication_slot.current_lsn is not None
@@ -269,15 +262,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table test_table (id serial primary key, data text);")
-            cur.execute("create publication test_publication for table test_table;")
-
-        with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table test_table (id serial primary key, data text);")
-            cur.execute(
-                "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
-            )
+        self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL
         postgres_replica_container = docker_api.containers.list(
@@ -298,35 +283,22 @@ class TestReplicationSlots:
             peerdb.list_replication_slots(), lambda x: x.slot_name == "test_subscription"
         )
         assert replication_slot is not None
-        assert pydash.omit(
-            replication_slot.model_dump(),
-            [
-                "confirmed_flush_lsn",
-                "confirmed_to_current_mb",
-                "current_lsn",
-                "inactive_since",
-                "lag_mb",
-                "redo_lsn",
-                "restart_lsn",
-                "restart_to_confirmed_mb",
-                "safe_wal_size",
-                "sent_lsn",
-                "wait_event_type",
-                "wait_event",
-            ],
-        ) == {
-            "active": False,
-            "backend_state": None,
-            "failover": False,
-            "logical_decoding_work_mem_mb": 64,
-            "slot_name": "test_subscription",
-            "spill_bytes": 0,
-            "spill_count": 0,
-            "spill_txns": 0,
-            "stats_reset": None,
-            "synced": False,
-            "wal_status": "unreserved",
-        }
+        self.assert_replication_slot(
+            replication_slot,
+            {
+                "active": False,
+                "backend_state": None,
+                "failover": False,
+                "logical_decoding_work_mem_mb": 64,
+                "slot_name": "test_subscription",
+                "spill_bytes": 0,
+                "spill_count": 0,
+                "spill_txns": 0,
+                "stats_reset": None,
+                "synced": False,
+                "wal_status": "unreserved",
+            },
+        )
         assert replication_slot.confirmed_flush_lsn is not None
         assert replication_slot.confirmed_to_current_mb is not None
         assert replication_slot.current_lsn is not None
@@ -346,15 +318,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table test_table (id serial primary key, data text);")
-            cur.execute("create publication test_publication for table test_table;")
-
-        with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
-            cur.execute("create table test_table (id serial primary key, data text);")
-            cur.execute(
-                "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
-            )
+        self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL
         postgres_replica_container = docker_api.containers.list(
@@ -377,35 +341,22 @@ class TestReplicationSlots:
             peerdb.list_replication_slots(), lambda x: x.slot_name == "test_subscription"
         )
         assert replication_slot is not None
-        assert pydash.omit(
-            replication_slot.model_dump(),
-            [
-                "confirmed_flush_lsn",
-                "confirmed_to_current_mb",
-                "current_lsn",
-                "inactive_since",
-                "lag_mb",
-                "redo_lsn",
-                "restart_lsn",
-                "restart_to_confirmed_mb",
-                "safe_wal_size",
-                "sent_lsn",
-                "wait_event_type",
-                "wait_event",
-            ],
-        ) == {
-            "active": False,
-            "backend_state": None,
-            "failover": False,
-            "logical_decoding_work_mem_mb": 64,
-            "slot_name": "test_subscription",
-            "spill_bytes": 0,
-            "spill_count": 0,
-            "spill_txns": 0,
-            "stats_reset": None,
-            "synced": False,
-            "wal_status": "lost",
-        }
+        self.assert_replication_slot(
+            replication_slot,
+            {
+                "active": False,
+                "backend_state": None,
+                "failover": False,
+                "logical_decoding_work_mem_mb": 64,
+                "slot_name": "test_subscription",
+                "spill_bytes": 0,
+                "spill_count": 0,
+                "spill_txns": 0,
+                "stats_reset": None,
+                "synced": False,
+                "wal_status": "lost",
+            },
+        )
         assert replication_slot.confirmed_flush_lsn is not None
         assert replication_slot.confirmed_to_current_mb is not None
         assert replication_slot.current_lsn is not None

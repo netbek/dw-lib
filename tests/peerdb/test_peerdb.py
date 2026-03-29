@@ -243,6 +243,7 @@ class TestReplicationSlots:
                 "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
             )
 
+        # Ensure the replica is running, then stop it to accumulate WAL
         postgres_replica_container = docker_api.containers.list(
             filters={"name": "postgres-replica"}
         ).pop()
@@ -321,6 +322,7 @@ class TestReplicationSlots:
                 "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
             )
 
+        # Ensure the replica is running, then stop it to accumulate WAL
         postgres_replica_container = docker_api.containers.list(
             filters={"name": "postgres-replica"}
         ).pop()
@@ -397,6 +399,7 @@ class TestReplicationSlots:
                 "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
             )
 
+        # Ensure the replica is running, then stop it to accumulate WAL
         postgres_replica_container = docker_api.containers.list(
             filters={"name": "postgres-replica"}
         ).pop()

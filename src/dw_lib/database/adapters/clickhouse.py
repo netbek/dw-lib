@@ -11,7 +11,7 @@ from ...utils.sqlmodel_utils import get_model_schema
 from ..adapters.base import BaseAdapter
 from ..utils import quote_identifier
 from clickhouse_connect.driver.client import Client
-from clickhouse_connect.driver.exceptions import DatabaseError, OperationalError
+from clickhouse_connect.driver.exceptions import DatabaseError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -62,7 +62,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         try:
             with self.create_client() as client:
                 result = client.query("select 1;").first_row == (1,)
-        except OperationalError:
+        except Exception:
             result = False
 
         return result

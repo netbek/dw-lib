@@ -46,9 +46,12 @@ class DuckDBAdapter(BaseAdapter[DuckDBSettings]):
         raise NotImplementedError()
 
     def can_connect(self) -> bool:
-        with self.create_client() as conn:
-            conn.execute("select 1;")
-            result = conn.fetchone() == (1,)
+        try:
+            with self.create_client() as conn:
+                conn.execute("select 1;")
+                result = conn.fetchone() == (1,)
+        except Exception:
+            result = False
 
         return result
 

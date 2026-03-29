@@ -52,12 +52,11 @@ class TestServicesOffline(PeerDBTest):
             peerdb.update_settings({"PEERDB_NULLABLE": "false"})
 
 
-# TODO Add tests for wal_status "extended" and "unreserved"
-# https://www.postgresql.org/docs/17/view-pg-replication-slots.html
 class TestListReplicationSlots:
     @pytest.fixture(scope="function")
-    def docker_compose_file(self) -> Path:
-        return Path(__file__).parent.parent / "docker-compose.peerdb.yml"
+    def docker_compose_file(self, request) -> Path:
+        marker = request.node.get_closest_marker("docker_compose_file")
+        return Path(__file__).parent.parent / marker.args[0]
 
     @pytest.fixture(scope="function")
     def docker_compose_project_name(self) -> str:
@@ -165,6 +164,7 @@ class TestListReplicationSlots:
 
         yield postgres_adapter
 
+    @pytest.mark.docker_compose_file("docker-compose.peerdb.wal_status_reserved.yml")
     def test_wal_status_reserved(
         self,
         postgres_primary_adapter: PostgresAdapter,
@@ -199,8 +199,10 @@ class TestListReplicationSlots:
                 "confirmed_to_current_mb",
                 "current_lsn",
                 "inactive_since",
+                "lag_mb",
                 "redo_lsn",
                 "restart_lsn",
+                "restart_to_confirmed_mb",
                 "safe_wal_size",
                 "sent_lsn",
                 "wait_event_type",
@@ -210,28 +212,109 @@ class TestListReplicationSlots:
             "active": True,
             "backend_state": "active",
             "failover": False,
-            "lag_mb": 0,
             "logical_decoding_work_mem_mb": 64,
-            "restart_to_confirmed_mb": 0,
             "slot_name": "test_subscription",
             "spill_bytes": 0,
             "spill_count": 0,
             "spill_txns": 0,
             "stats_reset": None,
             "synced": False,
-            # "wait_event_type": None,
-            # "wait_event": None,
             "wal_status": "reserved",
         }
         assert replication_slot.confirmed_flush_lsn is not None
         assert replication_slot.confirmed_to_current_mb == 0
         assert replication_slot.current_lsn is not None
         assert replication_slot.inactive_since is None
+        assert replication_slot.lag_mb == 0
         assert replication_slot.redo_lsn is not None
         assert replication_slot.restart_lsn is not None
+        assert replication_slot.restart_to_confirmed_mb == 0
         assert replication_slot.safe_wal_size is not None
         assert replication_slot.sent_lsn is not None
 
+    @pytest.mark.docker_compose_file("docker-compose.peerdb.wal_status_extended.yml")
+    def test_wal_status_extended(
+        self,
+        docker_api: docker.client.DockerClient,
+        postgres_primary_adapter: PostgresAdapter,
+        postgres_replica_adapter: PostgresAdapter,
+        peerdb: PeerDB,
+    ):
+        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+            cur.execute("create table test_table (id serial primary key, data text);")
+            cur.execute("create publication test_publication for table test_table;")
+
+        with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
+            cur.execute("create table test_table (id serial primary key, data text);")
+            cur.execute(
+                "create subscription test_subscription connection 'host=postgres-primary port=5432 user=postgres password=postgres dbname=test' publication test_publication;"
+            )
+
+        postgres_replica_container = docker_api.containers.list(
+            filters={"name": "postgres-replica"}
+        ).pop()
+        assert postgres_replica_container.status == "running"
+        postgres_replica_container.stop(timeout=0)
+        postgres_replica_container.reload()
+        assert postgres_replica_container.status == "exited"
+
+        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+            # Generate ~80MB of data (between 64MB max_wal_size and 128MB max_slot_wal_keep_size)
+            cur.execute(
+                "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 80000);"
+            )
+            # Ensure that WAL status updates immediately
+            cur.execute("checkpoint;")
+            cur.execute(
+                "select wal_status from pg_replication_slots where slot_name = 'test_subscription';"
+            )
+            wal_status = cur.fetchone()[0]
+            assert wal_status == "extended"
+        replication_slot = pydash.find(
+            peerdb.list_replication_slots(), lambda x: x.slot_name == "test_subscription"
+        )
+        assert replication_slot is not None
+        assert pydash.omit(
+            replication_slot.model_dump(),
+            [
+                "confirmed_flush_lsn",
+                "confirmed_to_current_mb",
+                "current_lsn",
+                "inactive_since",
+                "lag_mb",
+                "redo_lsn",
+                "restart_lsn",
+                "restart_to_confirmed_mb",
+                "safe_wal_size",
+                "sent_lsn",
+                "wait_event_type",
+                "wait_event",
+            ],
+        ) == {
+            "active": False,
+            "backend_state": None,
+            "failover": False,
+            "logical_decoding_work_mem_mb": 64,
+            "slot_name": "test_subscription",
+            "spill_bytes": 0,
+            "spill_count": 0,
+            "spill_txns": 0,
+            "stats_reset": None,
+            "synced": False,
+            "wal_status": "extended",
+        }
+        assert replication_slot.confirmed_flush_lsn is not None
+        assert replication_slot.confirmed_to_current_mb is not None
+        assert replication_slot.current_lsn is not None
+        assert replication_slot.inactive_since is not None
+        assert replication_slot.lag_mb is not None
+        assert replication_slot.redo_lsn is not None
+        assert replication_slot.restart_lsn is not None
+        assert replication_slot.restart_to_confirmed_mb == 0
+        assert replication_slot.safe_wal_size is not None
+        assert replication_slot.sent_lsn is None
+
+    @pytest.mark.docker_compose_file("docker-compose.peerdb.wal_status_reserved.yml")
     def test_wal_status_lost(
         self,
         docker_api: docker.client.DockerClient,
@@ -258,10 +341,12 @@ class TestListReplicationSlots:
         assert postgres_replica_container.status == "exited"
 
         with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+            # Generate ~80MB of data
             cur.execute(
-                "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 100000);"
+                "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 80000);"
             )
-            cur.execute("checkpoint;")  # Ensure that WAL status updates immediately
+            # Ensure that WAL status updates immediately
+            cur.execute("checkpoint;")
             cur.execute(
                 "select wal_status from pg_replication_slots where slot_name = 'test_subscription';"
             )
@@ -279,8 +364,10 @@ class TestListReplicationSlots:
                 "confirmed_to_current_mb",
                 "current_lsn",
                 "inactive_since",
+                "lag_mb",
                 "redo_lsn",
                 "restart_lsn",
+                "restart_to_confirmed_mb",
                 "safe_wal_size",
                 "sent_lsn",
                 "wait_event_type",
@@ -290,24 +377,22 @@ class TestListReplicationSlots:
             "active": False,
             "backend_state": None,
             "failover": False,
-            "lag_mb": None,
             "logical_decoding_work_mem_mb": 64,
-            "restart_to_confirmed_mb": None,
             "slot_name": "test_subscription",
             "spill_bytes": 0,
             "spill_count": 0,
             "spill_txns": 0,
             "stats_reset": None,
             "synced": False,
-            # "wait_event_type": None,
-            # "wait_event": None,
             "wal_status": "lost",
         }
         assert replication_slot.confirmed_flush_lsn is not None
         assert replication_slot.confirmed_to_current_mb is not None
         assert replication_slot.current_lsn is not None
         assert replication_slot.inactive_since is not None
+        assert replication_slot.lag_mb is None
         assert replication_slot.redo_lsn is not None
         assert replication_slot.restart_lsn is None
+        assert replication_slot.restart_to_confirmed_mb is None
         assert replication_slot.safe_wal_size is None
         assert replication_slot.sent_lsn is None

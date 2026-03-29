@@ -64,12 +64,18 @@ class TestReplicationSlots:
         return "dw-lib-test-peerdb-replication-slots"  # Pin the project name to avoid creating multiple stacks
 
     @pytest.fixture(scope="function")
-    def docker_setup(self, docker_api: docker.client.DockerClient):
-        try:
-            container = docker_api.containers.get("catalog")
-            container.remove(force=True)
-        except docker.errors.NotFound:
-            pass
+    def docker_setup(
+        self, docker_api: docker.client.DockerClient, docker_compose_project_name: str
+    ):
+        # Remove all containers from this compose project (even if names are global)
+        containers = docker_api.containers.list(
+            all=True, filters={"label": f"com.docker.compose.project={docker_compose_project_name}"}
+        )
+        for container in containers:
+            try:
+                container.remove(force=True)
+            except Exception:
+                pass
         return ["down -v --remove-orphans", "up --build --wait"]
 
     @pytest.fixture(scope="function")

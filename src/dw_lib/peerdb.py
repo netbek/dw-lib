@@ -1181,12 +1181,11 @@ class PeerDB:
             pg_version_str = session.exec(text("SHOW server_version_num")).scalar()
             pg_version = int(pg_version_str)
 
-            wal_status_select = "prs.wal_status"
-            safe_wal_size_select = "prs.safe_wal_size"
-
-            if pg_version < POSTGRES_13:
-                wal_status_select = "'unknown' AS wal_status"
-                safe_wal_size_select = "NULL::bigint AS safe_wal_size"
+            wal_status_select = "'unknown' AS wal_status"
+            safe_wal_size_select = "NULL::bigint AS safe_wal_size"
+            if pg_version >= POSTGRES_13:
+                wal_status_select = "prs.wal_status"
+                safe_wal_size_select = "prs.safe_wal_size"
 
             ldw_mb_select = "NULL::bigint AS logical_decoding_work_mem_mb"
             if pg_version >= POSTGRES_13:
@@ -1195,7 +1194,12 @@ class PeerDB:
                     FROM pg_settings WHERE name='logical_decoding_work_mem'
                 ) AS logical_decoding_work_mem_mb"""
 
-            stats_select = "NULL::bigint AS stats_reset, NULL::bigint AS spill_txns, NULL::bigint AS spill_count, NULL::bigint AS spill_bytes"
+            stats_select = """
+                NULL::bigint AS stats_reset,
+                NULL::bigint AS spill_txns,
+                NULL::bigint AS spill_count,
+                NULL::bigint AS spill_bytes
+            """
             stats_join = ""
             if pg_version >= POSTGRES_16:
                 stats_select = """
@@ -1237,14 +1241,12 @@ class PeerDB:
                     {stats_select},
                     prs.failover,
                     prs.synced
-                FROM current_wal cw,
-                    pg_control_checkpoint() as pcc,
-                    (pg_replication_slots as prs
-                        LEFT JOIN pg_stat_activity as psa
-                            on psa.pid = prs.active_pid
-                        LEFT JOIN pg_stat_replication as psr
-                            on psr.pid = prs.active_pid
-                        {stats_join})
+                FROM pg_replication_slots AS prs
+                CROSS JOIN current_wal AS cw
+                CROSS JOIN pg_control_checkpoint() AS pcc
+                LEFT JOIN pg_stat_activity AS psa ON psa.pid = prs.active_pid
+                LEFT JOIN pg_stat_replication AS psr ON psr.pid = prs.active_pid
+                {stats_join}
                 WHERE prs.database = :database
             """
             result = session.exec(text(query), params={"database": database})

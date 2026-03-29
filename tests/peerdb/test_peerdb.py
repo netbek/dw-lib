@@ -52,7 +52,7 @@ class TestServicesOffline(PeerDBTest):
             peerdb.update_settings({"PEERDB_NULLABLE": "false"})
 
 
-class TestListReplicationSlots:
+class TestReplicationSlots:
     @pytest.fixture(scope="function")
     def docker_compose_file(self, request) -> Path:
         marker = request.node.get_closest_marker("docker_compose_file")
@@ -60,7 +60,7 @@ class TestListReplicationSlots:
 
     @pytest.fixture(scope="function")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-test-peerdb"  # Pin the project name to avoid creating multiple stacks
+        return "dw-lib-test-peerdb-replication-slots"  # Pin the project name to avoid creating multiple stacks
 
     # @pytest.fixture(scope="function")
     # def docker_setup(self) -> list[str] | str:

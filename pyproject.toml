@@ -42,7 +42,7 @@ dagster = [
 # dbt-core pinned for compatibility with dbt-clickhouse https://github.com/netbek/dbt-clickhouse/blob/v1.10.0-batch/pyproject.toml#L26
 dbt = [
     "dbt-clickhouse",
-    "dbt-core>=1.10.0,<1.11",
+    "dbt-core>=1.10.0,<1.12",
     "livereload>=2.7.1",
     "opentelemetry-sdk>=1.39.1",
     "polyfactory>=3.0.0",

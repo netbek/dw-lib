@@ -9,6 +9,7 @@ from ruamel.yaml import YAML
 from typing import Any
 
 import docker
+import docker.errors
 import pydash
 import pytest
 import requests
@@ -63,8 +64,13 @@ class TestReplicationSlots:
         return "dw-lib-test-peerdb-replication-slots"  # Pin the project name to avoid creating multiple stacks
 
     @pytest.fixture(scope="function")
-    def docker_setup(self) -> list[str] | str:
-        return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
+    def docker_setup(self, docker_api: docker.client.DockerClient):
+        try:
+            container = docker_api.containers.get("catalog")
+            container.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+        return ["down -v --remove-orphans", "up --build --wait"]
 
     @pytest.fixture(scope="function")
     def docker_api(self) -> docker.client.DockerClient:

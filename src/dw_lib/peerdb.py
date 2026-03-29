@@ -237,19 +237,19 @@ class ListReplicationSlotsItem(BaseModel):
     redo_lsn: str
     restart_lsn: str | None = None
     current_lsn: str
-    active: bool
+    active: bool | None = None
     inactive_since: datetime | None = None
-    lag_mb: int
+    lag_mb: int | None = None
     confirmed_flush_lsn: str | None = None
     sent_lsn: str | None = None
-    restart_to_confirmed_mb: int
-    confirmed_to_current_mb: int
+    restart_to_confirmed_mb: int | None = None
+    confirmed_to_current_mb: int | None = None
     wal_status: str
     safe_wal_size: int | None = None
     wait_event_type: str | None = None
     wait_event: str | None = None
     backend_state: str | None = None
-    logical_decoding_work_mem_mb: int
+    logical_decoding_work_mem_mb: int | None = None
     stats_reset: int | None = None
     spill_txns: int | None = None
     spill_count: int | None = None
@@ -1175,18 +1175,16 @@ class PeerDB:
 
         source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
         database = source_adapter.settings.database
-        data = []
 
         with source_adapter.create_session() as session:
             pg_version_str = session.exec(text("SHOW server_version_num")).scalar()
             pg_version = int(pg_version_str)
 
-            wal_status_select = "prs.wal_status"
-            safe_wal_size_select = "prs.safe_wal_size"
-
-            if pg_version < POSTGRES_13:
-                wal_status_select = "'unknown' AS wal_status"
-                safe_wal_size_select = "NULL::bigint AS safe_wal_size"
+            wal_status_select = "'unknown' AS wal_status"
+            safe_wal_size_select = "NULL::bigint AS safe_wal_size"
+            if pg_version >= POSTGRES_13:
+                wal_status_select = "prs.wal_status"
+                safe_wal_size_select = "prs.safe_wal_size"
 
             ldw_mb_select = "NULL::bigint AS logical_decoding_work_mem_mb"
             if pg_version >= POSTGRES_13:
@@ -1195,7 +1193,12 @@ class PeerDB:
                     FROM pg_settings WHERE name='logical_decoding_work_mem'
                 ) AS logical_decoding_work_mem_mb"""
 
-            stats_select = "NULL::bigint AS stats_reset, NULL::bigint AS spill_txns, NULL::bigint AS spill_count, NULL::bigint AS spill_bytes"
+            stats_select = """
+                NULL::bigint AS stats_reset,
+                NULL::bigint AS spill_txns,
+                NULL::bigint AS spill_count,
+                NULL::bigint AS spill_bytes
+            """
             stats_join = ""
             if pg_version >= POSTGRES_16:
                 stats_select = """
@@ -1237,25 +1240,16 @@ class PeerDB:
                     {stats_select},
                     prs.failover,
                     prs.synced
-                FROM current_wal cw,
-                    pg_control_checkpoint() as pcc,
-                    (pg_replication_slots as prs
-                        LEFT JOIN pg_stat_activity as psa
-                            on psa.pid = prs.active_pid
-                        LEFT JOIN pg_stat_replication as psr
-                            on psr.pid = prs.active_pid
-                        {stats_join})
+                FROM pg_replication_slots AS prs
+                CROSS JOIN current_wal AS cw
+                CROSS JOIN pg_control_checkpoint() AS pcc
+                LEFT JOIN pg_stat_activity AS psa ON psa.pid = prs.active_pid
+                LEFT JOIN pg_stat_replication AS psr ON psr.pid = prs.active_pid
+                {stats_join}
                 WHERE prs.database = :database
             """
             result = session.exec(text(query), params={"database": database})
-            for row in result.fetchall():
-                row_dict = row._asdict()
-                row_dict["active"] = bool(row.active) if row.active is not None else False
-                row_dict["lag_mb"] = row.lag_mb or 0
-                row_dict["restart_to_confirmed_mb"] = row.restart_to_confirmed_mb or 0
-                row_dict["confirmed_to_current_mb"] = row.confirmed_to_current_mb or 0
-                row_dict["logical_decoding_work_mem_mb"] = row.logical_decoding_work_mem_mb or 0
-                data.append(ListReplicationSlotsItem(**row_dict))
+            data = [ListReplicationSlotsItem(**row._asdict()) for row in result.fetchall()]
 
         return data
 

@@ -177,8 +177,8 @@ class PeerDBTest:
         docker_compose_command: str,
         docker_compose_file: list[str] | str,
         docker_compose_project_name: str,
-        docker_setup: str,
-        docker_cleanup: str,
+        docker_setup: list[str] | str,
+        docker_cleanup: list[str] | str,
     ) -> Iterator[Services]:
         with get_docker_services(
             docker_compose_command,

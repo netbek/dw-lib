@@ -60,11 +60,14 @@ class TestReplicationSlots:
 
     @pytest.fixture(scope="function")
     def docker_compose_project_name(self) -> str:
-        return "dw-lib-test-peerdb-replication-slots"  # Pin the project name to avoid creating multiple stacks
+        import uuid
 
-    @pytest.fixture(scope="function")
-    def docker_setup(self) -> list[str] | str:
-        return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
+        return f"dw-lib-test-{uuid.uuid4().hex[:6]}"
+        # return "dw-lib-test-peerdb-replication-slots"  # Pin the project name to avoid creating multiple stacks
+
+    # @pytest.fixture(scope="function")
+    # def docker_setup(self) -> list[str] | str:
+    #     return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="function")
     def docker_api(self) -> docker.client.DockerClient:

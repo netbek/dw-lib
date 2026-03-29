@@ -69,7 +69,7 @@ class DatabaseTest:
 
     # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
-    #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
+    #     return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="module")
     def clickhouse_settings(self) -> ClickHouseSettings:
@@ -169,7 +169,7 @@ class PeerDBTest:
 
     # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
-    #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
+    #     return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="module")
     def docker_services(
@@ -351,7 +351,7 @@ class LoaderTest:
 
     # @pytest.fixture(scope="module")
     # def docker_setup(self) -> list[str] | str:
-    #     return ["down -v", "up --build -d"]  # Stop the stack before starting a new one
+    #     return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="module")
     def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:

@@ -76,9 +76,12 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         session.close()
 
     def can_connect(self) -> bool:
-        with self.create_client() as (conn, cur):
-            cur.execute("select 1;")
-            result = cur.fetchone() == (1,)
+        try:
+            with self.create_client() as (conn, cur):
+                cur.execute("select 1;")
+                result = cur.fetchone() == (1,)
+        except Exception:
+            result = False
 
         return result
 

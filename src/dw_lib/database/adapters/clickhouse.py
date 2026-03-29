@@ -59,8 +59,11 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         session.close()
 
     def can_connect(self) -> bool:
-        with self.create_client() as client:
-            result = client.query("select 1;").first_row == (1,)
+        try:
+            with self.create_client() as client:
+                result = client.query("select 1;").first_row == (1,)
+        except Exception:
+            result = False
 
         return result
 

@@ -55,19 +55,19 @@ services:
 
   catalog:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: catalog
     stop_grace_period: 0s
 
   temporal:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: temporal
     stop_grace_period: 0s
 
   temporal-admin-tools:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: temporal-admin-tools
     stop_grace_period: 0s
     healthcheck:
@@ -80,19 +80,19 @@ services:
 
   temporal-ui:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: temporal-ui
     stop_grace_period: 0s
 
   flow-api:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: flow-api
     stop_grace_period: 0s
 
   flow-snapshot-worker:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: flow-snapshot-worker
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -100,25 +100,25 @@ services:
 
   flow-worker:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: flow-worker
     stop_grace_period: 0s
 
   peerdb:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: peerdb
     stop_grace_period: 0s
 
   peerdb-ui:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: peerdb-ui
     stop_grace_period: 0s
 
   minio:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ./data/peerdb/docker-compose.yml
       service: minio
     stop_grace_period: 0s
 

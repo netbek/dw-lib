@@ -4,35 +4,28 @@
 
 name: peerdb-quickstart
 
-x-minio-env: &minio-env
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: _peerdb_minioadmin
-  MINIO_ROOT_USER: _peerdb_minioadmin
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: _peerdb_minioadmin
-  MINIO_ROOT_PASSWORD: _peerdb_minioadmin
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_REGION: us-east-1
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:9001
-  PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdbbucket
-
-x-catalog-env: &catalog-env
+x-peerdb-postgres-env: &peerdb-postgres-env
   PEERDB_CATALOG_HOST: catalog
   PEERDB_CATALOG_PORT: 5432
-  PEERDB_CATALOG_USER: postgres
-  PEERDB_CATALOG_PASSWORD: postgres
-  PEERDB_CATALOG_DATABASE: postgres
+  PEERDB_CATALOG_USER: peerdb
+  PEERDB_CATALOG_PASSWORD: peerdb
+  PEERDB_CATALOG_DATABASE: peerdb
+
+x-peerdb-minio-env: &peerdb-minio-env
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: admin
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: password
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_REGION: us-east-1
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:9001
+  PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdb
 
 x-peerdb-flow-worker-env: &peerdb-flow-worker-env
   TEMPORAL_HOST_PORT: temporal-server:7233
   TEMPORAL_CLIENT_CERT:
   TEMPORAL_CLIENT_KEY:
   PEERDB_TEMPORAL_NAMESPACE: default
-  # For GCS, these will be your HMAC keys instead
-  # For more information:
-  # https://cloud.google.com/storage/docs/authentication/managing-hmackeys
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-  # For GCS, set this to "auto" without the quotes
   AWS_REGION: ${AWS_REGION:-}
-  # For GCS, set this as: https://storage.googleapis.com
   AWS_ENDPOINT: ${AWS_ENDPOINT:-}
 
 services:
@@ -49,7 +42,7 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_INITDB_ARGS: --locale=C.UTF-8
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - host.docker.internal:host-gateway
     volumes:
       - catalog-data:/var/lib/postgresql/data
       - ./catalog/postgresql.conf:/etc/postgresql.conf
@@ -67,11 +60,12 @@ services:
       catalog:
         condition: service_healthy
     environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=catalog # Postgres service name
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: catalog # Postgres service name
+      SKIP_DB_CREATE: true
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
     entrypoint: ["/bin/sh", "-c", "/scripts/catalog-setup.sh"]
     volumes:
@@ -84,13 +78,13 @@ services:
       catalog-setup:
         condition: service_completed_successfully
     environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=catalog
-      - BIND_ON_IP=0.0.0.0
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: catalog
+      BIND_ON_IP: 0.0.0.0
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
     image: ${TEMPORAL_SERVER_IMAGE}
     ports:
       - 7233:7233
@@ -109,8 +103,8 @@ services:
       temporal-server:
         condition: service_healthy
     environment:
-      - TEMPORAL_ADDRESS=temporal-server:7233
-      - DEFAULT_NAMESPACE=default
+      TEMPORAL_ADDRESS: temporal-server:7233
+      DEFAULT_NAMESPACE: default
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
     entrypoint: ["/bin/sh", "-c", "/scripts/temporal-setup.sh"]
     volumes:
@@ -128,9 +122,9 @@ services:
       temporal-server:
         condition: service_healthy
     environment:
-      - TEMPORAL_ADDRESS=temporal-server:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-      - TEMPORAL_CSRF_COOKIE_INSECURE=true
+      TEMPORAL_ADDRESS: temporal-server:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+      TEMPORAL_CSRF_COOKIE_INSECURE: true
     image: ${TEMPORAL_UI_IMAGE}
     ports:
       - 8085:8080
@@ -143,10 +137,10 @@ services:
       - 8112:8112
       - 8113:8113
     environment:
-      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
+      <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
       PEERDB_ALLOWED_TARGETS:
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - host.docker.internal:host-gateway
     depends_on:
       temporal-setup:
         condition: service_completed_successfully
@@ -156,7 +150,7 @@ services:
     image: ${PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
+      <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
     depends_on:
       temporal-setup:
         condition: service_completed_successfully
@@ -166,9 +160,9 @@ services:
     image: ${PEERDB_FLOW_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
+      <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - host.docker.internal:host-gateway
     depends_on:
       temporal-setup:
         condition: service_completed_successfully
@@ -179,7 +173,7 @@ services:
     image: ${PEERDB_SERVER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: *catalog-env
+      <<: *peerdb-postgres-env
       PEERDB_PASSWORD:
       PEERDB_FLOW_SERVER_ADDRESS: grpc://peerdb-flow-api:8112
       RUST_LOG: info
@@ -197,7 +191,7 @@ services:
     ports:
       - 3000:3000
     environment:
-      <<: *catalog-env
+      <<: *peerdb-postgres-env
       PEERDB_FLOW_SERVER_HTTP: http://peerdb-flow-api:8113
       NEXTAUTH_SECRET: __changeme__
       NEXTAUTH_URL: http://localhost:3000
@@ -213,18 +207,26 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      - "9001:9000"
-      - "9002:36987"
+      - 9000:9000
+      - 9001:9001
     environment:
-      <<: *minio-env
+      <<: *peerdb-minio-env
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
     entrypoint: |
       /bin/sh -c "
-      minio server /data --console-address=:36987 & sleep 2;
-      mc alias set myminiopeerdb http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
-      mc mb --ignore-existing myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
-      mc ilm rule add "myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
+      minio server /data --console-address=:9001 & sleep 2;
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb --ignore-existing local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
+      mc ilm rule add "local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
       wait
       "
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 30s
 
 volumes:
   catalog-data:

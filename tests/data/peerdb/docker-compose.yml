@@ -52,8 +52,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - catalog-data:/var/lib/postgresql/data
-      - ./postgres/postgresql.conf:/etc/postgresql.conf
-      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./catalog/postgresql.conf:/etc/postgresql.conf
+      - ./catalog/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "pg_isready", "-d", "postgres", "-U", "postgres"]
       interval: 10s
@@ -61,8 +61,8 @@ services:
       retries: 5
       start_period: 60s
 
-  postgres-setup:
-    container_name: postgres-setup
+  catalog-setup:
+    container_name: catalog-setup
     depends_on:
       catalog:
         condition: service_healthy
@@ -73,15 +73,15 @@ services:
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=catalog # Postgres service name
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
-    entrypoint: ["/bin/sh", "-c", "/scripts/postgres-setup.sh"]
+    entrypoint: ["/bin/sh", "-c", "/scripts/catalog-setup.sh"]
     volumes:
-      - ./postgres-setup:/scripts
+      - ./catalog-setup:/scripts
 
   temporal-server:
     container_name: temporal-server
     restart: unless-stopped
     depends_on:
-      postgres-setup:
+      catalog-setup:
         condition: service_completed_successfully
     environment:
       - DB=postgres12

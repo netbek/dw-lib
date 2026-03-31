@@ -40,10 +40,10 @@ services:
       service: catalog
     stop_grace_period: 0s
 
-  postgres-setup:
+  catalog-setup:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: postgres-setup
+      service: catalog-setup
     stop_grace_period: 0s
 
   temporal-server:
@@ -103,5 +103,5 @@ services:
     stop_grace_period: 0s
 
 volumes:
-  postgres-data:
+  catalog-data:
   minio-data:

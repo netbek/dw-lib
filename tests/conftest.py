@@ -20,11 +20,11 @@ import requests
 # Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.12/docker-compose.yml
 PEERDB_TEST_ENV = {
     "MINIO_IMAGE": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
-    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.12",
-    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.12",
-    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.12",
-    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.12",
-    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.12",
+    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.9",
+    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.9",
+    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.9",
+    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.9",
+    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.9",
     "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
     "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.25.2-tctl-1.18.1-cli-1.1.1",
     "TEMPORAL_AUTO_SETUP_IMAGE": "temporalio/auto-setup:1.29.4.1",

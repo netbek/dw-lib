@@ -176,9 +176,12 @@ class DatabaseTest:
 
 class PeerDBTest:
     @pytest.fixture(scope="module", autouse=True)
-    def set_env(self):
-        # TODO Restore the environment afterwards or replace with a cleaner solution
+    def set_env(self) -> Generator[None, Any, None]:
+        old_env = os.environ.copy()
         os.environ.update(PEERDB_TEST_ENV)
+        yield
+        os.environ.clear()
+        os.environ.update(old_env)
 
     @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:

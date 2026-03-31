@@ -17,9 +17,12 @@ import requests
 
 class TestReplicationSlots:
     @pytest.fixture(scope="function", autouse=True)
-    def set_env(self):
-        # TODO Restore the environment afterwards or replace with a cleaner solution
+    def set_env(self) -> Generator[None, Any, None]:
+        old_env = os.environ.copy()
         os.environ.update(PEERDB_TEST_ENV)
+        yield
+        os.environ.clear()
+        os.environ.update(old_env)
 
     @pytest.fixture(scope="function")
     def docker_compose_file(self, request) -> Path:

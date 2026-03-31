@@ -12,8 +12,24 @@ from sqlalchemy import Column
 from sqlmodel import Field, SQLModel, Table
 from typing import Any
 
+import os
 import pytest
 import requests
+
+# Environment variables for PeerDB tests
+# Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.9/docker-compose.yml
+PEERDB_TEST_ENV = {
+    "MINIO_IMAGE": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.7",
+    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.7",
+    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.7",
+    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.7",
+    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.7",
+    "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
+    "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.25.2-tctl-1.18.1-cli-1.1.1",
+    "TEMPORAL_AUTO_SETUP_IMAGE": "temporalio/auto-setup:1.29.4.1",
+    "TEMPORAL_UI_IMAGE": "temporalio/ui:2.45.4",
+}
 
 
 class TableWithoutSchema(SQLModel, table=True):
@@ -159,6 +175,14 @@ class DatabaseTest:
 
 
 class PeerDBTest:
+    @pytest.fixture(scope="module", autouse=True)
+    def set_env(self) -> Generator[None, Any, None]:
+        old_env = os.environ.copy()
+        os.environ.update(PEERDB_TEST_ENV)
+        yield
+        os.environ.clear()
+        os.environ.update(old_env)
+
     @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:
         return Path(__file__).parent / "docker-compose.peerdb.yml"
@@ -242,7 +266,7 @@ class PeerDBTest:
 
 class PeerDBIntegrationTest(PeerDBTest):
     @pytest.fixture(scope="function")
-    def table_defs(self) -> list[tuple[str, str]]:
+    def table_defs(self) -> list[dict[str, str]]:
         return [
             {
                 "table": "table_1",
@@ -282,7 +306,7 @@ class PeerDBIntegrationTest(PeerDBTest):
 
     @pytest.fixture(scope="function")
     def some_postgres_tables(
-        self, postgres_adapter: PostgresAdapter, table_defs: list[tuple[str, str]]
+        self, postgres_adapter: PostgresAdapter, table_defs: list[dict[str, str]]
     ) -> Generator[list[Table], Any, None]:
         for table_def in table_defs[:1]:
             postgres_adapter.create_table(
@@ -300,7 +324,7 @@ class PeerDBIntegrationTest(PeerDBTest):
 
     @pytest.fixture(scope="function")
     def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter, table_defs: list[tuple[str, str]]
+        self, postgres_adapter: PostgresAdapter, table_defs: list[dict[str, str]]
     ) -> Generator[list[Table], Any, None]:
         for table_def in table_defs:
             postgres_adapter.create_table(

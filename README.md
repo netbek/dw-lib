@@ -4,10 +4,10 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 
 ## Development: Installation
 
-1. Clone the repo and its submodules:
+1. Clone the repo:
 
     ```shell
-    git clone --recurse-submodules git@github.com:netbek/dw-lib.git
+    git clone git@github.com:netbek/dw-lib.git
     ```
 
 2. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:

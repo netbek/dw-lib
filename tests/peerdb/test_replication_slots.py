@@ -1,3 +1,4 @@
+from ..conftest import PEERDB_TEST_ENV
 from collections.abc import Generator, Iterator
 from dw_lib.database import PostgresAdapter
 from dw_lib.peerdb import ListReplicationSlotsItem, PeerDB
@@ -8,12 +9,18 @@ from ruamel.yaml import YAML
 from typing import Any
 
 import docker
+import os
 import pydash
 import pytest
 import requests
 
 
 class TestReplicationSlots:
+    @pytest.fixture(scope="function", autouse=True)
+    def set_env(self):
+        # TODO Restore the environment afterwards or replace with a cleaner solution
+        os.environ.update(PEERDB_TEST_ENV)
+
     @pytest.fixture(scope="function")
     def docker_compose_file(self, request) -> Path:
         marker = request.node.get_closest_marker("docker_compose_file")

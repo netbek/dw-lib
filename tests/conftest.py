@@ -16,6 +16,21 @@ import os
 import pytest
 import requests
 
+# Environment variables for PeerDB tests
+# Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.9/docker-compose.yml
+PEERDB_TEST_ENV = {
+    "MINIO_IMAGE": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.7",
+    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.7",
+    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.7",
+    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.7",
+    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.7",
+    "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
+    "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.25.2-tctl-1.18.1-cli-1.1.1",
+    "TEMPORAL_AUTO_SETUP_IMAGE": "temporalio/auto-setup:1.29.4.1",
+    "TEMPORAL_UI_IMAGE": "temporalio/ui:2.45.4",
+}
+
 
 class TableWithoutSchema(SQLModel, table=True):
     __tablename__ = "table_without_schema"
@@ -162,21 +177,8 @@ class DatabaseTest:
 class PeerDBTest:
     @pytest.fixture(scope="module", autouse=True)
     def set_env(self):
-        # Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.9/docker-compose.yml
-        os.environ.update(
-            {
-                "MINIO_IMAGE": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
-                "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.7",
-                "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.7",
-                "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.7",
-                "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.7",
-                "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.7",
-                "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
-                "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.25.2-tctl-1.18.1-cli-1.1.1",
-                "TEMPORAL_AUTO_SETUP_IMAGE": "temporalio/auto-setup:1.29.4.1",
-                "TEMPORAL_UI_IMAGE": "temporalio/ui:2.45.4",
-            }
-        )
+        # TODO Restore the environment afterwards or replace with a cleaner solution
+        os.environ.update(PEERDB_TEST_ENV)
 
     @pytest.fixture(scope="module")
     def docker_compose_file(self) -> Path:

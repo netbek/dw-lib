@@ -59,10 +59,10 @@ services:
       service: catalog
     stop_grace_period: 0s
 
-  catalog-setup:
+  temporal-setup-postgres:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: catalog-setup
+      service: temporal-setup-postgres
     stop_grace_period: 0s
 
   temporal-server:
@@ -71,10 +71,10 @@ services:
       service: temporal-server
     stop_grace_period: 0s
 
-  temporal-setup:
+  temporal-create-namespace:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: temporal-setup
+      service: temporal-create-namespace
     stop_grace_period: 0s
 
   temporal-ui:

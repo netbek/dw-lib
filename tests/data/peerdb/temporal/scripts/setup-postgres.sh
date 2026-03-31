@@ -7,7 +7,6 @@ set -eu
 : "${POSTGRES_USER:?ERROR: POSTGRES_USER environment variable is required}"
 : "${POSTGRES_PWD:?ERROR: POSTGRES_PWD environment variable is required}"
 
-# Set default for SKIP_DB_CREATE if not provided
 SKIP_DB_CREATE="${SKIP_DB_CREATE:-false}"
 
 echo "Starting PostgreSQL schema setup..."

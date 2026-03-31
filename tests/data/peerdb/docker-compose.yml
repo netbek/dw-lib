@@ -54,8 +54,8 @@ services:
       retries: 5
       start_period: 60s
 
-  catalog-setup:
-    container_name: catalog-setup
+  temporal-setup-postgres:
+    container_name: temporal-setup-postgres
     depends_on:
       catalog:
         condition: service_healthy
@@ -67,15 +67,15 @@ services:
       POSTGRES_SEEDS: catalog # Postgres service name
       SKIP_DB_CREATE: true
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
-    entrypoint: ["/bin/sh", "-c", "/scripts/catalog-setup.sh"]
+    entrypoint: ["/bin/sh", "-c", "/scripts/setup-postgres.sh"]
     volumes:
-      - ./catalog-setup:/scripts
+      - ./temporal/scripts:/scripts
 
   temporal-server:
     container_name: temporal-server
     restart: unless-stopped
     depends_on:
-      catalog-setup:
+      temporal-setup-postgres:
         condition: service_completed_successfully
     environment:
       DB: postgres12
@@ -89,7 +89,7 @@ services:
     ports:
       - 7233:7233
     volumes:
-      - ./temporal-server/dynamicconfig:/etc/temporal/config/dynamicconfig
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "7233"]
       interval: 5s
@@ -97,8 +97,8 @@ services:
       start_period: 30s
       retries: 60
 
-  temporal-setup:
-    container_name: temporal-setup
+  temporal-create-namespace:
+    container_name: temporal-create-namespace
     depends_on:
       temporal-server:
         condition: service_healthy
@@ -106,9 +106,9 @@ services:
       TEMPORAL_ADDRESS: temporal-server:7233
       DEFAULT_NAMESPACE: default
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
-    entrypoint: ["/bin/sh", "-c", "/scripts/temporal-setup.sh"]
+    entrypoint: ["/bin/sh", "-c", "/scripts/create-namespace.sh"]
     volumes:
-      - ./temporal-setup:/scripts
+      - ./temporal/scripts:/scripts
     healthcheck:
       test: ["CMD-SHELL", "temporal workflow list && temporal operator search-attribute list | grep -w MirrorName"]
       interval: 1s
@@ -142,7 +142,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
-      temporal-setup:
+      temporal-create-namespace:
         condition: service_completed_successfully
 
   peerdb-flow-snapshot-worker:
@@ -152,7 +152,7 @@ services:
     environment:
       <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
     depends_on:
-      temporal-setup:
+      temporal-create-namespace:
         condition: service_completed_successfully
 
   peerdb-flow-worker:
@@ -164,7 +164,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
-      temporal-setup:
+      temporal-create-namespace:
         condition: service_completed_successfully
 
   peerdb-server:

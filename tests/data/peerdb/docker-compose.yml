@@ -52,8 +52,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./volumes/postgresql.conf:/etc/postgresql.conf
-      - ./volumes/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./postgres/postgresql.conf:/etc/postgresql.conf
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "pg_isready", "-d", "postgres", "-U", "postgres"]
       interval: 10s
@@ -75,7 +75,7 @@ services:
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
     entrypoint: ["/bin/sh", "-c", "/scripts/postgres-setup.sh"]
     volumes:
-      - ./scripts:/scripts
+      - ./postgres-setup:/scripts
 
   temporal-server:
     container_name: temporal-server
@@ -95,7 +95,7 @@ services:
     ports:
       - 7233:7233
     volumes:
-      - ./volumes/temporal-dynamicconfig:/etc/temporal/config/dynamicconfig
+      - ./temporal-server/dynamicconfig:/etc/temporal/config/dynamicconfig
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "7233"]
       interval: 5s
@@ -114,7 +114,7 @@ services:
     image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
     entrypoint: ["/bin/sh", "-c", "/scripts/temporal-setup.sh"]
     volumes:
-      - ./scripts:/scripts
+      - ./temporal-setup:/scripts
     healthcheck:
       test: ["CMD-SHELL", "temporal workflow list && temporal operator search-attribute list | grep -w MirrorName"]
       interval: 1s

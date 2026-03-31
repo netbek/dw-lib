@@ -4,7 +4,7 @@
 
 name: peerdb-quickstart
 
-x-minio-config: &minio-config
+x-minio-env: &minio-env
   PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: _peerdb_minioadmin
   MINIO_ROOT_USER: _peerdb_minioadmin
   PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: _peerdb_minioadmin
@@ -13,7 +13,7 @@ x-minio-config: &minio-config
   PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:9001
   PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdbbucket
 
-x-catalog: &catalog
+x-catalog-env: &catalog-env
   PEERDB_CATALOG_HOST: catalog
   PEERDB_CATALOG_PORT: 5432
   PEERDB_CATALOG_USER: postgres
@@ -143,7 +143,7 @@ services:
       - 8112:8112
       - 8113:8113
     environment:
-      <<: [*catalog, *peerdb-flow-worker-env, *minio-config]
+      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
       PEERDB_ALLOWED_TARGETS:
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -156,7 +156,7 @@ services:
     image: ${PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog, *peerdb-flow-worker-env, *minio-config]
+      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
     depends_on:
       temporal-setup:
         condition: service_completed_successfully
@@ -166,7 +166,7 @@ services:
     image: ${PEERDB_FLOW_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog, *peerdb-flow-worker-env, *minio-config]
+      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -179,7 +179,7 @@ services:
     image: ${PEERDB_SERVER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: *catalog
+      <<: *catalog-env
       PEERDB_PASSWORD:
       PEERDB_FLOW_SERVER_ADDRESS: grpc://peerdb-flow-api:8112
       RUST_LOG: info
@@ -197,7 +197,7 @@ services:
     ports:
       - 3000:3000
     environment:
-      <<: *catalog
+      <<: *catalog-env
       PEERDB_FLOW_SERVER_HTTP: http://peerdb-flow-api:8113
       NEXTAUTH_SECRET: __changeme__
       NEXTAUTH_URL: http://localhost:3000
@@ -216,7 +216,7 @@ services:
       - "9001:9000"
       - "9002:36987"
     environment:
-      <<: *minio-config
+      <<: *minio-env
     entrypoint: |
       /bin/sh -c "
       minio server /data --console-address=:36987 & sleep 2;

@@ -1,3 +1,7 @@
+# Source:
+# https://github.com/temporalio/samples-server/blob/21ba633df78cd0f4a02096d620c19eb2d17ef900/compose/docker-compose.yml
+# https://github.com/PeerDB-io/peerdb/blob/v0.36.9/docker-compose.yml
+
 name: peerdb-quickstart
 
 x-minio-config: &minio-config
@@ -16,8 +20,8 @@ x-catalog-config: &catalog-config
   PEERDB_CATALOG_PASSWORD: postgres
   PEERDB_CATALOG_DATABASE: postgres
 
-x-flow-worker-env: &flow-worker-env
-  TEMPORAL_HOST_PORT: temporal:7233
+x-peerdb-flow-worker-env: &peerdb-flow-worker-env
+  TEMPORAL_HOST_PORT: temporal-server:7233
   TEMPORAL_CLIENT_CERT:
   TEMPORAL_CLIENT_KEY:
   PEERDB_TEMPORAL_NAMESPACE: default
@@ -47,7 +51,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
       - ./volumes/postgresql.conf:/etc/postgresql.conf
       - ./volumes/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     healthcheck:
@@ -57,100 +61,119 @@ services:
       retries: 5
       start_period: 60s
 
-  temporal:
-    container_name: temporal
-    restart: unless-stopped
+  postgres-setup:
+    container_name: postgres-setup
     depends_on:
       catalog:
         condition: service_healthy
     environment:
       - DB=postgres12
       - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=postgres
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=catalog # Postgres service name
+    image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
+    entrypoint: ["/bin/sh", "-c", "/scripts/postgres-setup.sh"]
+    volumes:
+      - ./scripts:/scripts
+
+  temporal-server:
+    container_name: temporal-server
+    restart: unless-stopped
+    depends_on:
+      postgres-setup:
+        condition: service_completed_successfully
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=catalog
+      - BIND_ON_IP=0.0.0.0
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-    image: ${TEMPORAL_AUTO_SETUP_IMAGE}
+    image: ${TEMPORAL_SERVER_IMAGE}
     ports:
       - 7233:7233
     volumes:
       - ./volumes/temporal-dynamicconfig:/etc/temporal/config/dynamicconfig
-    labels:
-      kompose.volume.type: configMap
-
-  temporal-admin-tools:
-    container_name: temporal-admin-tools
-    restart: unless-stopped
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-      - TEMPORAL_CLI_SHOW_STACKS=1
-    image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
-    stdin_open: true
-    tty: true
-    entrypoint: /etc/temporal/entrypoint.sh
     healthcheck:
-      test: ["CMD", "tctl", "workflow", "list"]
+      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 60
+
+  temporal-setup:
+    container_name: temporal-setup
+    depends_on:
+      temporal-server:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal-server:7233
+      - DEFAULT_NAMESPACE=default
+    image: ${TEMPORAL_ADMIN_TOOLS_IMAGE}
+    entrypoint: ["/bin/sh", "-c", "/scripts/temporal-setup.sh"]
+    volumes:
+      - ./scripts:/scripts
+    healthcheck:
+      test: ["CMD-SHELL", "temporal workflow list && temporal operator search-attribute list | grep -w MirrorName"]
       interval: 1s
       timeout: 5s
       retries: 30
-    volumes:
-      - ./scripts/mirror-name-search.sh:/etc/temporal/entrypoint.sh
 
   temporal-ui:
     container_name: temporal-ui
     restart: unless-stopped
     depends_on:
-      - temporal
+      temporal-server:
+        condition: service_healthy
     environment:
-      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_ADDRESS=temporal-server:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
       - TEMPORAL_CSRF_COOKIE_INSECURE=true
     image: ${TEMPORAL_UI_IMAGE}
     ports:
       - 8085:8080
 
-  flow-api:
-    container_name: flow_api
+  peerdb-flow-api:
+    container_name: peerdb-flow-api
     image: ${PEERDB_FLOW_API_IMAGE}
     restart: unless-stopped
     ports:
       - 8112:8112
       - 8113:8113
     environment:
-      <<: [*catalog-config, *flow-worker-env, *minio-config]
+      <<: [*catalog-config, *peerdb-flow-worker-env, *minio-config]
       PEERDB_ALLOWED_TARGETS:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      temporal-admin-tools:
-        condition: service_healthy
+      temporal-setup:
+        condition: service_completed_successfully
 
-  flow-snapshot-worker:
-    container_name: flow-snapshot-worker
+  peerdb-flow-snapshot-worker:
+    container_name: peerdb-flow-snapshot-worker
     image: ${PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog-config, *flow-worker-env, *minio-config]
+      <<: [*catalog-config, *peerdb-flow-worker-env, *minio-config]
     depends_on:
-      temporal-admin-tools:
-        condition: service_healthy
+      temporal-setup:
+        condition: service_completed_successfully
 
-  flow-worker:
-    container_name: flow-worker
+  peerdb-flow-worker:
+    container_name: peerdb-flow-worker
     image: ${PEERDB_FLOW_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog-config, *flow-worker-env, *minio-config]
+      <<: [*catalog-config, *peerdb-flow-worker-env, *minio-config]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      temporal-admin-tools:
-        condition: service_healthy
+      temporal-setup:
+        condition: service_completed_successfully
 
-  peerdb:
+  peerdb-server:
     container_name: peerdb-server
     stop_signal: SIGINT
     image: ${PEERDB_SERVER_IMAGE}
@@ -158,7 +181,7 @@ services:
     environment:
       <<: *catalog-config
       PEERDB_PASSWORD:
-      PEERDB_FLOW_SERVER_ADDRESS: grpc://flow_api:8112
+      PEERDB_FLOW_SERVER_ADDRESS: grpc://peerdb-flow-api:8112
       RUST_LOG: info
       RUST_BACKTRACE: 1
     ports:
@@ -175,14 +198,14 @@ services:
       - 3000:3000
     environment:
       <<: *catalog-config
-      PEERDB_FLOW_SERVER_HTTP: http://flow_api:8113
+      PEERDB_FLOW_SERVER_HTTP: http://peerdb-flow-api:8113
       NEXTAUTH_SECRET: __changeme__
       NEXTAUTH_URL: http://localhost:3000
       PEERDB_ALLOWED_TARGETS:
       PEERDB_CLICKHOUSE_ALLOWED_DOMAINS:
       PEERDB_EXPERIMENTAL_ENABLE_SCRIPTING: true
     depends_on:
-      - flow-api
+      - peerdb-flow-api
 
   minio:
     image: ${MINIO_IMAGE}
@@ -194,11 +217,17 @@ services:
       - "9002:36987"
     environment:
       <<: *minio-config
-    entrypoint: >
-      /bin/sh -c " minio server /data --console-address=:36987 & sleep 2; mc alias set myminiopeerdb http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; mc mb myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME; wait "
+    entrypoint: |
+      /bin/sh -c "
+      minio server /data --console-address=:36987 & sleep 2;
+      mc alias set myminiopeerdb http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb --ignore-existing myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
+      mc ilm rule add "myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
+      wait
+      "
 
 volumes:
-  pgdata:
+  postgres-data:
   minio-data:
 
 networks:

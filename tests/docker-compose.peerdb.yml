@@ -40,24 +40,23 @@ services:
       service: catalog
     stop_grace_period: 0s
 
-  temporal:
+  postgres-setup:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: temporal
+      service: postgres-setup
     stop_grace_period: 0s
 
-  temporal-admin-tools:
+  temporal-server:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: temporal-admin-tools
+      service: temporal-server
     stop_grace_period: 0s
-    healthcheck:
-      # Added check for MirrorName attribute to ensure that temporal-admin-tools service is ready
-      # https://github.com/PeerDB-io/peerdb/blob/248fbe54d6b56b57d7908bdcc8cd0893d7f270f2/scripts/mirror-name-search.sh
-      test: ["CMD-SHELL", "temporal workflow list && temporal operator search-attribute list | grep -w MirrorName"]
-      interval: 1s
-      timeout: 5s
-      retries: 30
+
+  temporal-setup:
+    extends:
+      file: ./data/peerdb/docker-compose.yml
+      service: temporal-setup
+    stop_grace_period: 0s
 
   temporal-ui:
     extends:
@@ -65,30 +64,30 @@ services:
       service: temporal-ui
     stop_grace_period: 0s
 
-  flow-api:
+  peerdb-flow-api:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: flow-api
+      service: peerdb-flow-api
     stop_grace_period: 0s
 
-  flow-snapshot-worker:
+  peerdb-flow-snapshot-worker:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: flow-snapshot-worker
+      service: peerdb-flow-snapshot-worker
     extra_hosts:
       - host.docker.internal:host-gateway
     stop_grace_period: 0s
 
-  flow-worker:
+  peerdb-flow-worker:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: flow-worker
+      service: peerdb-flow-worker
     stop_grace_period: 0s
 
-  peerdb:
+  peerdb-server:
     extends:
       file: ./data/peerdb/docker-compose.yml
-      service: peerdb
+      service: peerdb-server
     stop_grace_period: 0s
 
   peerdb-ui:
@@ -104,5 +103,5 @@ services:
     stop_grace_period: 0s
 
 volumes:
-  pgdata:
+  postgres-data:
   minio-data:

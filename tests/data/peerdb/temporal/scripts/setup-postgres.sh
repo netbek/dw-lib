@@ -11,7 +11,9 @@ SKIP_DB_CREATE="${SKIP_DB_CREATE:-false}"
 
 echo "Starting PostgreSQL schema setup..."
 echo "Waiting for PostgreSQL port to be available..."
-nc -z -w 10 ${POSTGRES_SEEDS} ${DB_PORT:-5432}
+until nc -z -v -w 3 $POSTGRES_SEEDS ${DB_PORT:-5432}; do
+    sleep 2
+done
 echo "PostgreSQL port is available"
 
 # Create and setup temporal database

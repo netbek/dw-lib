@@ -5,13 +5,11 @@
 name: peerdb-quickstart
 
 x-minio-env: &minio-env
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: _peerdb_minioadmin
-  MINIO_ROOT_USER: _peerdb_minioadmin
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: _peerdb_minioadmin
-  MINIO_ROOT_PASSWORD: _peerdb_minioadmin
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: admin
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: password
   PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_REGION: us-east-1
   PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:9001
-  PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdbbucket
+  PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdb
 
 x-catalog-env: &catalog-env
   PEERDB_CATALOG_HOST: catalog
@@ -32,7 +30,6 @@ x-peerdb-flow-worker-env: &peerdb-flow-worker-env
 
 services:
   catalog:
-    container_name: catalog
     image: ${POSTGRES_IMAGE}
     command: -c config_file=/etc/postgresql.conf
     restart: unless-stopped
@@ -57,7 +54,6 @@ services:
       start_period: 60s
 
   temporal-setup-postgres:
-    container_name: temporal-setup-postgres
     depends_on:
       catalog:
         condition: service_healthy
@@ -74,7 +70,6 @@ services:
       - ./temporal/scripts:/scripts
 
   temporal-server:
-    container_name: temporal-server
     restart: unless-stopped
     depends_on:
       temporal-setup-postgres:
@@ -100,7 +95,6 @@ services:
       retries: 60
 
   temporal-create-namespace:
-    container_name: temporal-create-namespace
     depends_on:
       temporal-server:
         condition: service_healthy
@@ -118,7 +112,6 @@ services:
       retries: 30
 
   temporal-ui:
-    container_name: temporal-ui
     restart: unless-stopped
     depends_on:
       temporal-server:
@@ -132,7 +125,6 @@ services:
       - 8085:8080
 
   peerdb-flow-api:
-    container_name: peerdb-flow-api
     image: ${PEERDB_FLOW_API_IMAGE}
     restart: unless-stopped
     ports:
@@ -148,7 +140,6 @@ services:
         condition: service_completed_successfully
 
   peerdb-flow-snapshot-worker:
-    container_name: peerdb-flow-snapshot-worker
     image: ${PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE}
     restart: unless-stopped
     environment:
@@ -158,7 +149,6 @@ services:
         condition: service_completed_successfully
 
   peerdb-flow-worker:
-    container_name: peerdb-flow-worker
     image: ${PEERDB_FLOW_WORKER_IMAGE}
     restart: unless-stopped
     environment:
@@ -170,7 +160,6 @@ services:
         condition: service_completed_successfully
 
   peerdb-server:
-    container_name: peerdb-server
     stop_signal: SIGINT
     image: ${PEERDB_SERVER_IMAGE}
     restart: unless-stopped
@@ -187,7 +176,6 @@ services:
         condition: service_healthy
 
   peerdb-ui:
-    container_name: peerdb-ui
     image: ${PEERDB_UI_IMAGE}
     restart: unless-stopped
     ports:
@@ -209,23 +197,21 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      - 9001:9000
-      - 9002:36987
+      - 9000:9000
+      - 9001:9001
     environment:
       <<: *minio-env
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
     entrypoint: |
       /bin/sh -c "
-      minio server /data --console-address=:36987 & sleep 2;
-      mc alias set myminiopeerdb http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
-      mc mb --ignore-existing myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
-      mc ilm rule add "myminiopeerdb/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
+      minio server /data --console-address=:9001 & sleep 2;
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb --ignore-existing local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
+      mc ilm rule add "local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
       wait
       "
 
 volumes:
   catalog-data:
   minio-data:
-
-networks:
-  default:
-    name: peerdb_network

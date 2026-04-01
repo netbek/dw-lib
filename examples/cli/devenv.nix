@@ -15,6 +15,8 @@
     tilt
   ];
 
+  dotenv.disableHint = true;
+
   languages = {
     python = {
       enable = true;

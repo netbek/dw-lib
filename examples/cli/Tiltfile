@@ -1,18 +1,24 @@
+load("ext://dotenv", "dotenv")
+
 analytics_settings(enable=False)
 
 project_name = "dw-lib-example"
 
+dotenv(".env")
 docker_compose("./docker-compose.yml", project_name=project_name)
 
-dc_resource("postgres", labels=["postgres"], project_name=project_name)
-dc_resource("clickhouse", labels=["clickhouse"], project_name=project_name)
-dc_resource("flow-api", labels=["peerdb"], project_name=project_name)
-dc_resource("flow-snapshot-worker", labels=["peerdb"], project_name=project_name)
-dc_resource("flow-worker", labels=["peerdb"], project_name=project_name)
-dc_resource("minio", labels=["peerdb"], project_name=project_name)
-dc_resource("peerdb-ui", labels=["peerdb"], project_name=project_name)
-dc_resource("peerdb", labels=["peerdb"], project_name=project_name)
-dc_resource("temporal-admin-tools", labels=["peerdb"], project_name=project_name)
+dc_resource("clickhouse", labels=["example"], project_name=project_name)
+dc_resource("postgres", labels=["example"], project_name=project_name)
+dc_resource("victoria-traces", labels=["example"], project_name=project_name)
+
+dc_resource("catalog", labels=["peerdb"], project_name=project_name)
+dc_resource("temporal-setup-postgres", labels=["peerdb"], project_name=project_name)
+dc_resource("temporal-server", labels=["peerdb"], project_name=project_name)
+dc_resource("temporal-create-namespace", labels=["peerdb"], project_name=project_name)
 dc_resource("temporal-ui", labels=["peerdb"], project_name=project_name)
-dc_resource("temporal", labels=["peerdb"], project_name=project_name)
-dc_resource("victoria-traces", labels=["monitoring"], project_name=project_name)
+dc_resource("peerdb-flow-api", labels=["peerdb"], project_name=project_name)
+dc_resource("peerdb-flow-snapshot-worker", labels=["peerdb"], project_name=project_name)
+dc_resource("peerdb-flow-worker", labels=["peerdb"], project_name=project_name)
+dc_resource("peerdb-server", labels=["peerdb"], project_name=project_name)
+dc_resource("peerdb-ui", labels=["peerdb"], project_name=project_name)
+dc_resource("minio", labels=["peerdb"], project_name=project_name)

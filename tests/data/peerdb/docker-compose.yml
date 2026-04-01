@@ -211,6 +211,12 @@ services:
       mc ilm rule add "local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
       wait
       "
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 30s
 
 volumes:
   catalog-data:

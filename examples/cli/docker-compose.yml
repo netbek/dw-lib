@@ -1,40 +1,13 @@
 name: dw-lib-example
 
-x-peerdb-postgres-env: &peerdb-postgres-env
-  PEERDB_CATALOG_HOST: postgres
-  PEERDB_CATALOG_PORT: 5432
-  PEERDB_CATALOG_USER: peerdb
-  PEERDB_CATALOG_PASSWORD: peerdb
-  PEERDB_CATALOG_DATABASE: peerdb
-
-x-peerdb-minio-env: &peerdb-minio-env
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: admin
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: password
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_REGION: us-east-1
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:28950
-  PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdb
-
-x-peerdb-flow-worker-env: &peerdb-flow-worker-env
-  TEMPORAL_HOST_PORT: temporal:7233
-  TEMPORAL_CLIENT_CERT:
-  TEMPORAL_CLIENT_KEY:
-  PEERDB_TEMPORAL_NAMESPACE: default
-  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-  AWS_REGION: ${AWS_REGION:-}
-  AWS_ENDPOINT: ${AWS_ENDPOINT:-}
-
 services:
   postgres:
-    container_name: postgres
     image: postgres:18.3-alpine3.23
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: example
       TZ: UTC
-    networks:
-      - default
     ports:
       - 25432:5432
     volumes:
@@ -48,7 +21,6 @@ services:
       retries: 10
 
   clickhouse:
-    container_name: clickhouse
     image: clickhouse/clickhouse-server:25.8.21.7-alpine
     environment:
       CLICKHOUSE_USER: default
@@ -58,8 +30,6 @@ services:
       TZ: UTC
     extra_hosts:
       - host.docker.internal:host-gateway
-    networks:
-      - default
     ports:
       - 28123:8123
       - 29000:9000
@@ -72,41 +42,8 @@ services:
       timeout: 1s
       retries: 10
 
-  minio:
-    container_name: minio
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    entrypoint: |
-      /bin/sh -c "
-      minio server /data --console-address=:9001 & sleep 2;
-      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
-      mc mb --ignore-existing local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
-      mc ilm rule add "local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
-      wait
-      "
-    environment:
-      <<: *peerdb-minio-env
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: password
-    networks:
-      - default
-    ports:
-      - 28950:9000
-      - 28951:9001
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "mc ready local"]
-      interval: 1s
-      timeout: 1s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
   victoria-traces:
-    container_name: victoria-traces
     image: victoriametrics/victoria-traces:v0.7.1
-    networks:
-      - default
     ports:
       - 20428:10428
     volumes:
@@ -119,172 +56,78 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  temporal:
-    container_name: temporal
-    image: temporalio/auto-setup:1.29.0
-    environment:
-      DB: postgres12
-      DB_PORT: 5432
-      POSTGRES_USER: temporal
-      POSTGRES_PWD: temporal
-      POSTGRES_SEEDS: postgres
-      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
-      SKIP_DB_CREATE: true
-    networks:
-      - default
-    ports:
-      - 28910:7233
-    volumes:
-      - ./infra/peerdb/volumes/temporal-dynamicconfig:/etc/temporal/config/dynamicconfig
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+  catalog:
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: catalog
+    stop_grace_period: 0s
 
-  temporal-admin-tools:
-    container_name: temporal-admin-tools
-    image: temporalio/admin-tools:1.25.2-tctl-1.18.1-cli-1.1.1
-    entrypoint: /etc/temporal/entrypoint.sh
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CLI_ADDRESS: temporal:7233
-      TEMPORAL_CLI_SHOW_STACKS: 1
-    networks:
-      - default
-    volumes:
-      - ./infra/peerdb/scripts/mirror-name-search.sh:/etc/temporal/entrypoint.sh
-    healthcheck:
-      # Added check for MirrorName attribute to ensure that temporal-admin-tools service is ready
-      # https://github.com/PeerDB-io/peerdb/blob/248fbe54d6b56b57d7908bdcc8cd0893d7f270f2/scripts/mirror-name-search.sh
-      test: ["CMD-SHELL", "temporal workflow list && temporal operator search-attribute list | grep -w MirrorName"]
-      interval: 1s
-      timeout: 5s
-      retries: 30
-    restart: unless-stopped
-    stdin_open: true
-    tty: true
-    depends_on:
-      temporal:
-        condition: service_started
+  temporal-setup-postgres:
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: temporal-setup-postgres
+    stop_grace_period: 0s
+
+  temporal-server:
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: temporal-server
+    stop_grace_period: 0s
+
+  temporal-create-namespace:
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: temporal-create-namespace
+    stop_grace_period: 0s
 
   temporal-ui:
-    container_name: temporal-ui
-    image: temporalio/ui:2.45.2
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CORS_ORIGINS: http://localhost:3000
-      TEMPORAL_CSRF_COOKIE_INSECURE: true
-    networks:
-      - default
-    ports:
-      - 28930:8080
-    restart: unless-stopped
-    depends_on:
-      temporal:
-        condition: service_started
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: temporal-ui
+    stop_grace_period: 0s
 
   peerdb-flow-api:
-    container_name: flow_api
-    image: ghcr.io/peerdb-io/flow-api:stable-v0.36.7
-    environment:
-      <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
-      PEERDB_ALLOWED_TARGETS:
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    networks:
-      - default
-    ports:
-      - 28940:8112
-      - 28941:8113
-    restart: unless-stopped
-    depends_on:
-      minio:
-        condition: service_healthy
-      temporal-admin-tools:
-        condition: service_healthy
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: peerdb-flow-api
+    stop_grace_period: 0s
 
   peerdb-flow-snapshot-worker:
-    container_name: peerdb-flow-snapshot-worker
-    image: ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.7
-    environment:
-      <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: peerdb-flow-snapshot-worker
     extra_hosts:
       - host.docker.internal:host-gateway
-    networks:
-      - default
-    restart: unless-stopped
-    depends_on:
-      minio:
-        condition: service_healthy
-      temporal-admin-tools:
-        condition: service_healthy
+    stop_grace_period: 0s
 
   peerdb-flow-worker:
-    container_name: peerdb-flow-worker
-    image: ghcr.io/peerdb-io/flow-worker:stable-v0.36.7
-    environment:
-      <<: [*peerdb-postgres-env, *peerdb-flow-worker-env, *peerdb-minio-env]
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    networks:
-      - default
-    restart: unless-stopped
-    depends_on:
-      minio:
-        condition: service_healthy
-      temporal-admin-tools:
-        condition: service_healthy
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: peerdb-flow-worker
+    stop_grace_period: 0s
 
   peerdb-server:
-    container_name: peerdb-server
-    image: ghcr.io/peerdb-io/peerdb-server:stable-v0.36.7
-    environment:
-      <<: *peerdb-postgres-env
-      PEERDB_FLOW_SERVER_ADDRESS: grpc://flow_api:8112
-      PEERDB_PASSWORD:
-      RUST_BACKTRACE: 1
-      RUST_LOG: info
-    networks:
-      - default
-    ports:
-      - 28900:9900
-    restart: unless-stopped
-    stop_signal: SIGINT
-    depends_on:
-      postgres:
-        condition: service_healthy
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: peerdb-server
+    stop_grace_period: 0s
 
   peerdb-ui:
-    container_name: peerdb-ui
-    image: ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.7
-    environment:
-      <<: *peerdb-postgres-env
-      DATABASE_URL: postgres://peerdb:peerdb@postgres:5432/peerdb
-      NEXTAUTH_SECRET: __changeme__
-      NEXTAUTH_URL: http://localhost:28920
-      PEERDB_ALLOWED_TARGETS:
-      PEERDB_CLICKHOUSE_ALLOWED_DOMAINS:
-      PEERDB_EXPERIMENTAL_ENABLE_SCRIPTING: true
-      PEERDB_FLOW_SERVER_HTTP: http://flow_api:8113
-    networks:
-      - default
-    ports:
-      - 28920:3000
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      peerdb-flow-api:
-        condition: service_started
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: peerdb-ui
+    stop_grace_period: 0s
+
+  minio:
+    extends:
+      file: ../../vendor/peerdb/docker-compose.yml
+      service: minio
+    stop_grace_period: 0s
 
 volumes:
+  catalog-data:
+  minio-data:
   postgres-data:
   clickhouse-data:
   clickhouse-logs:
-  minio-data:
   victoria-traces-data:
-
-networks:
-  default:
-    name: dw-lib-example
-    driver: bridge

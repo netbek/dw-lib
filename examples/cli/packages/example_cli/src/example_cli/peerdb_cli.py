@@ -119,7 +119,9 @@ def resume_mirrors() -> None:
 def create_peer(name: str, if_exists: Literal["fail", "keep", "replace"] = "keep") -> None:
     """Create a peer."""
     peer = pydash.find(peerdb.config.peers, lambda x: x.name == name)
-    response = peerdb.create_peer(peer.model_dump(), if_exists=if_exists)
+    response = peerdb.create_peer(
+        {"name": peer.name, **peer.peerdb.model_dump()}, if_exists=if_exists
+    )
     console.print(response.message, style="green")
 
 

@@ -43,13 +43,18 @@ bump-version:
 		exit 1; \
 	fi; \
 	if ! echo "$$VALID_BUMP" | grep -qw "$$BUMP"; then \
-		echo "$(RED)Error: Invalid bump value '$$BUMP'.$(RESET)"; \
+		echo "$(RED)Error: Invalid bump '$$BUMP'.$(RESET)"; \
 		echo "Must be one of: $(CYAN)$$VALID_BUMP$(RESET)"; \
 		exit 1; \
 	fi; \
 	uv version --bump $$BUMP; \
 	VERSION=$$(uv version --short); \
 	$(MAKE) --no-print-directory uv-sync-all; \
+	git add \
+		pyproject.toml \
+		uv.lock \
+		examples/cli/uv.lock \
+		examples/cli/packages/example_cli/uv.lock; \
 	git commit -m $$VERSION;
 
 create-release:

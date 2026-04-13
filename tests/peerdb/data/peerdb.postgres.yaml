@@ -52,5 +52,6 @@ mirrors:
     table_mappings:
       - source_table_identifier: public.table_2
         destination_table_identifier: replica.table_2
+        exclude: [large_column, very_large_column]
       - source_table_identifier: public.table_3
         destination_table_identifier: replica.table_3

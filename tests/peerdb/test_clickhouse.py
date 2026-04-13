@@ -105,6 +105,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
                         {
                             "source_table_identifier": "public.table_1",
                             "destination_table_identifier": "table_1",
+                            "exclude": None,
                         },
                     ],
                 },
@@ -127,24 +128,16 @@ class TestLoadConfig(PeerDBIntegrationTest):
                         {
                             "source_table_identifier": "public.table_2",
                             "destination_table_identifier": "table_2",
+                            "exclude": ["large_column", "very_large_column"],
                         },
                         {
                             "source_table_identifier": "public.table_3",
                             "destination_table_identifier": "table_3",
+                            "exclude": None,
                         },
                     ],
                 },
             ],
-            # "publications": [
-            #     {
-            #         "name": "publication_1",
-            #         "table_identifiers": ["public.table_1", "public.table_2"],
-            #     },
-            #     {
-            #         "name": "publication_2",
-            #         "table_identifiers": ["public.table_3"],
-            #     },
-            # ],
         }
 
         config_file = Path(__file__).parent / "data" / "peerdb.clickhouse.yaml"

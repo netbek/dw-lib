@@ -343,6 +343,7 @@ class ConfigPeerPostgres(BaseModel):
 class ConfigMirrorTableMapping(BaseModel):
     source_table_identifier: str
     destination_table_identifier: str
+    exclude: list[str] | None = None
 
 
 class ConfigMirror(BaseModel):

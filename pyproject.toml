@@ -35,7 +35,7 @@ psycopg2 = [
 ]
 
 dagster = [
-    "dagster>=1.12.19",
+    "dagster>=1.13.0",
     "dagster-dbt>=0.28.19",
 ]
 

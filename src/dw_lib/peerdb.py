@@ -68,6 +68,33 @@ LITERAL_FLOW_STATUS_LABELS = {
 }
 
 
+# https://www.postgresql.org/docs/17/view-pg-replication-slots.html
+class ListReplicationSlotsItem(BaseModel):
+    slot_name: str
+    redo_lsn: str
+    restart_lsn: str | None = None
+    current_lsn: str
+    active: bool | None = None
+    inactive_since: datetime | None = None
+    lag_mb: int | None = None
+    confirmed_flush_lsn: str | None = None
+    sent_lsn: str | None = None
+    restart_to_confirmed_mb: int | None = None
+    confirmed_to_current_mb: int | None = None
+    wal_status: str
+    safe_wal_size: int | None = None
+    wait_event_type: str | None = None
+    wait_event: str | None = None
+    backend_state: str | None = None
+    logical_decoding_work_mem_mb: int | None = None
+    stats_reset: int | None = None
+    spill_txns: int | None = None
+    spill_count: int | None = None
+    spill_bytes: int | None = None
+    failover: bool
+    synced: bool
+
+
 # https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L39
 class DynamicSetting(BaseModel):
     name: str
@@ -219,6 +246,7 @@ class ListMirrorsItem(BaseModel):
     destination_type: str = Field(alias="destinationType")
     created_at: datetime = Field(alias="createdAt")
     is_cdc: bool = Field(alias="isCdc")
+    replication_slot: ListReplicationSlotsItem | None = None
 
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L410
@@ -229,33 +257,6 @@ class ListMirrorsResponse(BaseModel):
 class ListPublicationsItem(BaseModel):
     publication_name: str
     relation: PostgresRelation
-
-
-# https://www.postgresql.org/docs/17/view-pg-replication-slots.html
-class ListReplicationSlotsItem(BaseModel):
-    slot_name: str
-    redo_lsn: str
-    restart_lsn: str | None = None
-    current_lsn: str
-    active: bool | None = None
-    inactive_since: datetime | None = None
-    lag_mb: int | None = None
-    confirmed_flush_lsn: str | None = None
-    sent_lsn: str | None = None
-    restart_to_confirmed_mb: int | None = None
-    confirmed_to_current_mb: int | None = None
-    wal_status: str
-    safe_wal_size: int | None = None
-    wait_event_type: str | None = None
-    wait_event: str | None = None
-    backend_state: str | None = None
-    logical_decoding_work_mem_mb: int | None = None
-    stats_reset: int | None = None
-    spill_txns: int | None = None
-    spill_count: int | None = None
-    spill_bytes: int | None = None
-    failover: bool
-    synced: bool
 
 
 class ConfigSetting(BaseModel):
@@ -582,7 +583,7 @@ class PeerDB:
 
             # Missing publications
             self._console.print()
-            data = [
+            missing_publications_data = [
                 {
                     "publication": publication.publication_name,
                     "schema": publication.relation.schema_,
@@ -590,14 +591,16 @@ class PeerDB:
                 }
                 for publication in self.list_missing_publications()
             ]
-            if data:
-                self._console.print(render_table(data, title="Missing publications"))
+            if missing_publications_data:
+                self._console.print(
+                    render_table(missing_publications_data, title="Missing publications")
+                )
             else:
                 self._console.print("Missing publications: [green]OK (None)[/green]")
 
             # Unused publications
             self._console.print()
-            data = [
+            unused_publications_data = [
                 {
                     "publication": publication.publication_name,
                     "schema": publication.relation.schema_,
@@ -605,48 +608,49 @@ class PeerDB:
                 }
                 for publication in self.list_unused_publications()
             ]
-            if data:
-                self._console.print(render_table(data, title="Unused publications"))
+            if unused_publications_data:
+                self._console.print(
+                    render_table(unused_publications_data, title="Unused publications")
+                )
             else:
                 self._console.print("Unused publications: [green]OK (None)[/green]")
 
             # Peers
             self._console.print()
-            data = [peer.model_dump() for peer in self.list_peers().items]
-            if data:
-                self._console.print(render_table(data, title="Peers"))
+            peers_data = [peer.model_dump() for peer in self.list_peers().items]
+            if peers_data:
+                self._console.print(render_table(peers_data, title="Peers"))
             else:
                 self._console.print("Peers: None")
 
             # Mirrors
             self._console.print()
-            data = []
-            for mirror in self.list_mirrors().mirrors:
+            mirrors_data = []
+            mirrors = self.list_mirrors(include_replication_slot=True).mirrors
+            for mirror in mirrors:
                 status_response = self.get_mirror_status(mirror.name)
-                data.append(
-                    pydash.pick(
-                        {
-                            **mirror.model_dump(),
-                            "status": LITERAL_FLOW_STATUS_LABELS.get(
-                                status_response.current_flow_state,
-                                status_response.current_flow_state,
-                            ),
-                        },
-                        "name",
-                        "created_at",
-                        "status",
-                    )
-                )
-            data = pydash.order_by(data, ["name"])
-            if data:
-                self._console.print(render_table(data, title="Mirrors"))
+                mirror_data = {
+                    **mirror.model_dump(),
+                    "status": LITERAL_FLOW_STATUS_LABELS.get(
+                        status_response.current_flow_state,
+                        status_response.current_flow_state,
+                    ),
+                }
+                mirror_data = {
+                    **pydash.pick(mirror_data, "name", "created_at", "status"),
+                    "replication_slot_name": pydash.get(mirror_data, "replication_slot.slot_name"),
+                }
+                mirrors_data.append(mirror_data)
+            mirrors_data = pydash.order_by(mirrors_data, ["name"])
+            if mirrors_data:
+                self._console.print(render_table(mirrors_data, title="Mirrors"))
             else:
                 self._console.print("Mirrors: None")
 
             # Replication slots
             self._console.print()
-            data = [
-                slot.model_dump(
+            replication_slots_data = [
+                mirror.replication_slot.model_dump(
                     include=[
                         "slot_name",
                         "active",
@@ -658,12 +662,19 @@ class PeerDB:
                         "synced",
                     ]
                 )
-                for slot in self.list_replication_slots()
+                for mirror in mirrors
+                if mirror.replication_slot
             ]
-            if data:
-                self._console.print(render_table(data, title="Replication slots"))
+            if replication_slots_data:
+                self._console.print(render_table(replication_slots_data, title="Replication slots"))
             else:
-                self._console.print("Replication slots: None")
+                has_running_mirror = any(mirror["status"] == "Running" for mirror in mirrors_data)
+                if has_running_mirror:
+                    self._console.print(
+                        "Replication slots: [red]Not OK (no replication slot for mirror in 'Running' state)[/red]"
+                    )
+                else:
+                    self._console.print("Replication slots: None")
 
         return result
 
@@ -1166,7 +1177,7 @@ class PeerDB:
         for relation in destination_relations:
             destination_adapter.drop_table(**relation.model_dump(by_alias=True), if_exists=True)
 
-    def list_mirrors(self) -> ListMirrorsResponse:
+    def list_mirrors(self, include_replication_slot: bool = False) -> ListMirrorsResponse:
         url = self.config.peerdb_api_url.join("v1/mirrors/list")
 
         try:
@@ -1179,7 +1190,18 @@ class PeerDB:
                 error_message = None
             raise Exception(f"Failed to list mirrors ({error_message or exc})")
 
-        return ListMirrorsResponse(mirrors=pydash.sort_by(response.json()["mirrors"], "name"))
+        mirrors = pydash.sort_by(response.json()["mirrors"], "name")
+
+        if include_replication_slot:
+            replication_slots = self.list_replication_slots()
+            for mirror in mirrors:
+                replication_slot_name = f"peerflow_slot_{mirror['name']}"
+                replication_slot = pydash.find(
+                    replication_slots, lambda x: x.slot_name == replication_slot_name
+                )
+                mirror["replication_slot"] = replication_slot
+
+        return ListMirrorsResponse(mirrors=mirrors)
 
     def list_expected_publications(self) -> list[ListPublicationsItem]:
         data = []

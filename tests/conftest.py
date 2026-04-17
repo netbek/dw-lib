@@ -20,11 +20,11 @@ import requests
 # Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.12/docker-compose.yml
 PEERDB_TEST_ENV = {
     "MINIO_IMAGE": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
-    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.16",
-    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.16",
-    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.16",
-    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.16",
-    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.16",
+    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.36.17",
+    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.36.17",
+    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.36.17",
+    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.17",
+    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.17",
     "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
     "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.29.6-tctl-1.18.4-cli-1.6.2",
     "TEMPORAL_SERVER_IMAGE": "temporalio/server:1.29.6",
@@ -266,7 +266,13 @@ class PeerDBTest:
 
 class PeerDBIntegrationTest(PeerDBTest):
     @pytest.fixture(scope="function")
-    def table_defs(self) -> list[dict[str, str]]:
+    def postgres_schemas(self) -> list[str]:
+        return [
+            "replica",  # Required by tests/peerdb/test_postgres.py (tests/peerdb/data/peerdb.postgres.yaml)
+        ]
+
+    @pytest.fixture(scope="function")
+    def postgres_table_defs(self) -> list[dict[str, str]]:
         return [
             {
                 "table": "table_1",
@@ -306,15 +312,22 @@ class PeerDBIntegrationTest(PeerDBTest):
 
     @pytest.fixture(scope="function")
     def some_postgres_tables(
-        self, postgres_adapter: PostgresAdapter, table_defs: list[dict[str, str]]
+        self,
+        postgres_adapter: PostgresAdapter,
+        postgres_schemas: list[str],
+        postgres_table_defs: list[dict[str, str]],
     ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs[:1]:
+        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+            for schema in postgres_schemas:
+                cur.execute(f"create schema if not exists {schema};")
+
+        for table_def in postgres_table_defs[:1]:
             postgres_adapter.create_table(
                 table=table_def["table"], statement=table_def["create_statement"]
             )
 
         # Create some tables
-        table_names = [table_def["table"] for table_def in table_defs[:1]]
+        table_names = [table_def["table"] for table_def in postgres_table_defs[:1]]
         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
 
         yield tables
@@ -322,23 +335,38 @@ class PeerDBIntegrationTest(PeerDBTest):
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
 
+        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+            for schema in postgres_schemas:
+                cur.execute(f"drop schema if exists {schema};")
+
     @pytest.fixture(scope="function")
     def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter, table_defs: list[dict[str, str]]
+        self,
+        postgres_adapter: PostgresAdapter,
+        postgres_schemas: list[str],
+        postgres_table_defs: list[dict[str, str]],
     ) -> Generator[list[Table], Any, None]:
-        for table_def in table_defs:
+        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+            for schema in postgres_schemas:
+                cur.execute(f"create schema if not exists {schema};")
+
+        for table_def in postgres_table_defs:
             postgres_adapter.create_table(
                 table=table_def["table"], statement=table_def["create_statement"]
             )
 
         # Create all tables
-        table_names = [table_def["table"] for table_def in table_defs]
+        table_names = [table_def["table"] for table_def in postgres_table_defs]
         tables = [table for table in postgres_adapter.list_tables() if table.name in table_names]
 
         yield tables
 
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
+
+        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+            for schema in postgres_schemas:
+                cur.execute(f"drop schema if exists {schema};")
 
     @pytest.fixture(scope="function")
     def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:

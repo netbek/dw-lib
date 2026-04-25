@@ -28,7 +28,7 @@ PEERDB_TEST_ENV = {
     "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
     "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.29.6-tctl-1.18.4-cli-1.6.2",
     "TEMPORAL_SERVER_IMAGE": "temporalio/server:1.29.6",
-    "TEMPORAL_UI_IMAGE": "temporalio/ui:2.48.3",
+    "TEMPORAL_UI_IMAGE": "temporalio/ui:2.48.4",
 }
 
 

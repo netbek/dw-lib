@@ -29,3 +29,9 @@ jobs:
 
       - name: Run tests
         run: uv run --frozen pytest
+
+      - name: Debug PeerDB Catalog Logs
+        if: failure()
+        run: |
+          docker logs dw-lib-test-peerdb-catalog-1
+          docker inspect dw-lib-test-peerdb-catalog-1 --format='{{json .State.Health}}'

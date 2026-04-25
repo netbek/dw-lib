@@ -1,6 +1,6 @@
 services:
   postgres-primary:
-    image: postgres:18.3-alpine3.23
+    image: postgres:17.9-alpine3.23
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -17,7 +17,7 @@ services:
     stop_grace_period: 0s
 
   postgres-replica:
-    image: postgres:18.3-alpine3.23
+    image: postgres:17.9-alpine3.23
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

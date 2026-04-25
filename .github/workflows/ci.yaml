@@ -30,7 +30,7 @@ jobs:
       - name: Run tests
         run: uv run --frozen pytest
 
-      - name: Debug PeerDB Catalog Logs
+      - name: Debug Docker containers started by tests
         if: failure()
         run: |
           docker logs dw-lib-test-peerdb-catalog-1

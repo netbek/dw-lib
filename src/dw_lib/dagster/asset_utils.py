@@ -8,6 +8,7 @@ from dagster import (
     RunRequest,
     RunsFilter,
     schedule,
+    ScheduleEvaluationContext,
     SkipReason,
 )
 from dagster._core.definitions.target import ExecutableDefinition
@@ -32,6 +33,8 @@ def build_singleton_schedule(
     job: ExecutableDefinition,
     cron_schedule: str,
     schedule_name: str | None = None,
+    tags: Mapping[str, str] | None = None,
+    config: RunConfig | None = None,
     execution_timezone: str | None = None,
     default_status: DefaultScheduleStatus = DefaultScheduleStatus.STOPPED,
 ):
@@ -49,16 +52,16 @@ def build_singleton_schedule(
         execution_timezone=execution_timezone,
         default_status=default_status,
     )
-    def _schedule(context):
-        # Find unfinished runs of the job
-        run_records = context.instance.get_run_records(
-            RunsFilter(job_name=job.name, statuses=NOT_FINISHED_STATUSES)
+    def _schedule(context: ScheduleEvaluationContext):
+        # Find an unfinished run of the job
+        runs = context.instance.get_runs(
+            filters=RunsFilter(job_name=job.name, statuses=NOT_FINISHED_STATUSES), limit=1
         )
 
-        if len(run_records) > 0:
+        if runs:
             return SkipReason(f"Skipping {job.name} because a run is already in progress.")
 
-        return RunRequest()
+        return RunRequest(run_config=config, tags=tags)
 
     return _schedule
 
@@ -102,13 +105,13 @@ def build_singleton_schedule_from_dbt_selection(
         execution_timezone=execution_timezone,
         default_status=default_status,
     )
-    def _schedule(context):
-        # Find unfinished runs of the job
-        run_records = context.instance.get_run_records(
-            RunsFilter(job_name=job.name, statuses=NOT_FINISHED_STATUSES)
+    def _schedule(context: ScheduleEvaluationContext):
+        # Find an unfinished run of the job
+        runs = context.instance.get_runs(
+            filters=RunsFilter(job_name=job.name, statuses=NOT_FINISHED_STATUSES), limit=1
         )
 
-        if run_records:
+        if runs:
             return SkipReason(f"Skipping {job.name} because a run is already in progress.")
 
         return RunRequest(run_config=config, tags=tags)

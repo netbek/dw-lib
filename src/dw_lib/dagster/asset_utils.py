@@ -21,11 +21,10 @@ from dagster_dbt.asset_utils import (
 
 # https://github.com/dagster-io/dagster/blob/1.12.19/python_modules/dagster/dagster/_core/storage/dagster_run.py#L110
 NOT_FINISHED_STATUSES = [
-    DagsterRunStatus.STARTING,
-    DagsterRunStatus.STARTED,
-    # DagsterRunStatus.CANCELING,
     DagsterRunStatus.QUEUED,
     DagsterRunStatus.NOT_STARTED,
+    DagsterRunStatus.STARTING,
+    DagsterRunStatus.STARTED,
 ]
 
 

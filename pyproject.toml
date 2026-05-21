@@ -24,19 +24,23 @@ dependencies = [
 clickhouse = [
     "clickhouse-connect>=0.10.0",
     "clickhouse-sqlalchemy",
+    "sqlmodel>=0.0.27",
 ]
 
 duckdb = [
     "duckdb>=1.4.2",
     "duckdb-engine>=0.17.0",
+    "sqlmodel>=0.0.27",
 ]
 
 psycopg = [
     "psycopg[binary]>=3.3.3",
+    "sqlmodel>=0.0.27",
 ]
 
 psycopg2 = [
     "psycopg2-binary>=2.9.11",
+    "sqlmodel>=0.0.27",
 ]
 
 dagster = [
@@ -54,6 +58,7 @@ dbt = [
     "pydantic>=2.12.4",
     "pydash>=8.0.5",
     "ruamel-yaml>=0.19.1",
+    "sqlmodel>=0.0.27",
 ]
 
 loader = [

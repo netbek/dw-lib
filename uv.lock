@@ -639,6 +639,7 @@ dependencies = [
 clickhouse = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-sqlalchemy" },
+    { name = "sqlmodel" },
 ]
 dagster = [
     { name = "dagster" },
@@ -653,10 +654,12 @@ dbt = [
     { name = "pydantic" },
     { name = "pydash" },
     { name = "ruamel-yaml" },
+    { name = "sqlmodel" },
 ]
 duckdb = [
     { name = "duckdb" },
     { name = "duckdb-engine" },
+    { name = "sqlmodel" },
 ]
 loader = [
     { name = "boto3" },
@@ -679,9 +682,11 @@ peerdb = [
 ]
 psycopg = [
     { name = "psycopg", extra = ["binary"] },
+    { name = "sqlmodel" },
 ]
 psycopg2 = [
     { name = "psycopg2-binary" },
+    { name = "sqlmodel" },
 ]
 
 [package.dev-dependencies]
@@ -736,7 +741,12 @@ requires-dist = [
     { name = "sqlglot", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'peerdb'", specifier = ">=28.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'clickhouse'", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'dbt'", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'duckdb'", specifier = ">=0.0.27" },
     { name = "sqlmodel", marker = "extra == 'peerdb'", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'psycopg'", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'psycopg2'", specifier = ">=0.0.27" },
     { name = "sqlparse", specifier = ">=0.5.3" },
 ]
 provides-extras = ["clickhouse", "duckdb", "psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb"]

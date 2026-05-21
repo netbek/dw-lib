@@ -1,5 +1,5 @@
 from ..conftest import DatabaseTest
-from dw_lib.database.adapters import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter
 from dw_lib.dbt import Dbt
 from pathlib import Path
 

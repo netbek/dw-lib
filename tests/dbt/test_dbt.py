@@ -1,6 +1,6 @@
 from .conftest import CodeGenerationTest
 from collections.abc import Generator
-from dw_lib.database.adapters import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter
 from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
 from dw_lib.dbt.types import DbtResourceType
 from dw_lib.types import ClickHouseRelation

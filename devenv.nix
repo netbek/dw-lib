@@ -11,6 +11,7 @@
   packages = with pkgs; [
     nixfmt
     ripgrep
+    trivy
   ];
 
   languages = {

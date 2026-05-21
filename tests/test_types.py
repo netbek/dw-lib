@@ -1,10 +1,10 @@
-from dw_lib.types import (
+from dw_lib.database import (
     ClickHouseRelation,
     ClickHouseSettings,
-    HttpUrl,
     PostgresRelation,
     PostgresSettings,
 )
+from dw_lib.types import HttpUrl
 from pydantic import ClickHouseDsn, PostgresDsn, ValidationError
 from sqlalchemy import make_url, URL
 

@@ -7,7 +7,7 @@ from ...conftest import (
     ViewWithSchema,
 )
 from collections.abc import Generator
-from dw_lib.database.adapters import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter
 from dw_lib.exceptions import (
     DatabaseNotFoundException,
     TableNotFoundException,

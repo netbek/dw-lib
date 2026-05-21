@@ -1,6 +1,5 @@
-from .cloud.adapters import S3Adapter
-from .cloud.utils import s3_to_endpoint_uri
-from .database.adapters import PostgresAdapter
+from .cloud import s3_to_endpoint_uri, S3Adapter
+from .database import PostgresAdapter
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
 from .types import PostgresRelation, PostgresSettings, S3Settings
 from .utils.filesystem import find_up

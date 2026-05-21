@@ -1,6 +1,6 @@
 from ..conftest import LoaderTest
 from collections.abc import Generator
-from dw_lib.database.adapters import PostgresAdapter
+from dw_lib.database import PostgresAdapter
 from dw_lib.loader import Loader
 from pathlib import Path
 from sqlmodel import Table

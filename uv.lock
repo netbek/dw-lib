@@ -622,11 +622,6 @@ name = "dw-lib"
 version = "1.30.17"
 source = { editable = "." }
 dependencies = [
-    { name = "boto3" },
-    { name = "clickhouse-connect" },
-    { name = "clickhouse-sqlalchemy" },
-    { name = "duckdb" },
-    { name = "duckdb-engine" },
     { name = "jinja2" },
     { name = "packaging" },
     { name = "psutil" },
@@ -641,6 +636,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+clickhouse = [
+    { name = "clickhouse-connect" },
+    { name = "clickhouse-sqlalchemy" },
+]
 dagster = [
     { name = "dagster" },
     { name = "dagster-dbt" },
@@ -654,6 +653,10 @@ dbt = [
     { name = "pydantic" },
     { name = "pydash" },
     { name = "ruamel-yaml" },
+]
+duckdb = [
+    { name = "duckdb" },
+    { name = "duckdb-engine" },
 ]
 loader = [
     { name = "boto3" },
@@ -693,19 +696,18 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", specifier = ">=1.41.1" },
     { name = "boto3", marker = "extra == 'loader'", specifier = ">=1.41.1" },
     { name = "chdb", marker = "extra == 'loader'", specifier = ">=3.7.2" },
-    { name = "clickhouse-connect", specifier = ">=0.10.0" },
+    { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
-    { name = "clickhouse-sqlalchemy", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
     { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
     { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
     { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
-    { name = "duckdb", specifier = ">=1.4.2" },
-    { name = "duckdb-engine", specifier = ">=0.17.0" },
+    { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=1.4.2" },
+    { name = "duckdb-engine", marker = "extra == 'duckdb'", specifier = ">=0.17.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jinja2", marker = "extra == 'loader'", specifier = ">=3.1.6" },
     { name = "livereload", marker = "extra == 'dbt'", specifier = ">=2.7.1" },
@@ -737,7 +739,7 @@ requires-dist = [
     { name = "sqlmodel", marker = "extra == 'peerdb'", specifier = ">=0.0.27" },
     { name = "sqlparse", specifier = ">=0.5.3" },
 ]
-provides-extras = ["psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb"]
+provides-extras = ["clickhouse", "duckdb", "psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb"]
 
 [package.metadata.requires-dev]
 dev = [

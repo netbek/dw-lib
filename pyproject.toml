@@ -24,22 +24,26 @@ dependencies = [
 clickhouse = [
     "clickhouse-connect>=0.10.0",
     "clickhouse-sqlalchemy",
+    "sqlglot>=28.0.0,<28.1.0",
     "sqlmodel>=0.0.27",
 ]
 
 duckdb = [
     "duckdb>=1.4.2",
     "duckdb-engine>=0.17.0",
+    "sqlglot>=28.0.0,<28.1.0",
     "sqlmodel>=0.0.27",
 ]
 
 psycopg = [
     "psycopg[binary]>=3.3.3",
+    "sqlglot>=28.0.0,<28.1.0",
     "sqlmodel>=0.0.27",
 ]
 
 psycopg2 = [
     "psycopg2-binary>=2.9.11",
+    "sqlglot>=28.0.0,<28.1.0",
     "sqlmodel>=0.0.27",
 ]
 

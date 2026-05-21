@@ -24,7 +24,7 @@ class TestClickHouseAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
     def clickhouse_table(
         self, clickhouse_adapter: ClickHouseAdapter
-    ) -> Generator[ClickHouseRelation, Any, None]:
+    ) -> Generator[Table, Any, None]:
         table = "test_table"
         statement = f"""
         create or replace table {ClickHouseRelation(table=table)}
@@ -45,16 +45,16 @@ class TestClickHouseAdapter(DatabaseTest):
         adapter = ClickHouseAdapter(clickhouse_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, ClickHouseSettings)
         # Exclude tcp_port from assertion because its value is lost when casting as URL with http driver
-        assert clickhouse_settings.model_dump(exclude=["tcp_port"]) == adapter.settings.model_dump(
-            exclude=["tcp_port"]
+        assert clickhouse_settings.model_dump(exclude={"tcp_port"}) == adapter.settings.model_dump(
+            exclude={"tcp_port"}
         )
 
     def test_instantiation_with_string_url(self, clickhouse_settings: ClickHouseSettings):
         adapter = ClickHouseAdapter(clickhouse_settings.to_string(hide_password=False))
         assert isinstance(adapter.settings, ClickHouseSettings)
         # Exclude tcp_port from assertion because its value is lost when casting as string URL with http driver
-        assert clickhouse_settings.model_dump(exclude=["tcp_port"]) == adapter.settings.model_dump(
-            exclude=["tcp_port"]
+        assert clickhouse_settings.model_dump(exclude={"tcp_port"}) == adapter.settings.model_dump(
+            exclude={"tcp_port"}
         )
 
     def test_create_client(self, clickhouse_adapter: ClickHouseAdapter):

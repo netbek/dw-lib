@@ -1,7 +1,6 @@
 from ..conftest import DatabaseTest
 from collections.abc import Generator
-from dw_lib.database import ClickHouseAdapter
-from dw_lib.types import ClickHouseRelation
+from dw_lib.database import ClickHouseAdapter, ClickHouseRelation
 from typing import Any
 
 import pytest

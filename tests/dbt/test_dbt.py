@@ -1,9 +1,8 @@
 from .conftest import CodeGenerationTest
 from collections.abc import Generator
-from dw_lib.database import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter, ClickHouseRelation
 from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
 from dw_lib.dbt.types import DbtResourceType
-from dw_lib.types import ClickHouseRelation
 from pathlib import Path
 from sqlmodel import Table
 from typing import Any

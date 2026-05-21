@@ -1,8 +1,7 @@
 from .conftest import CodeGenerationTest
-from dw_lib.database import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter, ClickHouseRelation
 from dw_lib.dbt.types import DbtSource
 from dw_lib.dbt.utils import generate_sqlmodel_code
-from dw_lib.types import ClickHouseRelation
 from sqlmodel import Table
 
 

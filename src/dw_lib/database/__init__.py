@@ -16,6 +16,15 @@ if TYPE_CHECKING:
     from .adapters.duckdb import DuckDBAdapter
     from .adapters.postgres import PostgresAdapter
 
+__getattr__, __dir__, _ = lazy.attach(
+    __name__,
+    submod_attrs={
+        "adapters.clickhouse": ["ClickHouseAdapter"],
+        "adapters.duckdb": ["DuckDBAdapter"],
+        "adapters.postgres": ["PostgresAdapter"],
+    },
+)
+
 __all__ = [
     "ClickHouseAdapter",
     "ClickHouseRelation",
@@ -28,13 +37,3 @@ __all__ = [
     "PostgresSettings",
     "render_statement",
 ]
-
-
-__getattr__, __dir__, _ = lazy.attach(
-    __name__,
-    submod_attrs={
-        "adapters.clickhouse": ["ClickHouseAdapter"],
-        "adapters.duckdb": ["DuckDBAdapter"],
-        "adapters.postgres": ["PostgresAdapter"],
-    },
-)

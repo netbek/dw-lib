@@ -1,8 +1,19 @@
-from ...types import S3Settings
 from botocore.client import Config
+from pydantic import BaseModel
 from typing import Any
 
 import boto3
+
+
+class S3Settings(BaseModel):
+    key_id: str
+    secret: str
+    region: str
+    endpoint: str
+    use_ssl: bool
+    url_style: str = "path"
+    bucket: str
+    prefix: str | None = None
 
 
 class S3Adapter:

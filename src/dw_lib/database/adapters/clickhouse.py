@@ -6,24 +6,130 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import ClickHouseRelation, ClickHouseSettings, ColumnStats, TableStats
+from ...types import ColumnStats, TableStats
 from ...utils.sqlmodel_utils import get_model_schema
-from ..adapters.base import BaseAdapter
+from ..adapters.base import BaseAdapter, BaseRelation
 from ..utils import quote_identifier
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from collections.abc import Generator
 from contextlib import contextmanager
+from dw_lib.utils.python_utils import validate_pydantic_clickhouse_dsn
+from pydantic import BaseModel, ClickHouseDsn, Field, model_validator
+from sqlalchemy.engine import make_url, URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.sql.ddl import CreateTable
 from sqlglot import exp
-from sqlglot.dialects.dialect import Dialects
+from sqlglot.dialects.dialect import Dialects, DialectType
 from sqlmodel import MetaData, Session, SQLModel, Table
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import clickhouse_connect
 import sqlglot
+
+
+class ClickHouseSettings(BaseModel):
+    host: str
+    http_port: int | None = None
+    tcp_port: int | None = None
+    username: str
+    password: str
+    database: str
+    driver: Literal["http", "native"] = "http"
+
+    @classmethod
+    def from_url(cls, url: ClickHouseDsn | URL | str) -> Self:
+        if isinstance(url, ClickHouseDsn):
+            _url = make_url(str(url))
+        elif isinstance(url, URL):
+            validate_pydantic_clickhouse_dsn(url.render_as_string(hide_password=False))
+            _url = url
+        elif isinstance(url, str):
+            validate_pydantic_clickhouse_dsn(url)
+            _url = make_url(url)
+        else:
+            raise TypeError("url must be one of: Pydantic ClickHouseDsn, SQLAlchemy URL, str")
+
+        given_driver = None
+        if _url.drivername and "+" in _url.drivername:
+            given_driver = _url.drivername.split("+")[1]
+
+        given_port = _url.port
+
+        if given_driver in ["http", "native"]:
+            driver = given_driver
+        elif given_port == 9000:
+            driver = "native"
+        else:
+            driver = "http"
+
+        http_port = given_port if driver == "http" else None
+        tcp_port = given_port if driver == "native" else None
+
+        return cls(
+            host=_url.host,
+            http_port=http_port,
+            tcp_port=tcp_port,
+            username=_url.username,
+            password=_url.password,
+            database=_url.database,
+            driver=driver,
+        )
+
+    @model_validator(mode="after")
+    def validate_ports_and_driver(self) -> Self:
+        if self.http_port is None and self.tcp_port is None:
+            raise ValueError("At least one of http_port or tcp_port must be provided")
+
+        if self.driver == "http" and self.http_port is None:
+            raise ValueError("Driver set to 'http' but http_port is missing")
+
+        if self.driver == "native" and self.tcp_port is None:
+            raise ValueError("Driver set to 'native' but tcp_port is missing")
+
+        return self
+
+    def to_sqlalchemy_url(self) -> URL:
+        if self.driver == "native":
+            port = self.tcp_port
+        else:
+            port = self.http_port
+
+        return URL.create(
+            f"clickhouse+{self.driver}",
+            host=self.host,
+            port=port,
+            username=self.username,
+            password=self.password,
+            database=self.database,
+        )
+
+    def to_string(self, hide_password: bool = True) -> str:
+        return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+
+class ClickHouseRelation(BaseRelation):
+    dialect: ClassVar[DialectType] = Dialects.CLICKHOUSE
+    database: str | None = Field(default=None)
+    table: str
+
+    @classmethod
+    def from_string(cls, identifier: str) -> Self:
+        parts = cls._parse_to_parts(identifier)
+        if len(parts) == 2:
+            return cls(database=parts[0], table=parts[1])
+        return cls(table=parts[0])
+
+    def __str__(self) -> str:
+        table_expr = exp.Table(
+            this=exp.to_identifier(self.table),
+            db=exp.to_identifier(self.database) if self.database else None,
+        )
+        return table_expr.sql(dialect=self.dialect)
 
 
 class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):

@@ -6,16 +6,101 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import PostgresRelation, PostgresSettings, TableStats
-from ..adapters.base import BaseAdapter
+from ...types import TableStats
+from ..adapters.base import BaseAdapter, BaseRelation
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
+from dw_lib.utils.python_utils import validate_pydantic_postgres_dsn
+from pydantic import BaseModel, Field, PostgresDsn
+from sqlalchemy.engine import make_url, URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.schema import ForeignKeyConstraint
-from sqlglot.dialects.dialect import Dialects
+from sqlglot import exp
+from sqlglot.dialects.dialect import Dialects, DialectType
 from sqlmodel import Column, MetaData, Session, SQLModel, Table
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal, Self
+
+
+class PostgresSettings(BaseModel):
+    host: str
+    port: int
+    username: str
+    password: str
+    database: str
+    schema_: str = Field(default="public", serialization_alias="schema")
+    driver: Literal["psycopg", "psycopg2"] = "psycopg2"
+
+    @classmethod
+    def from_url(cls, url: PostgresDsn | URL | str) -> Self:
+        if isinstance(url, PostgresDsn):
+            _url = make_url(str(url))
+        elif isinstance(url, URL):
+            validate_pydantic_postgres_dsn(url.render_as_string(hide_password=False))
+            _url = url
+        elif isinstance(url, str):
+            validate_pydantic_postgres_dsn(url)
+            _url = make_url(url)
+        else:
+            raise TypeError("url must be one of: Pydantic PostgresDsn, SQLAlchemy URL, str")
+
+        given_driver = None
+        if _url.drivername and "+" in _url.drivername:
+            given_driver = _url.drivername.split("+")[1]
+
+        if given_driver in ["psycopg", "psycopg2"]:
+            driver = given_driver
+        else:
+            driver = "psycopg2"
+
+        return cls(
+            host=_url.host,
+            port=_url.port,
+            username=_url.username,
+            password=_url.password,
+            database=_url.database,
+            driver=driver,
+        )
+
+    def to_sqlalchemy_url(self) -> URL:
+        return URL.create(
+            f"postgresql+{self.driver}",
+            host=self.host,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            database=self.database,
+        )
+
+    def to_string(self, hide_password: bool = True) -> str:
+        return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+
+class PostgresRelation(BaseRelation):
+    dialect: ClassVar[DialectType] = Dialects.POSTGRES
+    database: str | None = Field(default=None)
+    schema_: str | None = Field(default=None, serialization_alias="schema")
+    table: str
+
+    @classmethod
+    def from_string(cls, identifier: str) -> Self:
+        parts = cls._parse_to_parts(identifier)
+        if len(parts) == 3:
+            return cls(database=parts[0], schema_=parts[1], table=parts[2])
+        elif len(parts) == 2:
+            return cls(schema_=parts[0], table=parts[1])
+        return cls(table=parts[0])
+
+    def __str__(self) -> str:
+        table_expr = exp.Table(
+            this=exp.to_identifier(self.table),
+            db=exp.to_identifier(self.schema_) if self.schema_ else None,
+            catalog=exp.to_identifier(self.database) if self.database else None,
+        )
+        return table_expr.sql(dialect=self.dialect)
 
 
 class PostgresAdapter(BaseAdapter[PostgresSettings]):

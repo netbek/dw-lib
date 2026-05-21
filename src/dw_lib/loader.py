@@ -1,7 +1,6 @@
-from .cloud import s3_to_endpoint_uri, S3Adapter
-from .database import PostgresAdapter
+from .cloud import s3_to_endpoint_uri, S3Adapter, S3Settings
+from .database import PostgresAdapter, PostgresRelation, PostgresSettings
 from .exceptions import ConnectionNotFoundException, StreamNotFoundException
-from .types import PostgresRelation, PostgresSettings, S3Settings
 from .utils.filesystem import find_up
 from chdb import session
 from enum import StrEnum

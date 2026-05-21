@@ -1,5 +1,11 @@
-from .database.adapters.clickhouse import ClickHouseAdapter
-from .database.adapters.postgres import PostgresAdapter
+from .database import (
+    ClickHouseAdapter,
+    ClickHouseRelation,
+    ClickHouseSettings,
+    PostgresAdapter,
+    PostgresRelation,
+    PostgresSettings,
+)
 from .exceptions import (
     EmptyConfigException,
     MirrorExistsException,
@@ -8,13 +14,7 @@ from .exceptions import (
     PeerNotFoundException,
     TableNotFoundException,
 )
-from .types import (
-    ClickHouseRelation,
-    ClickHouseSettings,
-    HttpUrl,
-    PostgresRelation,
-    PostgresSettings,
-)
+from .types import HttpUrl
 from .utils.filesystem import find_up
 from .utils.template import render_template
 from datetime import datetime

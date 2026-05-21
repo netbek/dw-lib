@@ -1,12 +1,102 @@
-from ...types import DuckDBSettings, TableStats
-from ..adapters.base import BaseAdapter
+from ...types import TableStats
+from ..adapters.base import BaseAdapter, BaseRelation
 from collections.abc import Generator
 from contextlib import contextmanager
-from sqlglot.dialects.dialect import Dialects
+from pathlib import Path
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy.engine import make_url, URL
+from sqlglot import exp
+from sqlglot.dialects.dialect import Dialects, DialectType
 from sqlmodel import SQLModel, Table
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import duckdb
+import math
+import psutil
+
+
+def calculate_memory_limit(percent) -> str:
+    amount = round(psutil.virtual_memory().total / (1024**3) * percent / 100, 1)
+    return f"{amount}GB"
+
+
+def calculate_threads(percent) -> int:
+    return max(1, int(math.floor(psutil.cpu_count(logical=True) * percent / 100)))
+
+
+class DuckDBSystemSettings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    memory_limit: str | None = calculate_memory_limit(80)
+    threads: int | str | None = calculate_threads(100)
+
+    @field_validator("memory_limit", mode="before")
+    @classmethod
+    def convert_memory_limit(cls, value):
+        if isinstance(value, str) and value.endswith("%"):
+            try:
+                percent = float(value.strip("%"))
+                return calculate_memory_limit(percent)
+            except ValueError:
+                raise ValueError("Invalid percentage format for memory_limit.")
+        return value
+
+    @field_validator("threads", mode="before")
+    @classmethod
+    def convert_threads(cls, value):
+        if isinstance(value, str) and value.endswith("%"):
+            try:
+                percent = float(value.strip("%"))
+                return calculate_threads(percent)
+            except ValueError:
+                raise ValueError("Invalid percentage format for threads.")
+        return value
+
+
+class DuckDBSettings(BaseModel):
+    database: Path | str
+    schema_: str = Field(default="main", serialization_alias="schema")
+    extensions: list[str] | None = None
+    settings: DuckDBSystemSettings | None = None
+
+    @classmethod
+    def from_url(cls, url: URL | str) -> Self:
+        url = make_url(url)
+
+        return cls(database=url.database)
+
+    def to_sqlalchemy_url(self) -> URL:
+        return URL.create("duckdb", database=str(self.database))
+
+    def to_string(self, hide_password: bool = True) -> str:
+        return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+
+class DuckDBRelation(BaseRelation):
+    dialect: ClassVar[DialectType] = Dialects.DUCKDB
+    database: str | None = Field(default=None)
+    schema_: str | None = Field(default=None, serialization_alias="schema")
+    table: str
+
+    @classmethod
+    def from_string(cls, identifier: str) -> Self:
+        parts = cls._parse_to_parts(identifier)
+        if len(parts) == 3:
+            return cls(database=parts[0], schema_=parts[1], table=parts[2])
+        elif len(parts) == 2:
+            return cls(schema_=parts[0], table=parts[1])
+        return cls(table=parts[0])
+
+    def __str__(self) -> str:
+        table_expr = exp.Table(
+            this=exp.to_identifier(self.table),
+            db=exp.to_identifier(self.schema_) if self.schema_ else None,
+            catalog=exp.to_identifier(self.database) if self.database else None,
+        )
+        return table_expr.sql(dialect=self.dialect)
 
 
 class DuckDBAdapter(BaseAdapter[DuckDBSettings]):

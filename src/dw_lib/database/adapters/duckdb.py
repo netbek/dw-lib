@@ -1,6 +1,6 @@
 from ...types import TableStats
 from ..adapters.base import BaseAdapter
-from .types import DuckDBSettings
+from ..types import DuckDBSettings
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlglot.dialects.dialect import Dialects

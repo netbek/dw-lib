@@ -1,4 +1,4 @@
-from .adapters.types import (
+from .types import (
     ClickHouseRelation,
     ClickHouseSettings,
     DuckDBRelation,

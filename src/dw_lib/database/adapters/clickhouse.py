@@ -9,8 +9,8 @@ from ...exceptions import (
 from ...types import ColumnStats, TableStats
 from ...utils.sqlmodel_utils import get_model_schema
 from ..adapters.base import BaseAdapter
+from ..types import ClickHouseRelation, ClickHouseSettings
 from ..utils import quote_identifier
-from .types import ClickHouseRelation, ClickHouseSettings
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect

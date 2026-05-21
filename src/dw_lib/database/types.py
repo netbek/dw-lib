@@ -1,4 +1,4 @@
-from ..adapters.base import BaseRelation
+from .adapters.base import BaseRelation
 from dw_lib.utils.python_utils import (
     validate_pydantic_clickhouse_dsn,
     validate_pydantic_postgres_dsn,

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .adapters.duckdb import DuckDBAdapter
     from .adapters.postgres import PostgresAdapter
 
+# TODO Replace with lazy keyword in Python 3.15+ https://docs.python.org/3.15/whatsnew/3.15.html#whatsnew315-lazy-imports
 __getattr__, __dir__, _ = lazy.attach(
     __name__,
     submod_attrs={

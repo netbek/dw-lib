@@ -647,6 +647,8 @@ dagster = [
     { name = "dagster-dbt" },
 ]
 dbt = [
+    { name = "clickhouse-connect" },
+    { name = "clickhouse-sqlalchemy" },
     { name = "dbt-clickhouse" },
     { name = "dbt-core" },
     { name = "livereload" },
@@ -655,6 +657,7 @@ dbt = [
     { name = "pydantic" },
     { name = "pydash" },
     { name = "ruamel-yaml" },
+    { name = "sqlglot" },
     { name = "sqlmodel" },
 ]
 duckdb = [
@@ -708,8 +711,10 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'loader'", specifier = ">=1.41.1" },
     { name = "chdb", marker = "extra == 'loader'", specifier = ">=3.7.2" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.10.0" },
+    { name = "clickhouse-connect", marker = "extra == 'dbt'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'dbt'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
     { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
@@ -744,6 +749,7 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'peerdb'", specifier = ">=2.0.44" },
     { name = "sqlglot", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'clickhouse'", specifier = ">=28.0.0,<28.1.0" },
+    { name = "sqlglot", marker = "extra == 'dbt'", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'duckdb'", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'peerdb'", specifier = ">=28.0.0" },
     { name = "sqlglot", marker = "extra == 'psycopg'", specifier = ">=28.0.0,<28.1.0" },

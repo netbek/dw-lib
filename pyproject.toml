@@ -54,6 +54,8 @@ dagster = [
 
 # dbt-core pinned for compatibility with dbt-clickhouse https://github.com/netbek/dbt-clickhouse/blob/v1.10.0-batch/pyproject.toml#L26
 dbt = [
+    "clickhouse-connect>=0.10.0",
+    "clickhouse-sqlalchemy",
     "dbt-clickhouse",
     "dbt-core>=1.10.0,<1.11",
     "livereload>=2.7.1",
@@ -62,6 +64,7 @@ dbt = [
     "pydantic>=2.12.4",
     "pydash>=8.0.5",
     "ruamel-yaml>=0.19.1",
+    "sqlglot>=28.0.0,<28.1.0",
     "sqlmodel>=0.0.27",
 ]
 

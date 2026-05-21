@@ -1,8 +1,8 @@
 from ..conftest import PEERDB_TEST_ENV
 from collections.abc import Generator, Iterator
-from dw_lib.database import PostgresAdapter
+from dw_lib.database import PostgresAdapter, PostgresSettings
 from dw_lib.peerdb import ListReplicationSlotsItem, PeerDB
-from dw_lib.types import HttpUrl, PostgresSettings
+from dw_lib.types import HttpUrl
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from ruamel.yaml import YAML

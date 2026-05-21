@@ -115,6 +115,7 @@ include = ["src", "tests"]
 [tool.pytest]
 addopts = ["-x", "--no-header", "--container-scope=module"]
 filterwarnings = [
+    "ignore:The 'u' type code is deprecated:DeprecationWarning", # Caused by clickhouse_connect
     "ignore::DeprecationWarning:dbt_common.invocation", # https://github.com/dbt-labs/dbt-core/issues/9791
     "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038
 ]

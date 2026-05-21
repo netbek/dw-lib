@@ -5,11 +5,30 @@ from dw_lib.types import TableStats
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, URL
 from sqlalchemy.sql.schema import ForeignKeyConstraint
-from sqlglot.dialects.dialect import Dialects
+from sqlglot import exp, parse_one
+from sqlglot.dialects.dialect import Dialects, DialectType
 from sqlmodel import SQLModel, Table
-from typing import Any, Generic, Literal, overload, TypeVar
+from typing import Any, ClassVar, Generic, Literal, overload, TypeVar
 
 T = TypeVar("T", bound=BaseModel)
+
+
+class BaseRelation(BaseModel):
+    dialect: ClassVar[DialectType] = ""
+
+    @classmethod
+    def _parse_to_parts(cls, identifier: str) -> list[str]:
+        if identifier:
+            expression = parse_one(identifier, read=cls.dialect, into=exp.Table)
+
+            if isinstance(expression.this, exp.Identifier):
+                parts = [expression.catalog, expression.db, expression.this.name]
+            else:
+                parts = [expression.this]
+
+            return [part for part in parts if part]
+        else:
+            raise ValueError(f"Invalid table identifier: {identifier}")
 
 
 class BaseAdapter(ABC, Generic[T]):

@@ -6,9 +6,10 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import ClickHouseRelation, ClickHouseSettings, ColumnStats, TableStats
+from ...types import ColumnStats, TableStats
 from ...utils.sqlmodel_utils import get_model_schema
 from ..adapters.base import BaseAdapter
+from ..types import ClickHouseRelation, ClickHouseSettings
 from ..utils import quote_identifier
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError

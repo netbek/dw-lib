@@ -623,6 +623,7 @@ version = "1.31.0"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
+    { name = "lazy-loader" },
     { name = "packaging" },
     { name = "psutil" },
     { name = "pydantic" },
@@ -647,6 +648,8 @@ dagster = [
     { name = "dagster-dbt" },
 ]
 dbt = [
+    { name = "clickhouse-connect" },
+    { name = "clickhouse-sqlalchemy" },
     { name = "dbt-clickhouse" },
     { name = "dbt-core" },
     { name = "livereload" },
@@ -655,6 +658,7 @@ dbt = [
     { name = "pydantic" },
     { name = "pydash" },
     { name = "ruamel-yaml" },
+    { name = "sqlglot" },
     { name = "sqlmodel" },
 ]
 duckdb = [
@@ -708,8 +712,10 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'loader'", specifier = ">=1.41.1" },
     { name = "chdb", marker = "extra == 'loader'", specifier = ">=3.7.2" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.10.0" },
+    { name = "clickhouse-connect", marker = "extra == 'dbt'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'dbt'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
     { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
     { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
@@ -719,6 +725,7 @@ requires-dist = [
     { name = "duckdb-engine", marker = "extra == 'duckdb'", specifier = ">=0.17.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jinja2", marker = "extra == 'loader'", specifier = ">=3.1.6" },
+    { name = "lazy-loader", specifier = ">=0.5" },
     { name = "livereload", marker = "extra == 'dbt'", specifier = ">=2.7.1" },
     { name = "opentelemetry-sdk", marker = "extra == 'dbt'", specifier = ">=1.39.1" },
     { name = "packaging", specifier = ">=26.0" },
@@ -744,6 +751,7 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'peerdb'", specifier = ">=2.0.44" },
     { name = "sqlglot", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'clickhouse'", specifier = ">=28.0.0,<28.1.0" },
+    { name = "sqlglot", marker = "extra == 'dbt'", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'duckdb'", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'peerdb'", specifier = ">=28.0.0" },
     { name = "sqlglot", marker = "extra == 'psycopg'", specifier = ">=28.0.0,<28.1.0" },
@@ -979,6 +987,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
+]
+
+[[package]]
+name = "lazy-loader"
+version = "0.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/ac/21a1f8aa3777f5658576777ea76bfb124b702c520bbe90edf4ae9915eafa/lazy_loader-0.5.tar.gz", hash = "sha256:717f9179a0dbed357012ddad50a5ad3d5e4d9a0b8712680d4e687f5e6e6ed9b3", size = 15294, upload-time = "2026-03-06T15:45:09.054Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/a1/8d812e53a5da1687abb10445275d41a8b13adb781bbf7196ddbcf8d88505/lazy_loader-0.5-py3-none-any.whl", hash = "sha256:ab0ea149e9c554d4ffeeb21105ac60bed7f3b4fd69b1d2360a4add51b170b005", size = 8044, upload-time = "2026-03-06T15:45:07.668Z" },
 ]
 
 [[package]]

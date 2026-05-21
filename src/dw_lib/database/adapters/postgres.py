@@ -6,8 +6,9 @@ from ...exceptions import (
     UserExistsException,
     UserNotFoundException,
 )
-from ...types import PostgresRelation, PostgresSettings, TableStats
+from ...types import TableStats
 from ..adapters.base import BaseAdapter
+from ..types import PostgresRelation, PostgresSettings
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from sqlalchemy.exc import InvalidRequestError

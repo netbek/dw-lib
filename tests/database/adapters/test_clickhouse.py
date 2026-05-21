@@ -7,13 +7,13 @@ from ...conftest import (
     ViewWithSchema,
 )
 from collections.abc import Generator
-from dw_lib.database import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter, ClickHouseRelation, ClickHouseSettings
 from dw_lib.exceptions import (
     DatabaseNotFoundException,
     TableNotFoundException,
     UserNotFoundException,
 )
-from dw_lib.types import ClickHouseRelation, ClickHouseSettings, ColumnStats, TableStats
+from dw_lib.types import ColumnStats, TableStats
 from sqlmodel import Table, text
 from typing import Any
 

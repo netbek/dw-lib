@@ -1,8 +1,28 @@
 from ...conftest import DatabaseTest
-from dw_lib.database import DuckDBAdapter
-from dw_lib.types import DuckDBSettings
+from dw_lib.database import DuckDBAdapter, DuckDBSettings
 
 # from sqlalchemy import text
+
+
+class TestDuckDBSettings:
+    def test_from_url_has_memory_database(self):
+        settings = DuckDBSettings.from_url("duckdb:///:memory:")
+        assert settings.database == ":memory:"
+
+    def test_from_url_has_file_database(self):
+        settings = DuckDBSettings.from_url("duckdb:////path/to/data.duckdb")
+        assert settings.database == "/path/to/data.duckdb"
+
+    def test_to_string(self):
+        settings = DuckDBSettings(database=":memory:")
+        assert str(settings) == "duckdb:///:memory:"
+        assert settings.to_string() == "duckdb:///:memory:"
+        assert settings.to_sqlalchemy_url().database == ":memory:"
+
+        settings = DuckDBSettings(database="/path/to/data.duckdb")
+        assert str(settings) == "duckdb:////path/to/data.duckdb"
+        assert settings.to_string() == "duckdb:////path/to/data.duckdb"
+        assert settings.to_sqlalchemy_url().database == "/path/to/data.duckdb"
 
 
 class TestDuckDBAdapter(DatabaseTest):

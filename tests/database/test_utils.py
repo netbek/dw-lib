@@ -1,4 +1,4 @@
-from dw_lib.database.utils import render_statement
+from dw_lib.database import render_statement
 from jinja2.exceptions import UndefinedError
 
 import pytest

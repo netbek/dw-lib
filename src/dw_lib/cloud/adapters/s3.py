@@ -1,4 +1,4 @@
-from ...types import S3Settings
+from ..types import S3Settings
 from botocore.client import Config
 from typing import Any
 

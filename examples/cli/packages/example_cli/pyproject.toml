@@ -5,7 +5,7 @@ description = "Example CLI"
 readme = "README.md"
 requires-python = "==3.13.*"
 dependencies = [
-    "dw-lib[dbt,loader,peerdb]",
+    "netbek-dw-lib[dbt,loader,peerdb]",
     "opentelemetry-exporter-otlp>=1.39.1",
     "pydash>=8.0.6",
     "rich>=14.2.0",
@@ -38,4 +38,4 @@ target-version = "py313"
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
 
 [tool.uv.sources]
-dw-lib = { path = "../../../../", editable = true }
+netbek-dw-lib = { path = "../../../../", editable = true }

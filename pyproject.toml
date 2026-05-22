@@ -58,7 +58,7 @@ dbt = [
     "clickhouse-connect>=0.10.0",
     "clickhouse-sqlalchemy @ git+https://github.com/netbek/clickhouse-sqlalchemy.git@datetime-uuid",
     "dbt-clickhouse @ git+https://github.com/netbek/dbt-clickhouse.git@v1.10.0-batch",
-    "dbt-core>=1.10.0,<1.11",
+    "dbt-core>=1.10.0,<1.12",
     "livereload>=2.7.1",
     "opentelemetry-sdk>=1.39.1",
     "polyfactory>=3.0.0",

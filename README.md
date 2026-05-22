@@ -61,7 +61,6 @@ Build and publish the Python distribution package:
 make bump-version [major|minor|patch]
 git push
 make build
-git push
 make create-release
 make publish
 ```

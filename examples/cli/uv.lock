@@ -197,7 +197,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dbt-clickhouse", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
+    { name = "dbt-clickhouse", specifier = ">=1.10.0" },
     { name = "dbt-core", specifier = ">=1.10.0,<1.11" },
     { name = "example-cli", editable = "packages/example_cli" },
     { name = "livereload", specifier = ">=2.7.1" },
@@ -265,13 +265,14 @@ wheels = [
 [[package]]
 name = "clickhouse-sqlalchemy"
 version = "0.3.2"
-source = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid#dc0ccd4e7b57b03a3e010085a7a8d420137cfb99" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asynch" },
     { name = "clickhouse-driver" },
     { name = "requests" },
     { name = "sqlalchemy" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/2d/b9/801073bb20edd4efc5e7240ea318b755867fb0d62acb374daafc35419b39/clickhouse-sqlalchemy-0.3.2.tar.gz", hash = "sha256:267f3a9a1d0d186eb99a41895a684922d31125cea21702cd7dc73af1ccdd10e7", size = 45206, upload-time = "2024-06-12T12:08:58.044Z" }
 
 [[package]]
 name = "colorama"
@@ -312,12 +313,16 @@ wheels = [
 [[package]]
 name = "dbt-clickhouse"
 version = "1.10.0"
-source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch#43d7c41b0c3aef8ffd368424dede83cbcd2e76a7" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-driver" },
     { name = "dbt-adapters" },
     { name = "dbt-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dd/4c/832da3bd5fb7be742c77b39b64e2506ac38c2d87fb4c67cd0323fc3248ce/dbt_clickhouse-1.10.0.tar.gz", hash = "sha256:65df64748e777dcb4361337fa2644e82895afe71577202ef0db4c25bd6fea51a", size = 52716, upload-time = "2026-02-16T12:14:59.976Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/dc/cd420e85ee2e46ba0cc0741845a0ef1d426a4d3394bbd84a20796d98470b/dbt_clickhouse-1.10.0-py3-none-any.whl", hash = "sha256:a5df3e0ddc5fc1b361e40d0f9b80eaff8343a3f6c4beea55b8627ed358ae47cb", size = 67277, upload-time = "2026-02-16T12:14:58.976Z" },
 ]
 
 [[package]]
@@ -498,7 +503,9 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/27/69/7f7e5372d998b81001899b1c0823c957aa413ba0f2662e65821611cc31e4/greenlet-3.5.1-cp313-cp313-macosx_11_0_universal2.whl", hash = "sha256:51518ff74664078fc51bffcc6fc529b0df5ae58da192691cee765d45ce944a2b", size = 285060, upload-time = "2026-05-20T13:08:51.899Z" },
     { url = "https://files.pythonhosted.org/packages/b1/bf/387f9b6b865fd2ae0d0be09e0004827295a01b71be76ed350dd1e28a91a4/greenlet-3.5.1-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1ffdb3c0bb002c99cd8f298957e046c3dbf6006b5b7cdf11a4e19194624a0a0a", size = 604370, upload-time = "2026-05-20T14:00:07.492Z" },
     { url = "https://files.pythonhosted.org/packages/32/f5/169ce3d4e4c67291bd18f8cbe0299c9f3e45102c7f1fb3c14780c93e4532/greenlet-3.5.1-cp313-cp313-manylinux_2_24_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:7715a5a2c3378ba602c3a440558261e13a820bb53a82693aacd7b7f6d964e283", size = 616987, upload-time = "2026-05-20T14:05:44.237Z" },
+    { url = "https://files.pythonhosted.org/packages/19/ba/c24110c55dffa55aa6e1d98b45310da33801aeba7686ff0190fe5d46fd32/greenlet-3.5.1-cp313-cp313-manylinux_2_24_s390x.manylinux_2_28_s390x.whl", hash = "sha256:d40a890035c0058cadbdc4af7569800fd28a0e527a0fdbb7b5f9418f176846ce", size = 622911, upload-time = "2026-05-20T14:09:10.598Z" },
     { url = "https://files.pythonhosted.org/packages/ee/e5/7f2e41d5273be07e77560d61ea4e56485b4d6c316d2a84518c62d1364061/greenlet-3.5.1-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:dc71ff466927a201b08305acac451ebe1aedfcea002f62f1f2f2ac2ac1e6a135", size = 613911, upload-time = "2026-05-20T13:14:27.539Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/7b/d20db2e8a5ad6c038702f3179b136f93f0a3d1a21a0c0777f3e470cdf4b2/greenlet-3.5.1-cp313-cp313-manylinux_2_39_riscv64.whl", hash = "sha256:67821bb03e4e98664490edb787ff6af501194c29bbee0f5c1dfdcf1dc3d9d436", size = 425228, upload-time = "2026-05-20T14:01:40.837Z" },
     { url = "https://files.pythonhosted.org/packages/c5/a4/fbdc67579b73615a1f91615e814303cc71e06128f7baaba87be79b8fb90c/greenlet-3.5.1-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:cd443683db272ebaaca03af98c0b063ab30db70ea8a31a1559f35e3f7b744ccd", size = 1570689, upload-time = "2026-05-20T14:02:27.225Z" },
     { url = "https://files.pythonhosted.org/packages/e6/b4/77abbe35078be39718a46cd49caf16bceb35662f97a34101dca28aa98e47/greenlet-3.5.1-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:089fff7a6ce8d9316d1f65ebc00273a56be258c1725b32b94de90a3a979557e1", size = 1635602, upload-time = "2026-05-20T13:14:36.344Z" },
     { url = "https://files.pythonhosted.org/packages/37/f7/129f27ca700845b8ee8ca88ce7f43435a1239c2eddb7677fc938822762cf/greenlet-3.5.1-cp313-cp313-win_amd64.whl", hash = "sha256:110a1ca7b49b014b097f6078272c3f4ed31af45b254de5228b79adba879f6af9", size = 238683, upload-time = "2026-05-20T13:11:50.57Z" },
@@ -825,12 +832,12 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'dbt'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
-    { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "clickhouse-sqlalchemy", marker = "extra == 'dbt'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", specifier = ">=0.3.2" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'dbt'", specifier = ">=0.3.2" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", specifier = ">=0.3.2" },
     { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
     { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
-    { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
+    { name = "dbt-clickhouse", marker = "extra == 'dbt'", specifier = ">=1.10.0" },
     { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=1.4.2" },
     { name = "duckdb-engine", marker = "extra == 'duckdb'", specifier = ">=0.17.0" },

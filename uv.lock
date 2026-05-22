@@ -294,13 +294,14 @@ wheels = [
 [[package]]
 name = "clickhouse-sqlalchemy"
 version = "0.3.2"
-source = { git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid#dc0ccd4e7b57b03a3e010085a7a8d420137cfb99" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asynch" },
     { name = "clickhouse-driver" },
     { name = "requests" },
     { name = "sqlalchemy" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/2d/b9/801073bb20edd4efc5e7240ea318b755867fb0d62acb374daafc35419b39/clickhouse-sqlalchemy-0.3.2.tar.gz", hash = "sha256:267f3a9a1d0d186eb99a41895a684922d31125cea21702cd7dc73af1ccdd10e7", size = 45206, upload-time = "2024-06-12T12:08:58.044Z" }
 
 [[package]]
 name = "colorama"
@@ -469,12 +470,16 @@ wheels = [
 [[package]]
 name = "dbt-clickhouse"
 version = "1.10.0"
-source = { git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch#43d7c41b0c3aef8ffd368424dede83cbcd2e76a7" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-driver" },
     { name = "dbt-adapters" },
     { name = "dbt-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dd/4c/832da3bd5fb7be742c77b39b64e2506ac38c2d87fb4c67cd0323fc3248ce/dbt_clickhouse-1.10.0.tar.gz", hash = "sha256:65df64748e777dcb4361337fa2644e82895afe71577202ef0db4c25bd6fea51a", size = 52716, upload-time = "2026-02-16T12:14:59.976Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/dc/cd420e85ee2e46ba0cc0741845a0ef1d426a4d3394bbd84a20796d98470b/dbt_clickhouse-1.10.0-py3-none-any.whl", hash = "sha256:a5df3e0ddc5fc1b361e40d0f9b80eaff8343a3f6c4beea55b8627ed358ae47cb", size = 67277, upload-time = "2026-02-16T12:14:58.976Z" },
 ]
 
 [[package]]
@@ -1224,12 +1229,12 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'dbt'", specifier = ">=0.10.0" },
     { name = "clickhouse-connect", marker = "extra == 'peerdb'", specifier = ">=0.10.0" },
-    { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "clickhouse-sqlalchemy", marker = "extra == 'dbt'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
-    { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", git = "https://github.com/netbek/clickhouse-sqlalchemy.git?rev=datetime-uuid" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'clickhouse'", specifier = ">=0.3.2" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'dbt'", specifier = ">=0.3.2" },
+    { name = "clickhouse-sqlalchemy", marker = "extra == 'peerdb'", specifier = ">=0.3.2" },
     { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
     { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
-    { name = "dbt-clickhouse", marker = "extra == 'dbt'", git = "https://github.com/netbek/dbt-clickhouse.git?rev=v1.10.0-batch" },
+    { name = "dbt-clickhouse", marker = "extra == 'dbt'", specifier = ">=1.10.0" },
     { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=1.4.2" },
     { name = "duckdb-engine", marker = "extra == 'duckdb'", specifier = ">=0.17.0" },

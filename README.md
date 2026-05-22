@@ -51,6 +51,21 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     direnv allow
     ```
 
+8. Enter a [PyPI API token](https://pypi.org/manage/account/#api-tokens) as the password in `.pypirc`.
+
+## Development: Usage
+
+Build and publish the Python distribution package:
+
+```shell
+make bump-version [major|minor|patch]
+git push
+make build
+git push
+make create-release
+make publish
+```
+
 ## License
 
 Copyright (c) 2025 Hein Bekker. Licensed under the GNU Affero General Public License, version 3.

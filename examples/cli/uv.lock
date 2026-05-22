@@ -190,7 +190,6 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "dbt-clickhouse" },
-    { name = "dbt-core" },
     { name = "example-cli" },
     { name = "livereload" },
 ]
@@ -198,7 +197,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "dbt-clickhouse", specifier = ">=1.10.0" },
-    { name = "dbt-core", specifier = ">=1.10.0,<1.11" },
     { name = "example-cli", editable = "packages/example_cli" },
     { name = "livereload", specifier = ">=2.7.1" },
 ]
@@ -793,7 +791,6 @@ dbt = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-sqlalchemy" },
     { name = "dbt-clickhouse" },
-    { name = "dbt-core" },
     { name = "livereload" },
     { name = "opentelemetry-sdk" },
     { name = "polyfactory" },
@@ -836,7 +833,6 @@ requires-dist = [
     { name = "dagster", marker = "extra == 'dagster'", specifier = ">=1.12.19" },
     { name = "dagster-dbt", marker = "extra == 'dagster'", specifier = ">=0.28.19" },
     { name = "dbt-clickhouse", marker = "extra == 'dbt'", specifier = ">=1.10.0" },
-    { name = "dbt-core", marker = "extra == 'dbt'", specifier = ">=1.10.0,<1.11" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=1.4.2" },
     { name = "duckdb-engine", marker = "extra == 'duckdb'", specifier = ">=0.17.0" },
     { name = "jinja2", specifier = ">=3.1.6" },

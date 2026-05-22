@@ -57,10 +57,19 @@ bump-version:
 		examples/cli/packages/example_cli/uv.lock; \
 	git commit -m $$VERSION;
 
+build:
+	find dist -maxdepth 1 ! -name ".gitignore" -type f -exec rm -f {} +
+	uv build -o dist --sdist
+	uv build -o dist --wheel
+	twine check dist/*
+
 create-release:
 	@VERSION=$$(uv version --short); \
 	gh release create $$VERSION; \
 	git fetch --tags;
+
+publish:
+	twine upload --config-file .pypirc --verbose dist/*
 
 # Prevent make from treating arguments to bump-version as targets
 ifeq (bump-version,$(firstword $(MAKECMDGOALS)))

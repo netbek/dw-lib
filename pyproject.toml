@@ -53,12 +53,10 @@ dagster = [
     "dagster-dbt>=0.28.19",
 ]
 
-# dbt-core pinned for compatibility with dbt-clickhouse https://github.com/ClickHouse/dbt-clickhouse/blob/v1.10.0/pyproject.toml#L26
 dbt = [
     "clickhouse-connect>=0.10.0",
     "clickhouse-sqlalchemy>=0.3.2",
     "dbt-clickhouse>=1.10.0",
-    "dbt-core>=1.10.0,<1.11",
     "livereload>=2.7.1",
     "opentelemetry-sdk>=1.39.1",
     "polyfactory>=3.0.0",

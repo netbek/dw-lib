@@ -26,9 +26,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run linter
-        run: |
-          . .venv/bin/activate
-          ruff check --config pyproject.toml
+        run: uv run ruff check --config pyproject.toml
 
       - name: Run tests
         run: uv run --frozen pytest

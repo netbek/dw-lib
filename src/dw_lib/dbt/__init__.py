@@ -459,10 +459,12 @@ class Dbt:
             tables = []
             for table_name in table_names:
                 metadata = describe_table(client, database, table_name)
-                table = {"name": table_name, "columns": metadata["columns"]}
-                if table_config_meta_props:
-                    table["config"] = {"meta": pydash.pick(metadata, *table_config_meta_props)}
-                tables.append(table)
+                config = (
+                    {"config": {"meta": pydash.pick(metadata, *table_config_meta_props)}}
+                    if table_config_meta_props
+                    else {}
+                )
+                tables.append({"name": table_name, **config, "columns": metadata["columns"]})
             data["sources"].append({"name": database, **(source_props or {}), "tables": tables})
 
         return dump_source_yaml(data)

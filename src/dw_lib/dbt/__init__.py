@@ -1,4 +1,5 @@
 from ..utils.filesystem import find_up
+from ..utils.sqlmodel_utils import parse_create_table_statement
 from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
 from datetime import datetime, timezone
@@ -145,11 +146,19 @@ def list_tables(client: Client, database: str, table_pattern: str = "%") -> list
 
 def describe_table(client: Client, database: str, table: str):
     query = """
+    SHOW CREATE TABLE {database:Identifier}.{table:Identifier}
+    """
+    statement = client.command(query, parameters={"database": database, "table": table})
+    statement = str(statement).replace("\\n", "\n")
+    parsed = parse_create_table_statement(statement)
+
+    query = """
     DESCRIBE TABLE {database:Identifier}.{table:Identifier}
     """
     result = client.query(query, parameters={"database": database, "table": table})
     columns = [{"name": row[0], "data_type": row[1]} for row in result.result_rows]
-    return columns
+
+    return {**parsed, "columns": columns}
 
 
 def dump_source_yaml(data: dict) -> str:
@@ -448,8 +457,14 @@ class Dbt:
             table_names = list_tables(client, database, table_pattern)
             tables = []
             for table_name in table_names:
-                columns = describe_table(client, database, table_name)
-                tables.append({"name": table_name, "columns": columns})
+                metadata = describe_table(client, database, table_name)
+                tables.append(
+                    {
+                        "name": table_name,
+                        "config": {"meta": pydash.pick(metadata, "primary_key")},
+                        "columns": metadata["columns"],
+                    }
+                )
             data["sources"].append({"name": database, **(source_props or {}), "tables": tables})
 
         return dump_source_yaml(data)

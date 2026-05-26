@@ -484,10 +484,10 @@ class Dbt:
         with adapter.create_client() as client:
             table_names = list_tables(client, database, table_pattern)
             for table_name in table_names:
-                columns = describe_table(client, database, table_name)
+                metadata = describe_table(client, database, table_name)
                 result[table_name] = {
                     "version": 2,
-                    "models": [{"name": table_name, "columns": columns}],
+                    "models": [{"name": table_name, "columns": metadata["columns"]}],
                 }
 
         if result:

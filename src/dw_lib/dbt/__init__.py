@@ -446,7 +446,8 @@ class Dbt:
         adapter: ClickHouseAdapter,
         database: str | None = None,
         table_pattern: str = "%",
-        source_props=None,
+        source_props: dict[str, Any] | None = None,
+        table_config_meta_props: list[str] | None = None,
     ) -> str:
         """Generate the schema YAML for the given source."""
         if database is None:
@@ -458,13 +459,10 @@ class Dbt:
             tables = []
             for table_name in table_names:
                 metadata = describe_table(client, database, table_name)
-                tables.append(
-                    {
-                        "name": table_name,
-                        "config": {"meta": pydash.pick(metadata, "primary_key")},
-                        "columns": metadata["columns"],
-                    }
-                )
+                table = {"name": table_name, "columns": metadata["columns"]}
+                if table_config_meta_props:
+                    table["config"] = {"meta": pydash.pick(metadata, *table_config_meta_props)}
+                tables.append(table)
             data["sources"].append({"name": database, **(source_props or {}), "tables": tables})
 
         return dump_source_yaml(data)

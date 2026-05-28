@@ -83,6 +83,42 @@ def _make_fake_tracer(spans: list, record: bool = True):
     return FakeTracer()
 
 
+class TestBuild(InvocationTest):
+    def test_success_tracing_disabled(
+        self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
+    ):
+        spans = []
+        monkeypatch.setattr(
+            "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
+        )
+
+        runner_result = dbt.build(exclude="test_table")
+        assert runner_result.success is True
+        assert spans == []
+
+    def test_success_tracing_enabled(
+        self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
+    ):
+        spans = []
+        monkeypatch.setattr(
+            "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
+        )
+
+        runner_result = dbt.build(exclude="test_table")
+        assert runner_result.success is True
+
+        root_spans = [s for s in spans if s.name.startswith("dbt.invoke")]
+        assert root_spans, "no root span created"
+        root = root_spans[0]
+        assert int(root.attributes.get("dbt.invoke.node_count", 0)) > 0
+        assert root.end_time is not None
+
+        node_spans = [s for s in spans if s.name.startswith("dbt.node.invoke")]
+        assert node_spans, "no node spans created"
+        for ns in node_spans:
+            assert ns.end_time is not None
+
+
 class TestRun(InvocationTest):
     def test_success_tracing_disabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch

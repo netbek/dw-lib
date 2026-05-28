@@ -306,22 +306,44 @@ class Dbt:
 
         return pydash.sort_by(selected_resources, lambda resource: resource.name)
 
-    def parse(
+    def build(
         self,
         debug: bool | None = False,
+        exclude: str | None = None,
         fail_fast: bool | None = True,
+        full_refresh: bool | None = False,
+        models: str | None = None,
         quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
         target: str | None = None,
         use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
     ) -> dbtRunnerResult:
-        cmd = self._parse_command(
+        cmd = self._build_command(
             debug=debug,
             fail_fast=fail_fast,
+            full_refresh=full_refresh,
+            exclude=exclude,
+            models=models,
             quiet=quiet,
+            select=select,
+            selector=selector,
             target=target,
             use_colors=use_colors,
+            vars=vars,
         )
         runner_result = dbtRunner().invoke(cmd[1:])
+
+        raw_command = " ".join(cmd)
+        invocation_id = str(uuid4())
+        _trace_invocation(
+            DbtCommand.BUILD,
+            raw_command,
+            invocation_id,
+            runner_result,
+            full_refresh=full_refresh,
+        )
 
         return runner_result
 
@@ -339,6 +361,25 @@ class Dbt:
             fail_fast=fail_fast,
             quiet=quiet,
             select=select,
+            target=target,
+            use_colors=use_colors,
+        )
+        runner_result = dbtRunner().invoke(cmd[1:])
+
+        return runner_result
+
+    def parse(
+        self,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+    ) -> dbtRunnerResult:
+        cmd = self._parse_command(
+            debug=debug,
+            fail_fast=fail_fast,
+            quiet=quiet,
             target=target,
             use_colors=use_colors,
         )
@@ -589,11 +630,16 @@ class Dbt:
             server.watch(path, lambda: self.docs_generate())
         server.serve(host="0.0.0.0", port=8080, root=self.docs_dir)
 
-    def _parse_command(
+    def _build_command(
         self,
         debug: bool | None = False,
+        exclude: str | None = None,
         fail_fast: bool | None = True,
+        full_refresh: bool | None = False,
+        models: str | None = None,
         quiet: bool | None = False,
+        select: str | None = None,
+        selector: str | None = None,
         target: str | None = None,
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
@@ -603,7 +649,7 @@ class Dbt:
 
         cmd = [
             "dbt",
-            "parse",
+            "run",
             "--profiles-dir",
             str(self._profiles_dir),
             "--project-dir",
@@ -615,15 +661,30 @@ class Dbt:
         else:
             cmd.extend(["--no-debug"])
 
+        if exclude:
+            cmd.extend(["--exclude", exclude])
+
         if fail_fast:
             cmd.extend(["--fail-fast"])
         else:
             cmd.extend(["--no-fail-fast"])
 
+        if full_refresh:
+            cmd.extend(["--full-refresh"])
+
+        if models:
+            cmd.extend(["--models", models])
+
         if quiet:
             cmd.extend(["--quiet"])
         else:
             cmd.extend(["--no-quiet"])
+
+        if select:
+            cmd.extend(["--select", select])
+
+        if selector:
+            cmd.extend(["--selector", selector])
 
         if target:
             cmd.extend(["--target", target])
@@ -689,6 +750,55 @@ class Dbt:
 
         if selector:
             cmd.extend(["--selector", selector])
+
+        if target:
+            cmd.extend(["--target", target])
+
+        if use_colors:
+            cmd.extend(["--use-colors"])
+        else:
+            cmd.extend(["--no-use-colors"])
+
+        if vars:
+            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+
+        return cmd
+
+    def _parse_command(
+        self,
+        debug: bool | None = False,
+        fail_fast: bool | None = True,
+        quiet: bool | None = False,
+        target: str | None = None,
+        use_colors: bool | None = False,
+        vars: dict[str, Any] | None = None,
+    ) -> list[str]:
+        if target is None:
+            target = self._target
+
+        cmd = [
+            "dbt",
+            "parse",
+            "--profiles-dir",
+            str(self._profiles_dir),
+            "--project-dir",
+            str(self._project_dir),
+        ]
+
+        if debug:
+            cmd.extend(["--debug"])
+        else:
+            cmd.extend(["--no-debug"])
+
+        if fail_fast:
+            cmd.extend(["--fail-fast"])
+        else:
+            cmd.extend(["--no-fail-fast"])
+
+        if quiet:
+            cmd.extend(["--quiet"])
+        else:
+            cmd.extend(["--no-quiet"])
 
         if target:
             cmd.extend(["--target", target])
@@ -987,7 +1097,7 @@ def _trace_invocation(
 
     parsed_nodes: list[ParsedNode] = []
 
-    if command in {DbtCommand.RUN, DbtCommand.SEED}:
+    if command in {DbtCommand.BUILD, DbtCommand.RUN, DbtCommand.SEED}:
         generated_at = runner_result.result.generated_at
 
         for node_result in runner_result.result.results:

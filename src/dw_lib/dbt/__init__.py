@@ -1097,7 +1097,7 @@ def _trace_invocation(
 
     parsed_nodes: list[ParsedNode] = []
 
-    if command in {DbtCommand.RUN, DbtCommand.SEED}:
+    if command in {DbtCommand.BUILD, DbtCommand.RUN, DbtCommand.SEED}:
         generated_at = runner_result.result.generated_at
 
         for node_result in runner_result.result.results:

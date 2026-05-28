@@ -312,7 +312,6 @@ class Dbt:
         exclude: str | None = None,
         fail_fast: bool | None = True,
         full_refresh: bool | None = False,
-        models: str | None = None,
         quiet: bool | None = False,
         select: str | None = None,
         selector: str | None = None,
@@ -325,7 +324,6 @@ class Dbt:
             fail_fast=fail_fast,
             full_refresh=full_refresh,
             exclude=exclude,
-            models=models,
             quiet=quiet,
             select=select,
             selector=selector,
@@ -393,7 +391,6 @@ class Dbt:
         exclude: str | None = None,
         fail_fast: bool | None = True,
         full_refresh: bool | None = False,
-        models: str | None = None,
         quiet: bool | None = False,
         select: str | None = None,
         selector: str | None = None,
@@ -406,7 +403,6 @@ class Dbt:
             fail_fast=fail_fast,
             full_refresh=full_refresh,
             exclude=exclude,
-            models=models,
             quiet=quiet,
             select=select,
             selector=selector,
@@ -579,7 +575,6 @@ class Dbt:
         debug: bool | None = False,
         exclude: str | None = None,
         fail_fast: bool | None = True,
-        models: str | None = None,
         quiet: bool | None = True,
         select: str | None = None,
         selector: str | None = None,
@@ -591,7 +586,6 @@ class Dbt:
             debug=debug,
             fail_fast=fail_fast,
             exclude=exclude,
-            models=models,
             quiet=quiet,
             select=select,
             selector=selector,
@@ -636,7 +630,6 @@ class Dbt:
         exclude: str | None = None,
         fail_fast: bool | None = True,
         full_refresh: bool | None = False,
-        models: str | None = None,
         quiet: bool | None = False,
         select: str | None = None,
         selector: str | None = None,
@@ -672,9 +665,6 @@ class Dbt:
         if full_refresh:
             cmd.extend(["--full-refresh"])
 
-        if models:
-            cmd.extend(["--models", models])
-
         if quiet:
             cmd.extend(["--quiet"])
         else:
@@ -704,7 +694,6 @@ class Dbt:
         debug: bool | None = False,
         exclude: str | None = None,
         fail_fast: bool | None = True,
-        models: str | None = None,
         quiet: bool | None = False,
         select: str | None = None,
         selector: str | None = None,
@@ -736,9 +725,6 @@ class Dbt:
             cmd.extend(["--fail-fast"])
         else:
             cmd.extend(["--no-fail-fast"])
-
-        if models:
-            cmd.extend(["--models", models])
 
         if quiet:
             cmd.extend(["--quiet"])
@@ -819,7 +805,6 @@ class Dbt:
         exclude: str | None = None,
         fail_fast: bool | None = True,
         full_refresh: bool | None = False,
-        models: str | None = None,
         quiet: bool | None = False,
         select: str | None = None,
         selector: str | None = None,
@@ -854,9 +839,6 @@ class Dbt:
 
         if full_refresh:
             cmd.extend(["--full-refresh"])
-
-        if models:
-            cmd.extend(["--models", models])
 
         if quiet:
             cmd.extend(["--quiet"])
@@ -991,7 +973,6 @@ class Dbt:
         debug: bool | None = False,
         exclude: str | None = None,
         fail_fast: bool | None = True,
-        models: str | None = None,
         quiet: bool | None = False,
         select: str | None = None,
         selector: str | None = None,
@@ -1024,9 +1005,6 @@ class Dbt:
             cmd.extend(["--fail-fast"])
         else:
             cmd.extend(["--no-fail-fast"])
-
-        if models:
-            cmd.extend(["--models", models])
 
         if quiet:
             cmd.extend(["--quiet"])

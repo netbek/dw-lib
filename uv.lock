@@ -1133,7 +1133,7 @@ wheels = [
 
 [[package]]
 name = "netbek-dw-lib"
-version = "1.32.6"
+version = "1.32.7"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },

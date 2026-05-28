@@ -133,11 +133,12 @@ def to_ns(dt: datetime) -> int:
 
 def list_tables(client: Client, database: str, table_pattern: str = "%") -> list[str]:
     query = """
-    SELECT name
-    FROM system.tables
-    WHERE database = {database:String}
-    AND name ILIKE {table_pattern:String}
-    ORDER BY name
+    select name
+    from system.tables
+    where
+        database = {database:String}
+        and name ilike {table_pattern:String}
+    order by name
     """
     result = client.query(query, parameters={"database": database, "table_pattern": table_pattern})
     tables = [row[0] for row in result.result_rows]
@@ -145,16 +146,11 @@ def list_tables(client: Client, database: str, table_pattern: str = "%") -> list
 
 
 def describe_table(client: Client, database: str, table: str):
-    query = """
-    SHOW CREATE TABLE {database:Identifier}.{table:Identifier}
-    """
-    statement = client.command(query, parameters={"database": database, "table": table})
-    statement = str(statement).replace("\\n", "\n")
+    query = "show create table {database:Identifier}.{table:Identifier}"
+    statement = client.query(query, parameters={"database": database, "table": table}).first_row[0]
     parsed = parse_create_table_statement(statement)
 
-    query = """
-    DESCRIBE TABLE {database:Identifier}.{table:Identifier}
-    """
+    query = "describe table {database:Identifier}.{table:Identifier}"
     result = client.query(query, parameters={"database": database, "table": table})
     columns = [{"name": row[0], "data_type": row[1]} for row in result.result_rows]
 

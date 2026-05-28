@@ -642,7 +642,7 @@ class Dbt:
 
         cmd = [
             "dbt",
-            "run",
+            "build",
             "--profiles-dir",
             str(self._profiles_dir),
             "--project-dir",

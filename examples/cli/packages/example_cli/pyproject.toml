@@ -3,7 +3,7 @@ name = "example-cli"
 version = "0.1.0"
 description = "Example CLI"
 readme = "README.md"
-requires-python = "==3.13.*"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "netbek-dw-lib[dbt,loader,peerdb]",
     "opentelemetry-exporter-otlp>=1.39.1",
@@ -36,6 +36,9 @@ target-version = "py313"
 
 [tool.ruff.lint]
 ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
+
+[tool.uv]
+exclude-newer = "7 days"
 
 [tool.uv.sources]
 netbek-dw-lib = { path = "../../../../", editable = true }

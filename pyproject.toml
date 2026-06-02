@@ -3,7 +3,7 @@ name = "netbek-dw-lib"
 version = "1.32.10"
 description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
-requires-python = "==3.13.*"
+requires-python = ">=3.13,<3.14"
 
 # sqlglot pinned for compatibility with dagster-dbt https://github.com/dagster-io/dagster/blob/1.12.19/python_modules/libraries/dagster-dbt/pyproject.toml#L33
 dependencies = [
@@ -137,6 +137,9 @@ filterwarnings = [
     "ignore::DeprecationWarning:dbt.cli.options"        # https://github.com/dbt-labs/dbt-core/issues/12038
 ]
 markers = ["docker_compose_file", "docker_skip_wait_until_responsive"]
+
+[tool.uv]
+exclude-newer = "7 days"
 
 [tool.uv.build-backend]
 module-name = "dw_lib"

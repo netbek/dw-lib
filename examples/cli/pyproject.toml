@@ -3,12 +3,15 @@ name = "cli"
 version = "0.1.0"
 description = "CLI example"
 readme = "README.md"
-requires-python = "==3.13.*"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "dbt-clickhouse>=1.10.0",
     "example-cli",
     "livereload>=2.7.1",
 ]
+
+[tool.uv]
+exclude-newer = "7 days"
 
 [tool.uv.sources]
 example-cli = { path = "./packages/example_cli", editable = true }

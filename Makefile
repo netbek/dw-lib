@@ -23,13 +23,13 @@ autoflake:
 	@echo "Removing unused imports..."
 	pre-commit run autoflake --hook-stage manual --files $(filter-out $@,$(MAKECMDGOALS))
 
-uv-sync-all:
+uv-sync:
 	uv sync --all-extras --all-groups
 	cd examples/cli && uv sync --all-extras --all-groups
 	cd examples/cli/packages/example_cli && uv sync --all-extras --all-groups
 	uv sync --all-extras --all-groups
 
-uv-lock-upgrade-all:
+uv-lock-upgrade:
 	uv lock --upgrade
 	cd examples/cli && uv lock --upgrade
 	cd examples/cli/packages/example_cli && uv lock --upgrade

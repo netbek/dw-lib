@@ -104,9 +104,9 @@ class DynamicSetting(BaseModel):
     apply_mode: Literal[
         "APPLY_MODE_IMMEDIATE", "APPLY_MODE_AFTER_RESUME", "APPLY_MODE_NEW_MIRROR"
     ] = Field(alias="applyMode")
-    target_for_setting: Literal["ALL", "QUEUES", "CLICKHOUSE", "SNOWFLAKE", "BIGQUERY"] = Field(
-        alias="targetForSetting"
-    )
+    target_for_setting: Literal[
+        "ALL", "BIGQUERY", "CLICKHOUSE", "POSTGRES", "QUEUES", "SNOWFLAKE"
+    ] = Field(alias="targetForSetting")
     value: str | None = None
 
 

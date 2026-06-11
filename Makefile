@@ -55,7 +55,7 @@ bump-version:
 	fi; \
 	uv version --bump $$BUMP; \
 	VERSION=$$(uv version --short); \
-	$(MAKE) --no-print-directory uv-sync-all; \
+	$(MAKE) --no-print-directory uv-sync; \
 	git add \
 		pyproject.toml \
 		uv.lock \

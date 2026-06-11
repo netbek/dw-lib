@@ -23,16 +23,22 @@ autoflake:
 	@echo "Removing unused imports..."
 	pre-commit run autoflake --hook-stage manual --files $(filter-out $@,$(MAKECMDGOALS))
 
+uv-sync: TOMORROW := $(shell date -d "tomorrow" +%Y-%m-%d)
+uv-sync: EXCLUDE_NEWER_PACKAGE ?=
 uv-sync:
-	uv sync --all-extras --all-groups
-	cd examples/cli && uv sync --all-extras --all-groups
-	cd examples/cli/packages/example_cli && uv sync --all-extras --all-groups
-	uv sync --all-extras --all-groups
+	$(eval OPTIONS := --all-extras --all-groups $(if $(EXCLUDE_NEWER_PACKAGE),--exclude-newer-package $(EXCLUDE_NEWER_PACKAGE)=$(TOMORROW),))
+	uv sync $(OPTIONS)
+	cd examples/cli && uv sync $(OPTIONS)
+	cd examples/cli/packages/example_cli && uv sync $(OPTIONS)
+	uv sync $(OPTIONS)
 
+uv-lock-upgrade: TOMORROW := $(shell date -d "tomorrow" +%Y-%m-%d)
+uv-lock-upgrade: EXCLUDE_NEWER_PACKAGE ?=
 uv-lock-upgrade:
-	uv lock --upgrade
-	cd examples/cli && uv lock --upgrade
-	cd examples/cli/packages/example_cli && uv lock --upgrade
+	$(eval OPTIONS := --upgrade $(if $(EXCLUDE_NEWER_PACKAGE),--exclude-newer-package $(EXCLUDE_NEWER_PACKAGE)=$(TOMORROW),))
+	uv lock $(OPTIONS)
+	cd examples/cli && uv lock $(OPTIONS)
+	cd examples/cli/packages/example_cli && uv lock $(OPTIONS)
 
 bump-version:
 	@BUMP=$(word 2,$(MAKECMDGOALS)); \

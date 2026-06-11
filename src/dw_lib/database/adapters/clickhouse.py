@@ -216,7 +216,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
         return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
-    def make_create_view_statement_from_model(
+    def make_create_view_statement_from_sqlmodel_model(
         self,
         model: type[SQLModel],
         sql: str,

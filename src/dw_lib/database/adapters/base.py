@@ -184,7 +184,7 @@ class BaseAdapter(ABC, Generic[T]):
 
     @overload
     @abstractmethod
-    def make_create_view_statement_from_model(
+    def make_create_view_statement_from_sqlmodel_model(
         self,
         model: type[SQLModel],
         sql: str,
@@ -199,7 +199,7 @@ class BaseAdapter(ABC, Generic[T]):
 
     @overload
     @abstractmethod
-    def make_create_view_statement_from_model(
+    def make_create_view_statement_from_sqlmodel_model(
         self,
         model: type[SQLModel],
         sql: str,
@@ -214,7 +214,7 @@ class BaseAdapter(ABC, Generic[T]):
     ) -> str: ...
 
     @abstractmethod
-    def make_create_view_statement_from_model(self, *args, **kwargs) -> None: ...
+    def make_create_view_statement_from_sqlmodel_model(self, *args, **kwargs) -> None: ...
 
     @overload
     @abstractmethod

@@ -438,7 +438,9 @@ class TestViewWithoutSchema(DatabaseTest):
         return ViewWithoutSchema
 
     def test_defaults(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(model, model.__sql__)
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
+            model, model.__sql__
+        )
         expected = """
         CREATE VIEW view_without_schema
         AS SELECT 42 AS id
@@ -446,7 +448,7 @@ class TestViewWithoutSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_if_not_exists(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, if_not_exists=True
         )
         expected = """
@@ -456,7 +458,7 @@ class TestViewWithoutSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_replace(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, replace=True
         )
         expected = """
@@ -467,12 +469,12 @@ class TestViewWithoutSchema(DatabaseTest):
 
     def test_if_not_exists_and_replace(self, clickhouse_adapter: ClickHouseAdapter, model):
         with pytest.raises(ValueError):
-            clickhouse_adapter.make_create_view_statement_from_model(
+            clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
                 model, model.__sql__, if_not_exists=True, replace=True
             )
 
     def test_sql_cte(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, "WITH final AS (SELECT 42 AS id) SELECT * FROM final"
         )
         expected = """
@@ -482,7 +484,7 @@ class TestViewWithoutSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, table="my_view"
         )
         expected = """
@@ -492,7 +494,7 @@ class TestViewWithoutSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_override_schema(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, database="my_database"
         )
         expected = """
@@ -502,7 +504,7 @@ class TestViewWithoutSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_override_schema_and_table(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, database="my_database", table="my_view"
         )
         expected = """
@@ -518,7 +520,9 @@ class TestViewWithSchema(DatabaseTest):
         return ViewWithSchema
 
     def test_defaults(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(model, model.__sql__)
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
+            model, model.__sql__
+        )
         expected = """
         CREATE VIEW analytics.view_with_schema
         AS SELECT 42 AS id
@@ -526,7 +530,7 @@ class TestViewWithSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_override_table(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, table="my_view"
         )
         expected = """
@@ -536,7 +540,7 @@ class TestViewWithSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_override_schema(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, database="my_database"
         )
         expected = """
@@ -546,7 +550,7 @@ class TestViewWithSchema(DatabaseTest):
         assert_sql_equal(actual, expected)
 
     def test_override_schema_and_table(self, clickhouse_adapter: ClickHouseAdapter, model):
-        actual = clickhouse_adapter.make_create_view_statement_from_model(
+        actual = clickhouse_adapter.make_create_view_statement_from_sqlmodel_model(
             model, model.__sql__, database="my_database", table="my_view"
         )
         expected = """

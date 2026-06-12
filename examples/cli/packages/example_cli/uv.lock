@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-05T17:18:47.667696181Z"
+exclude-newer = "2026-06-05T17:19:41.647292136Z"
 exclude-newer-span = "P7D"
 
 [[package]]

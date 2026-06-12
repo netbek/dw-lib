@@ -71,7 +71,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
                         "type": 8,
                         "clickhouse_config": {
                             "host": "host.docker.internal",
-                            "port": 28123,
+                            "port": 29000,
                             "user": "default",
                             "database": "default",
                             "password": "default",

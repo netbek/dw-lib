@@ -220,7 +220,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         measures = []
         for column in table_metadata.columns:
             name = column.name
-            measures.append(f"uniqCombined(`{name}`) as `{name}_cardinality`")
+            measures.append(f"coalesce(uniqCombined(`{name}`), 0) as `{name}_cardinality`")
             measures.append(f"countIf(isNull(`{name}`)) as `{name}_null_count`")
             measures.append(f"count(*) as `{name}_count`")
 

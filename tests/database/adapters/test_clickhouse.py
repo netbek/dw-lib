@@ -24,6 +24,7 @@ class TestClickHouseAdapter(DatabaseTest):
         create or replace table {ClickHouseRelation(table=table)}
         (
             id UInt64,
+            nullable Nullable(String),
             updated_at DateTime default now(),
             _peerdb_synced_at DateTime64(9) default now64(),
             _peerdb_is_deleted UInt8,
@@ -108,6 +109,7 @@ class TestClickHouseAdapter(DatabaseTest):
         table = clickhouse_adapter.get_table(clickhouse_table.name)
         assert {
             "id",
+            "nullable",
             "updated_at",
             "_peerdb_synced_at",
             "_peerdb_is_deleted",
@@ -149,6 +151,7 @@ class TestClickHouseAdapter(DatabaseTest):
         CREATE TABLE {clickhouse_adapter.settings.database}.{clickhouse_table.name}
         (
             `id` UInt64,
+            `nullable` Nullable(String),
             `updated_at` DateTime DEFAULT now(),
             `_peerdb_synced_at` DateTime64(9) DEFAULT now64(),
             `_peerdb_is_deleted` UInt8,
@@ -177,6 +180,14 @@ class TestClickHouseAdapter(DatabaseTest):
                     name="id",
                     data_type="UInt64",
                     nullable=False,
+                    cardinality=0,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="nullable",
+                    data_type="Nullable(String)",
+                    nullable=True,
                     cardinality=0,
                     null_count=0,
                     null_pct=0,
@@ -233,6 +244,14 @@ class TestClickHouseAdapter(DatabaseTest):
                     cardinality=3,
                     null_count=0,
                     null_pct=0,
+                ),
+                ColumnStats(
+                    name="nullable",
+                    data_type="Nullable(String)",
+                    nullable=True,
+                    cardinality=0,
+                    null_count=3,
+                    null_pct=100,
                 ),
                 ColumnStats(
                     name="updated_at",

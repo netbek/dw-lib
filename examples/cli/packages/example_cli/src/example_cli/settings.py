@@ -1,4 +1,4 @@
-from dw_lib.types import ClickHouseSettings
+from dw_lib.database import ClickHouseSettings
 from functools import lru_cache
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,6 @@ def to_clickhouse_settings(dbt_target_settings: DbtTargetSettings) -> ClickHouse
         username=dbt_target_settings.username,
         password=dbt_target_settings.password,
         database=dbt_target_settings.database,
-        driver=dbt_target_settings.driver,
     )
 
 

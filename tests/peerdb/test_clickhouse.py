@@ -60,12 +60,11 @@ class TestLoadConfig(PeerDBIntegrationTest):
                         "type": "clickhouse",
                         "settings": {
                             "host": "localhost",
-                            "http_port": 28123,
-                            "tcp_port": 29000,
+                            "port": 28123,
                             "username": "default",
                             "password": "default",
                             "database": "default",
-                            "driver": "http",
+                            "driver": "connect",
                         },
                     },
                     "peerdb": {

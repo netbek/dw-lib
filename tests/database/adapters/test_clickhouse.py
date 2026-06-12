@@ -41,18 +41,12 @@ class TestClickHouseAdapter(DatabaseTest):
     def test_instantiation_with_sqlalchemy_url(self, clickhouse_settings: ClickHouseSettings):
         adapter = ClickHouseAdapter(clickhouse_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, ClickHouseSettings)
-        # Exclude tcp_port from assertion because its value is lost when casting as URL with http driver
-        assert clickhouse_settings.model_dump(exclude={"tcp_port"}) == adapter.settings.model_dump(
-            exclude={"tcp_port"}
-        )
+        assert clickhouse_settings.model_dump() == adapter.settings.model_dump()
 
     def test_instantiation_with_string_url(self, clickhouse_settings: ClickHouseSettings):
         adapter = ClickHouseAdapter(clickhouse_settings.to_string(hide_password=False))
         assert isinstance(adapter.settings, ClickHouseSettings)
-        # Exclude tcp_port from assertion because its value is lost when casting as string URL with http driver
-        assert clickhouse_settings.model_dump(exclude={"tcp_port"}) == adapter.settings.model_dump(
-            exclude={"tcp_port"}
-        )
+        assert clickhouse_settings.model_dump() == adapter.settings.model_dump()
 
     def test_create_client(self, clickhouse_adapter: ClickHouseAdapter):
         with clickhouse_adapter.create_client() as client:

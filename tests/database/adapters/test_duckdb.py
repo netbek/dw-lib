@@ -1,8 +1,6 @@
 from ...conftest import DatabaseTest
 from dw_lib.database import DuckDBAdapter, DuckDBSettings
 
-# from sqlalchemy import text
-
 
 class TestDuckDBSettings:
     def test_from_url_has_memory_database(self):
@@ -47,7 +45,7 @@ class TestDuckDBAdapter(DatabaseTest):
 
     # def test_create_session(self, duckdb_adapter: DuckDBAdapter):
     #     with duckdb_adapter.create_session() as session:
-    #         actual = session.exec(
+    #         actual = session.execute(
     #             text(
     #                 "select 1 from information_schema.schemata where catalog_name = :database limit 1;"
     #             ).bindparams(database="test")

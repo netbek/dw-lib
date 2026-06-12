@@ -61,7 +61,7 @@ class TestClickHouseAdapter(DatabaseTest):
 
     def test_create_session(self, clickhouse_adapter: ClickHouseAdapter):
         with clickhouse_adapter.create_session() as session:
-            actual = session.exec(
+            actual = session.execute(
                 text("select 1 from system.databases where name = :database;").bindparams(
                     database=clickhouse_adapter.settings.database
                 )

@@ -39,7 +39,7 @@ peers:
     type: clickhouse
     settings:
       host: clickhouse
-      port: 8123
+      port: 9000
       username: default
       password: default
       database: example

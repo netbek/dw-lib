@@ -23,7 +23,7 @@ peers:
     type: clickhouse
     settings:
       host: host.docker.internal
-      port: 28123
+      port: 29000
       username: default
       password: default
       database: default

@@ -23,7 +23,6 @@ dependencies = [
 [project.optional-dependencies]
 clickhouse = [
     "clickhouse-connect>=0.10.0",
-    "clickhouse-sqlalchemy>=0.3.2",
     "sqlglot>=28.0.0,<28.1.0",
 ]
 
@@ -50,7 +49,6 @@ dagster = [
 
 dbt = [
     "clickhouse-connect>=0.10.0",
-    "clickhouse-sqlalchemy>=0.3.2",
     "dbt-clickhouse>=1.10.0",
     "livereload>=2.7.1",
     "opentelemetry-sdk>=1.39.1",
@@ -70,7 +68,6 @@ loader = [
 
 peerdb = [
     "clickhouse-connect>=0.10.0",
-    "clickhouse-sqlalchemy>=0.3.2",
     "pydantic>=2.12.4",
     "pydash>=8.0.5",
     "requests>=2.32.5",

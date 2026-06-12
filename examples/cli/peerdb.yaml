@@ -39,8 +39,7 @@ peers:
     type: clickhouse
     settings:
       host: clickhouse
-      http_port: 8123
-      tcp_port: 9000
+      port: 9000
       username: default
       password: default
       database: example
@@ -50,8 +49,7 @@ peers:
     # PeerDB API container, so the host and port could differ from the `settings` values.
     adapter_settings:
       host: localhost
-      http_port: 28123
-      tcp_port: 29000
+      port: 28123
       username: default
       password: default
       database: example

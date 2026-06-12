@@ -1,6 +1,7 @@
 from ..constants import PYTHON_RESERVED_WORDS
+from ..types import ClickHouseDsn
 from functools import lru_cache
-from pydantic import ClickHouseDsn, PostgresDsn, TypeAdapter
+from pydantic import PostgresDsn, TypeAdapter
 from typing import Any
 
 TYPE_ADAPTER_CLICKHOUSE_DSN = TypeAdapter(ClickHouseDsn)

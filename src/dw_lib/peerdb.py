@@ -428,7 +428,7 @@ class PeerDB:
                         "type": DIALECT_TO_PEERDB_TYPE_MAP[value["type"]],
                         "clickhouse_config": {
                             "host": value["settings"]["host"],
-                            "port": value["settings"]["tcp_port"],
+                            "port": value["settings"]["port"],
                             "user": value["settings"]["username"],
                             "password": value["settings"]["password"],
                             "database": value["settings"]["database"],

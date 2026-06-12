@@ -15,13 +15,9 @@ class DbtTargetSettings(BaseModel):
 
 
 def to_clickhouse_settings(dbt_target_settings: DbtTargetSettings) -> ClickHouseSettings:
-    is_http = dbt_target_settings.driver.lower() == "http"
-    is_native = dbt_target_settings.driver.lower() == "native"
-
     return ClickHouseSettings(
         host=dbt_target_settings.host,
-        http_port=dbt_target_settings.port if is_http else 0,
-        tcp_port=dbt_target_settings.port if is_native else 0,
+        port=dbt_target_settings.port,
         username=dbt_target_settings.username,
         password=dbt_target_settings.password,
         database=dbt_target_settings.database,

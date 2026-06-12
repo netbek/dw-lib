@@ -33,7 +33,6 @@ services:
       - host.docker.internal:host-gateway
     ports:
       - 28123:8123
-      - 29000:9000
     volumes:
       - clickhouse-data:/var/lib/clickhouse/:rw
       - clickhouse-logs:/var/log/clickhouse-server/:rw

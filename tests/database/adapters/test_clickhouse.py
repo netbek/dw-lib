@@ -24,9 +24,12 @@ class TestClickHouseAdapter(DatabaseTest):
         create or replace table {ClickHouseRelation(table=table)}
         (
             id UInt64,
-            updated_at DateTime default now()
+            updated_at DateTime default now(),
+            _peerdb_synced_at DateTime64(9) default now64(),
+            _peerdb_is_deleted UInt8,
+            _peerdb_version UInt64
         )
-        engine = MergeTree
+        engine = ReplacingMergeTree(_peerdb_version, _peerdb_is_deleted)
         order by id
         """
         clickhouse_adapter.create_table(table, statement)
@@ -109,7 +112,13 @@ class TestClickHouseAdapter(DatabaseTest):
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
         table = clickhouse_adapter.get_table(clickhouse_table.name)
-        assert {"id", "updated_at"} == {column.name for column in table.columns}
+        assert {
+            "id",
+            "updated_at",
+            "_peerdb_synced_at",
+            "_peerdb_is_deleted",
+            "_peerdb_version",
+        } == {column.name for column in table.columns}
 
     def test_create_and_drop_table(self, clickhouse_adapter: ClickHouseAdapter):
         table = "test_table"
@@ -146,9 +155,12 @@ class TestClickHouseAdapter(DatabaseTest):
         CREATE TABLE {clickhouse_adapter.settings.database}.{clickhouse_table.name}
         (
             `id` UInt64,
-            `updated_at` DateTime DEFAULT now()
+            `updated_at` DateTime DEFAULT now(),
+            `_peerdb_synced_at` DateTime64(9) DEFAULT now64(),
+            `_peerdb_is_deleted` UInt8,
+            `_peerdb_version` UInt64
         )
-        ENGINE = MergeTree
+        ENGINE = ReplacingMergeTree(_peerdb_version, _peerdb_is_deleted)
         ORDER BY id
         SETTINGS index_granularity = 8192
         """
@@ -183,6 +195,30 @@ class TestClickHouseAdapter(DatabaseTest):
                     null_count=0,
                     null_pct=0,
                 ),
+                ColumnStats(
+                    name="_peerdb_synced_at",
+                    data_type="DateTime64(9)",
+                    nullable=False,
+                    cardinality=0,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="_peerdb_is_deleted",
+                    data_type="UInt8",
+                    nullable=False,
+                    cardinality=0,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="_peerdb_version",
+                    data_type="UInt64",
+                    nullable=False,
+                    cardinality=0,
+                    null_count=0,
+                    null_pct=0,
+                ),
             ]
         )
         assert actual == expected
@@ -207,6 +243,30 @@ class TestClickHouseAdapter(DatabaseTest):
                 ColumnStats(
                     name="updated_at",
                     data_type="DateTime",
+                    nullable=False,
+                    cardinality=1,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="_peerdb_synced_at",
+                    data_type="DateTime64(9)",
+                    nullable=False,
+                    cardinality=1,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="_peerdb_is_deleted",
+                    data_type="UInt8",
+                    nullable=False,
+                    cardinality=1,
+                    null_count=0,
+                    null_pct=0,
+                ),
+                ColumnStats(
+                    name="_peerdb_version",
+                    data_type="UInt64",
                     nullable=False,
                     cardinality=1,
                     null_count=0,

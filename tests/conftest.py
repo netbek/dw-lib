@@ -54,12 +54,11 @@ class DatabaseTest:
     def clickhouse_settings(self) -> ClickHouseSettings:
         return ClickHouseSettings(
             host="localhost",
-            http_port=18123,
-            tcp_port=19000,
+            port=18123,
             username="default",
             password="default",
             database="default",
-            driver="http",
+            driver="connect",
         )
 
     @pytest.fixture(scope="module")

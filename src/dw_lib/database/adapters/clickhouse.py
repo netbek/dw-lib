@@ -14,7 +14,7 @@ from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
 from collections.abc import Generator
 from contextlib import contextmanager
-from sqlalchemy import MetaData, Table
+from sqlalchemy import inspect, MetaData, Table
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session
 from sqlglot.dialects.dialect import Dialects
@@ -29,14 +29,9 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
     @contextmanager
     def create_client(self) -> Generator[Client, Any, None]:
-        if self.settings.driver == "native":
-            port = self.settings.tcp_port
-        else:
-            port = self.settings.http_port
-
         client = clickhouse_connect.get_client(
             host=self.settings.host,
-            port=port or 0,
+            port=self.settings.port,
             username=self.settings.username,
             password=self.settings.password,
             database=self.settings.database,
@@ -206,16 +201,16 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         url = self.settings.to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
-            metadata = MetaData(schema=database)
+            metadata = MetaData()
+            inspector = inspect(engine)
+
+            if not inspector.has_table(table, schema=database):
+                raise TableNotFoundException(f"Table '{table}' not found")
 
             try:
-                metadata.reflect(bind=engine, views=True, only=[table])
-                table_metadata = metadata.tables[f"{database}.{table}"]
+                table_metadata = Table(table, metadata, schema=database, autoload_with=engine)
             except InvalidRequestError as exc:
-                if "requested table(s) not available" in str(exc):
-                    raise TableNotFoundException(f"Table '{table}' not found")
-                else:
-                    raise exc
+                raise exc
 
         return table_metadata
 
@@ -276,11 +271,21 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         url = self.settings.to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
-            metadata = MetaData(schema=database)
-            metadata.reflect(bind=engine, views=True)
-            tables = sorted(metadata.tables.values(), key=lambda table: table.name)
+            metadata = MetaData()
+            inspector = inspect(engine)
+            table_names = inspector.get_table_names(schema=database)
+            view_names = inspector.get_view_names(schema=database)
+            all_names = list(set(table_names + view_names))
 
-        return tables
+            tables = []
+            for name in all_names:
+                try:
+                    table = Table(name, metadata, schema=database, autoload_with=engine)
+                    tables.append(table)
+                except Exception:
+                    continue
+
+        return sorted(tables, key=lambda table: table.name)
 
     def has_user(self, username: str) -> bool:
         statement = "select 1 from system.users where name = {username:String};"

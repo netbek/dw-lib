@@ -4,15 +4,7 @@ from dw_lib.utils.python_utils import (
     validate_pydantic_postgres_dsn,
 )
 from pathlib import Path
-from pydantic import (
-    BaseModel,
-    ClickHouseDsn,
-    ConfigDict,
-    Field,
-    field_validator,
-    model_validator,
-    PostgresDsn,
-)
+from pydantic import BaseModel, ClickHouseDsn, ConfigDict, Field, field_validator, PostgresDsn
 from sqlalchemy.engine import make_url, URL
 from sqlglot import exp
 from sqlglot.dialects.dialect import Dialects, DialectType
@@ -24,12 +16,11 @@ import psutil
 
 class ClickHouseSettings(BaseModel):
     host: str
-    http_port: int | None = None
-    tcp_port: int | None = None
+    port: int
     username: str
     password: str
     database: str
-    driver: Literal["http", "native"] = "http"
+    driver: Literal["connect"] = "connect"
 
     @classmethod
     def from_url(cls, url: ClickHouseDsn | URL | str) -> Self:
@@ -48,51 +39,25 @@ class ClickHouseSettings(BaseModel):
         if _url.drivername and "+" in _url.drivername:
             given_driver = _url.drivername.split("+")[1]
 
-        given_port = _url.port
-
-        if given_driver in ["http", "native"]:
+        if given_driver in ["connect"]:
             driver = given_driver
-        elif given_port == 9000:
-            driver = "native"
         else:
-            driver = "http"
-
-        http_port = given_port if driver == "http" else None
-        tcp_port = given_port if driver == "native" else None
+            driver = "connect"
 
         return cls(
             host=_url.host,
-            http_port=http_port,
-            tcp_port=tcp_port,
+            port=_url.port,
             username=_url.username,
             password=_url.password,
             database=_url.database,
             driver=driver,
         )
 
-    @model_validator(mode="after")
-    def validate_ports_and_driver(self) -> Self:
-        if self.http_port is None and self.tcp_port is None:
-            raise ValueError("At least one of http_port or tcp_port must be provided")
-
-        if self.driver == "http" and self.http_port is None:
-            raise ValueError("Driver set to 'http' but http_port is missing")
-
-        if self.driver == "native" and self.tcp_port is None:
-            raise ValueError("Driver set to 'native' but tcp_port is missing")
-
-        return self
-
     def to_sqlalchemy_url(self) -> URL:
-        if self.driver == "native":
-            port = self.tcp_port
-        else:
-            port = self.http_port
-
         return URL.create(
-            f"clickhouse+{self.driver}",
+            f"clickhousedb+{self.driver}",
             host=self.host,
-            port=port,
+            port=self.port,
             username=self.username,
             password=self.password,
             database=self.database,

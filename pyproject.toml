@@ -1,6 +1,6 @@
 [project]
 name = "netbek-dw-lib"
-version = "1.32.12"
+version = "1.33.0"
 description = "Tools for working with Postgres, ClickHouse, and DuckDB."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"

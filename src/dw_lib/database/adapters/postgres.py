@@ -11,11 +11,12 @@ from ..adapters.base import BaseAdapter
 from ..types import PostgresRelation, PostgresSettings
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
+from sqlalchemy import Column, MetaData, Table
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm import Session
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import Column, MetaData, Session, SQLModel, Table
 from typing import Any, Literal
 
 
@@ -237,34 +238,6 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
         return statement
 
-    def make_create_table_statement_from_model(
-        self,
-        model: type[SQLModel],
-        table: str | None = None,
-        database: str | None = None,
-        sql: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str:
-        raise NotImplementedError()
-
-    def make_create_view_statement_from_model(
-        self,
-        model: type[SQLModel],
-        sql: str,
-        table: str | None = None,
-        database: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str:
-        raise NotImplementedError()
-
     def drop_table(
         self,
         table: str,
@@ -334,16 +307,17 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         url = self.settings.model_copy(update={"database": database}).to_sqlalchemy_url()
 
         with self.create_engine(url=url) as engine:
-            metadata = MetaData(schema=schema)
+            metadata = MetaData()
 
             try:
-                metadata.reflect(bind=engine, views=True, only=[table])
-                table_metadata = metadata.tables[f"{schema}.{table}"]
+                with engine.connect() as connection:
+                    metadata.reflect(bind=connection, schema=schema, views=True, only=[table])
+                table_key = f"{schema}.{table}" if schema else table
+                table_metadata = metadata.tables[table_key]
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
-                    raise TableNotFoundException(f"Table '{table}' not found")
-                else:
-                    raise exc
+                    raise TableNotFoundException(f"Table '{table}' not found") from exc
+                raise exc
 
         return table_metadata
 

@@ -1,4 +1,3 @@
-from clickhouse_sqlalchemy import engines, types
 from collections.abc import Generator, Iterator
 from dw_lib.cloud import S3Adapter, S3Settings
 from dw_lib.database import (
@@ -15,8 +14,7 @@ from dw_lib.types import HttpUrl
 from pathlib import Path
 from pytest_docker.plugin import get_docker_services, Services
 from ruamel.yaml import YAML
-from sqlalchemy import Column
-from sqlmodel import Field, SQLModel, Table
+from sqlalchemy import Table
 from typing import Any
 
 import os
@@ -37,48 +35,6 @@ PEERDB_TEST_ENV = {
     "TEMPORAL_SERVER_IMAGE": "temporalio/server:1.29.6.1",
     "TEMPORAL_UI_IMAGE": "temporalio/ui:2.51.0",
 }
-
-
-class TableWithoutSchema(SQLModel, table=True):
-    __tablename__ = "table_without_schema"
-
-    id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-
-    __table_args__ = (
-        engines.MergeTree(
-            order_by=("id"),
-            index_granularity=8192,
-        ),
-    )
-
-
-class TableWithSchema(SQLModel, table=True):
-    __tablename__ = "table_with_schema"
-
-    id: int = Field(sa_column=Column(types.Int32, primary_key=True))
-
-    __table_args__ = (
-        engines.MergeTree(
-            order_by=("id"),
-            index_granularity=8192,
-        ),
-        {"schema": "analytics"},
-    )
-
-
-class ViewWithoutSchema(SQLModel):
-    __tablename__ = "view_without_schema"
-    __sql__ = """
-    SELECT 42 AS id
-    """
-
-
-class ViewWithSchema(SQLModel):
-    __tablename__ = "view_with_schema"
-    __sql__ = """
-    SELECT 42 AS id
-    """
-    __table_args__ = {"schema": "analytics"}
 
 
 class DatabaseTest:

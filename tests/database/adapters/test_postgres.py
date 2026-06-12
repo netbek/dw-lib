@@ -7,7 +7,7 @@ from dw_lib.exceptions import (
     TableNotFoundException,
     UserNotFoundException,
 )
-from sqlmodel import Table, text
+from sqlalchemy import Table, text
 from typing import Any
 
 import pytest
@@ -99,7 +99,7 @@ class TestPostgresAdapter(DatabaseTest):
 
     def test_create_session(self, postgres_adapter: PostgresAdapter):
         with postgres_adapter.create_session() as session:
-            actual = session.exec(
+            actual = session.execute(
                 text(
                     "select 1 from information_schema.schemata where catalog_name = :database limit 1;"
                 ).bindparams(database=postgres_adapter.settings.database)

@@ -6,7 +6,7 @@ from .types import (
     PostgresRelation,
     PostgresSettings,
 )
-from .utils import render_statement
+from .utils import parse_create_table_statement, render_statement
 from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
@@ -33,6 +33,7 @@ __all__ = [
     "DuckDBAdapter",
     "DuckDBRelation",
     "DuckDBSettings",
+    "parse_create_table_statement",
     "PostgresAdapter",
     "PostgresRelation",
     "PostgresSettings",

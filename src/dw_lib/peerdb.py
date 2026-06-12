@@ -24,8 +24,8 @@ from pydantic import BaseModel, Field, model_validator
 from rich.console import Console
 from rich.table import Table
 from ruamel.yaml import YAML
+from sqlalchemy import text
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import text
 from typing import Any, Literal, Self
 
 import os
@@ -1225,7 +1225,7 @@ class PeerDB:
             FROM pg_publication_tables
             ORDER BY pubname, schemaname, tablename
             """
-            result = session.exec(text(query))
+            result = session.execute(text(query))
             for row in result.fetchall():
                 relation = PostgresRelation(schema_=row.schemaname, table=row.tablename)
                 data.append(ListPublicationsItem(publication_name=row.pubname, relation=relation))
@@ -1260,7 +1260,7 @@ class PeerDB:
         database = source_adapter.settings.database
 
         with source_adapter.create_session() as session:
-            pg_version_str = session.exec(text("SHOW server_version_num")).scalar()
+            pg_version_str = session.execute(text("SHOW server_version_num")).scalar()
             pg_version = int(pg_version_str)
 
             wal_status_select = "'unknown' AS wal_status"
@@ -1331,7 +1331,7 @@ class PeerDB:
                 {stats_join}
                 WHERE prs.database = :database
             """
-            result = session.exec(text(query), params={"database": database})
+            result = session.execute(text(query), params={"database": database})
             data = [ListReplicationSlotsItem(**row._asdict()) for row in result.fetchall()]
 
         return data

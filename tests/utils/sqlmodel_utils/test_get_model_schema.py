@@ -1,4 +1,4 @@
-from ...conftest import TableWithoutSchema, TableWithSchema, ViewWithoutSchema, ViewWithSchema
+from .conftest import TableWithoutSchema, TableWithSchema, ViewWithoutSchema, ViewWithSchema
 from dw_lib.utils.sqlmodel_utils import get_model_schema
 
 

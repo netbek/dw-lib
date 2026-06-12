@@ -1,12 +1,11 @@
-from ..utils.filesystem import find_up
-from ..utils.sqlmodel_utils import parse_create_table_statement
 from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
 from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
-from dw_lib.database import ClickHouseAdapter
+from dw_lib.database import ClickHouseAdapter, parse_create_table_statement
+from dw_lib.utils.filesystem import find_up
 from functools import cached_property
 from io import StringIO
 from livereload import Server

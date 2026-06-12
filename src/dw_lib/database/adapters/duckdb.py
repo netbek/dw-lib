@@ -3,8 +3,8 @@ from ..adapters.base import BaseAdapter
 from ..types import DuckDBSettings
 from collections.abc import Generator
 from contextlib import contextmanager
+from sqlalchemy import Table
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import SQLModel, Table
 from typing import Any, Literal
 
 import duckdb
@@ -98,34 +98,6 @@ class DuckDBAdapter(BaseAdapter[DuckDBSettings]):
 
     def make_create_table_statement_from_table(
         self, table: str, database: str | None = None, schema: str | None = None
-    ) -> str:
-        raise NotImplementedError()
-
-    def make_create_table_statement_from_model(
-        self,
-        model: type[SQLModel],
-        table: str | None = None,
-        database: str | None = None,
-        sql: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str:
-        raise NotImplementedError()
-
-    def make_create_view_statement_from_model(
-        self,
-        model: type[SQLModel],
-        sql: str,
-        table: str | None = None,
-        database: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
     ) -> str:
         raise NotImplementedError()
 

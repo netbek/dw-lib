@@ -3,11 +3,10 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from dw_lib.types import TableStats
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Engine, URL
+from sqlalchemy import create_engine, Engine, Table, URL
 from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
-from sqlmodel import SQLModel, Table
 from typing import Any, ClassVar, Generic, Literal, overload, TypeVar
 
 T = TypeVar("T", bound=BaseModel)
@@ -147,74 +146,6 @@ class BaseAdapter(ABC, Generic[T]):
 
     @abstractmethod
     def make_create_table_statement_from_table(self, *args, **kwargs) -> str: ...
-
-    @overload
-    @abstractmethod
-    def make_create_table_statement_from_model(
-        self,
-        model: type[SQLModel],
-        table: str | None = None,
-        database: str | None = None,
-        sql: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str: ...
-
-    @overload
-    @abstractmethod
-    def make_create_table_statement_from_model(
-        self,
-        model: type[SQLModel],
-        table: str | None = None,
-        database: str | None = None,
-        schema: str | None = None,
-        sql: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str: ...
-
-    @abstractmethod
-    def make_create_table_statement_from_model(self, *args, **kwargs) -> None: ...
-
-    @overload
-    @abstractmethod
-    def make_create_view_statement_from_model(
-        self,
-        model: type[SQLModel],
-        sql: str,
-        table: str | None = None,
-        database: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str: ...
-
-    @overload
-    @abstractmethod
-    def make_create_view_statement_from_model(
-        self,
-        model: type[SQLModel],
-        sql: str,
-        table: str | None = None,
-        database: str | None = None,
-        schema: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str: ...
-
-    @abstractmethod
-    def make_create_view_statement_from_model(self, *args, **kwargs) -> None: ...
 
     @overload
     @abstractmethod

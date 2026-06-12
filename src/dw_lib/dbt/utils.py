@@ -72,9 +72,8 @@ def generate_sqlmodel_code(
         engine_kwargs.update(parsed_statement["settings"])
 
     imports = [
-        "from clickhouse_sqlalchemy import engines",
+        "from clickhouse_connect.cc_sqlalchemy import engines, types",
         "from dw_lib.dbt.polyfactory.mixins import BaseMixin",
-        "from dw_lib.sqlalchemy.clickhouse import types",
         "from sqlmodel import Column, Field, SQLModel",
     ]
 

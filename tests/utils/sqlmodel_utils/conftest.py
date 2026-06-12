@@ -1,4 +1,4 @@
-from clickhouse_sqlalchemy import engines, types
+from clickhouse_connect.cc_sqlalchemy import engines, types
 from sqlalchemy import Column
 from sqlmodel import Field, SQLModel
 
@@ -11,7 +11,7 @@ class TableWithoutSchema(SQLModel, table=True):
     __table_args__ = (
         engines.MergeTree(
             order_by=("id"),
-            index_granularity=8192,
+            settings={"index_granularity": 8192},
         ),
     )
 
@@ -24,7 +24,7 @@ class TableWithSchema(SQLModel, table=True):
     __table_args__ = (
         engines.MergeTree(
             order_by=("id"),
-            index_granularity=8192,
+            settings={"index_granularity": 8192},
         ),
         {"schema": "analytics"},
     )

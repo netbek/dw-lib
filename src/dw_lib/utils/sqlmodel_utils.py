@@ -1,4 +1,4 @@
-from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
+from clickhouse_connect.cc_sqlalchemy.dialect import ClickHouseDialect
 from sqlalchemy import Table
 from sqlalchemy.sql.ddl import CreateTable
 from sqlglot import exp

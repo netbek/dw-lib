@@ -105,9 +105,8 @@ ORDER BY uint64
 SETTINGS index_granularity = 8192
 \"""
 
-from clickhouse_sqlalchemy import engines
+from clickhouse_connect.cc_sqlalchemy import engines, types
 from dw_lib.dbt.polyfactory.mixins import BaseMixin
-from dw_lib.sqlalchemy.clickhouse import types
 from sqlmodel import Column, Field, SQLModel
 from uuid import UUID
 import datetime

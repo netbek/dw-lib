@@ -7,24 +7,19 @@ from ...exceptions import (
     UserNotFoundException,
 )
 from ...types import ColumnStats, TableStats
-from ...utils.sqlmodel_utils import get_model_schema
 from ..adapters.base import BaseAdapter
 from ..types import ClickHouseRelation, ClickHouseSettings
 from ..utils import quote_identifier
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
-from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.sql.ddl import CreateTable
-from sqlglot import exp
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import MetaData, Session, SQLModel, Table
+from sqlmodel import MetaData, Session, Table
 from typing import Any, Literal
 
 import clickhouse_connect
-import sqlglot
 
 
 class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
@@ -173,77 +168,6 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                     raise exc
 
         return statement
-
-    def make_create_table_statement_from_model(
-        self,
-        model: type[SQLModel],
-        table: str | None = None,
-        database: str | None = None,
-        sql: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str:
-        if if_not_exists and replace:
-            raise ValueError("if_not_exists and replace are mutually exclusive")
-
-        statement = CreateTable(model.__table__, if_not_exists=if_not_exists).compile(
-            dialect=ClickHouseDialect()
-        )
-        statement = str(statement)
-        tree = sqlglot.parse_one(statement, read=self.dialect)
-
-        if replace:
-            tree.set("replace", True)
-
-        if table is not None or database is not None:
-            table_exp = tree.find(exp.Table)
-
-            if table_exp is None:
-                raise Exception("Table expression not found")
-
-            if table is not None:
-                table_exp.set("this", exp.Identifier(this=table))
-
-            if database is not None:
-                table_exp.set("db", exp.Identifier(this=database))
-
-        if sql is not None:
-            query_exp = sqlglot.parse_one(sql, read=self.dialect)
-            tree.set("expression", query_exp)
-
-        return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
-
-    def make_create_view_statement_from_sqlmodel_model(
-        self,
-        model: type[SQLModel],
-        sql: str,
-        table: str | None = None,
-        database: str | None = None,
-        if_not_exists: bool | None = False,
-        replace: bool | None = False,
-        pretty: bool = False,
-        pad: int = 2,
-        indent: int = 2,
-    ) -> str:
-        if if_not_exists and replace:
-            raise ValueError("if_not_exists and replace are mutually exclusive")
-
-        resolved_table = table or model.__tablename__
-        resolved_database = database or get_model_schema(model)
-
-        table_exp = exp.Table(
-            this=exp.Identifier(this=resolved_table),
-            db=exp.Identifier(this=resolved_database) if resolved_database else None,
-        )
-        query_exp = sqlglot.parse_one(sql, read=self.dialect)
-        tree = exp.Create(
-            this=table_exp, kind="VIEW", expression=query_exp, exists=if_not_exists, replace=replace
-        )
-
-        return tree.sql(dialect=self.dialect, pretty=pretty, pad=pad, indent=indent)
 
     def drop_table(
         self, table: str, database: str | None = None, if_exists: bool | None = False

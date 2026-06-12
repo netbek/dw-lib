@@ -71,7 +71,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
                         "type": 8,
                         "clickhouse_config": {
                             "host": "host.docker.internal",
-                            "port": 29000,
+                            "port": 28123,
                             "user": "default",
                             "database": "default",
                             "password": "default",
@@ -164,7 +164,7 @@ class TestDebug(PeerDBClickHouseTest):
                 "wal_level = logical": "OK",
             },
             "Destination peer": {
-                "URL": make_url("clickhouse+http://default:default@localhost:28123/default"),
+                "URL": make_url("clickhousedb+connect://default:default@localhost:28123/default"),
                 "Connection test": "OK",
             },
         }

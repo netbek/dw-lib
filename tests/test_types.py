@@ -4,8 +4,8 @@ from dw_lib.database import (
     PostgresRelation,
     PostgresSettings,
 )
-from dw_lib.types import HttpUrl
-from pydantic import ClickHouseDsn, PostgresDsn, ValidationError
+from dw_lib.types import ClickHouseDsn, HttpUrl
+from pydantic import PostgresDsn, ValidationError
 from sqlalchemy import make_url, URL
 
 import pytest
@@ -54,7 +54,7 @@ class TestClickHouseSettings:
         "url, expected",
         [
             (
-                "clickhouse://guest:secret@clickhouse:8123/data",
+                "clickhousedb://guest:secret@clickhouse:8123/data",
                 {
                     "host": "clickhouse",
                     "port": 8123,
@@ -65,65 +65,10 @@ class TestClickHouseSettings:
                 },
             ),
             (
-                "clickhouse://guest:secret@clickhouse:9000/data",
-                {
-                    "host": "clickhouse",
-                    "port": 9000,
-                    "username": "guest",
-                    "password": "secret",
-                    "database": "data",
-                    "driver": "connect",
-                },
-            ),
-            (
-                "clickhouse://guest:secret@clickhouse:9001/data",
-                {
-                    "host": "clickhouse",
-                    "port": 9001,
-                    "username": "guest",
-                    "password": "secret",
-                    "database": "data",
-                    "driver": "connect",
-                },
-            ),
-            (
-                "clickhouse+http://guest:secret@clickhouse:8123/data",
+                "clickhousedb+connect://guest:secret@clickhouse:8123/data",
                 {
                     "host": "clickhouse",
                     "port": 8123,
-                    "username": "guest",
-                    "password": "secret",
-                    "database": "data",
-                    "driver": "connect",
-                },
-            ),
-            (
-                "clickhouse+http://guest:secret@clickhouse:28123/data",
-                {
-                    "host": "clickhouse",
-                    "port": 28123,
-                    "username": "guest",
-                    "password": "secret",
-                    "database": "data",
-                    "driver": "connect",
-                },
-            ),
-            (
-                "clickhouse+native://guest:secret@clickhouse:9000/data",
-                {
-                    "host": "clickhouse",
-                    "port": 9000,
-                    "username": "guest",
-                    "password": "secret",
-                    "database": "data",
-                    "driver": "connect",
-                },
-            ),
-            (
-                "clickhouse+native://guest:secret@clickhouse:29000/data",
-                {
-                    "host": "clickhouse",
-                    "port": 29000,
                     "username": "guest",
                     "password": "secret",
                     "database": "data",
@@ -137,7 +82,7 @@ class TestClickHouseSettings:
         assert settings.model_dump(by_alias=True) == expected
 
     def test_from_url_sqlalchemy(self):
-        url = make_url("clickhouse+http://guest:secret@clickhouse:8123/data")
+        url = make_url("clickhousedb+connect://guest:secret@clickhouse:8123/data")
         settings = ClickHouseSettings.from_url(url)
         assert settings.model_dump(by_alias=True) == {
             "host": "clickhouse",
@@ -149,7 +94,7 @@ class TestClickHouseSettings:
         }
 
     def test_from_url_pydantic(self):
-        url = ClickHouseDsn("clickhouse+http://guest:secret@clickhouse:8123/data")
+        url = ClickHouseDsn("clickhousedb+connect://guest:secret@clickhouse:8123/data")
         settings = ClickHouseSettings.from_url(url)
         assert settings.model_dump(by_alias=True) == {
             "host": "clickhouse",

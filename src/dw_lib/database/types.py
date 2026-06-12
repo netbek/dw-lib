@@ -35,12 +35,8 @@ class ClickHouseSettings(BaseModel):
         else:
             raise TypeError("url must be one of: Pydantic ClickHouseDsn, SQLAlchemy URL, str")
 
-        given_driver = None
         if _url.drivername and "+" in _url.drivername:
-            given_driver = _url.drivername.split("+")[1]
-
-        if given_driver in ["connect"]:
-            driver = given_driver
+            driver = _url.drivername.split("+")[1]
         else:
             driver = "connect"
 
@@ -196,12 +192,8 @@ class PostgresSettings(BaseModel):
         else:
             raise TypeError("url must be one of: Pydantic PostgresDsn, SQLAlchemy URL, str")
 
-        given_driver = None
         if _url.drivername and "+" in _url.drivername:
-            given_driver = _url.drivername.split("+")[1]
-
-        if given_driver in ["psycopg", "psycopg2"]:
-            driver = given_driver
+            driver = _url.drivername.split("+")[1]
         else:
             driver = "psycopg2"
 

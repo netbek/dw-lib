@@ -1,10 +1,20 @@
 from pathlib import Path
 from pydantic import BaseModel
+from pydantic import ClickHouseDsn as _ClickHouseDsn
 from pydantic import HttpUrl as _HttpUrl
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, UrlConstraints
 from urllib.parse import urljoin, urlparse, urlunparse
 
 import re
+
+
+# TODO Remove this class in favour of ClickHouseDsn after "clickhousedb+connect" has been added
+class ClickHouseDsn(_ClickHouseDsn):
+    _constraints = UrlConstraints(
+        allowed_schemes=_ClickHouseDsn._constraints.allowed_schemes + ["clickhousedb+connect"],
+        default_host=_ClickHouseDsn._constraints.default_host,
+        default_port=_ClickHouseDsn._constraints.default_port,
+    )
 
 
 class HttpUrl(_HttpUrl):

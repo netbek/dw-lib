@@ -1,19 +1,10 @@
 from ..constants import PYTHON_RESERVED_WORDS
+from ..types import ClickHouseDsn
 from functools import lru_cache
-from pydantic import ClickHouseDsn, PostgresDsn, TypeAdapter, UrlConstraints
+from pydantic import PostgresDsn, TypeAdapter
 from typing import Any
 
-
-# TODO Remove this class in favour of ClickHouseDsn after "clickhousedb+connect" has been added
-class CustomClickHouseDsn(ClickHouseDsn):
-    _constraints = UrlConstraints(
-        allowed_schemes=ClickHouseDsn._constraints.allowed_schemes + ["clickhousedb+connect"],
-        default_host=ClickHouseDsn._constraints.default_host,
-        default_port=ClickHouseDsn._constraints.default_port,
-    )
-
-
-TYPE_ADAPTER_CLICKHOUSE_DSN = TypeAdapter(CustomClickHouseDsn)
+TYPE_ADAPTER_CLICKHOUSE_DSN = TypeAdapter(ClickHouseDsn)
 TYPE_ADAPTER_POSTGRES_DSN = TypeAdapter(PostgresDsn)
 
 
@@ -22,7 +13,7 @@ def is_python_reserved_word(value: str) -> bool:
     return value.lower() in PYTHON_RESERVED_WORDS
 
 
-def validate_pydantic_clickhouse_dsn(value: Any) -> CustomClickHouseDsn:
+def validate_pydantic_clickhouse_dsn(value: Any) -> ClickHouseDsn:
     return TYPE_ADAPTER_CLICKHOUSE_DSN.validate_python(value)
 
 

@@ -1,5 +1,6 @@
 from ...asserts import assert_sql_equal
-from ...conftest import DatabaseTest, ViewWithoutSchema, ViewWithSchema
+from ...conftest import DatabaseTest
+from .conftest import ViewWithoutSchema, ViewWithSchema
 from dw_lib.database import ClickHouseAdapter
 from dw_lib.utils.sqlmodel_utils import make_create_view_statement_from_model
 

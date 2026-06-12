@@ -24,8 +24,8 @@ from pydantic import BaseModel, Field, model_validator
 from rich.console import Console
 from rich.table import Table
 from ruamel.yaml import YAML
+from sqlalchemy import text
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import text
 from typing import Any, Literal, Self
 
 import os

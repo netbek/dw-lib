@@ -1,8 +1,9 @@
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
+from sqlalchemy import Table
 from sqlalchemy.sql.ddl import CreateTable
 from sqlglot import exp
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import SQLModel, Table
+from sqlmodel import SQLModel
 
 import sqlglot
 

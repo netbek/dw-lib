@@ -3,8 +3,8 @@ from ..adapters.base import BaseAdapter
 from ..types import DuckDBSettings
 from collections.abc import Generator
 from contextlib import contextmanager
+from sqlalchemy import Table
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import SQLModel, Table
 from typing import Any, Literal
 
 import duckdb

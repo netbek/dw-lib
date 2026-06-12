@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-04T20:35:41.885726564Z"
+exclude-newer = "2026-06-05T17:05:25.074079974Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -456,18 +456,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "faker"
-version = "40.21.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "tzdata", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e8/6f/d7b251fb31de7dce0e482680bf7ca876aa0043f475c04aeefa1459ea80d4/faker-40.21.0.tar.gz", hash = "sha256:2fdee1b650a723a54432db9c6dfe17cfa29d1adc8bd60520444a07698524ba4d", size = 1970295, upload-time = "2026-06-02T17:53:46.27Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/77/6adb5a9dcd028f687f81fc9f789591f9572cb5a46454337122add004e134/faker-40.21.0-py3-none-any.whl", hash = "sha256:cb6601b2ae8e128895dc96814d271eab6b930a2d2d7932c6f9ff26785c24ee18", size = 2008808, upload-time = "2026-06-02T17:53:44.346Z" },
-]
-
-[[package]]
 name = "googleapis-common-protos"
 version = "1.75.0"
 source = { registry = "https://pypi.org/simple" }
@@ -756,7 +744,7 @@ wheels = [
 
 [[package]]
 name = "netbek-dw-lib"
-version = "1.32.11"
+version = "1.32.12"
 source = { editable = "../../../../" }
 dependencies = [
     { name = "jinja2" },
@@ -769,7 +757,6 @@ dependencies = [
     { name = "ruamel-yaml" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
     { name = "sqlparse" },
 ]
 
@@ -780,12 +767,10 @@ dbt = [
     { name = "dbt-clickhouse" },
     { name = "livereload" },
     { name = "opentelemetry-sdk" },
-    { name = "polyfactory" },
     { name = "pydantic" },
     { name = "pydash" },
     { name = "ruamel-yaml" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 loader = [
     { name = "boto3" },
@@ -804,7 +789,6 @@ peerdb = [
     { name = "ruamel-yaml" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 
 [package.metadata]
@@ -828,7 +812,7 @@ requires-dist = [
     { name = "livereload", marker = "extra == 'dbt'", specifier = ">=2.7.1" },
     { name = "opentelemetry-sdk", marker = "extra == 'dbt'", specifier = ">=1.39.1" },
     { name = "packaging", specifier = ">=26.0" },
-    { name = "polyfactory", marker = "extra == 'dbt'", specifier = ">=3.0.0" },
+    { name = "polyfactory", marker = "extra == 'sqlmodel'", specifier = ">=3.0.0" },
     { name = "psutil", specifier = ">=7.1.3" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'psycopg'", specifier = ">=3.3.3" },
     { name = "psycopg2-binary", marker = "extra == 'psycopg2'", specifier = ">=2.9.11" },
@@ -855,16 +839,10 @@ requires-dist = [
     { name = "sqlglot", marker = "extra == 'peerdb'", specifier = ">=28.0.0" },
     { name = "sqlglot", marker = "extra == 'psycopg'", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'psycopg2'", specifier = ">=28.0.0,<28.1.0" },
-    { name = "sqlmodel", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'clickhouse'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'dbt'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'duckdb'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'peerdb'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'psycopg'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'psycopg2'", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'sqlmodel'", specifier = ">=0.0.27" },
     { name = "sqlparse", specifier = ">=0.5.3" },
 ]
-provides-extras = ["clickhouse", "duckdb", "psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb"]
+provides-extras = ["clickhouse", "duckdb", "psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb", "sqlmodel"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1089,19 +1067,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043, upload-time = "2023-12-10T22:30:45Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191, upload-time = "2023-12-10T22:30:43.14Z" },
-]
-
-[[package]]
-name = "polyfactory"
-version = "3.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "faker" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/85/68/7717bd9e63ed254617a7d3dc9260904fb736d6ea203e58ffddcb186c64e4/polyfactory-3.3.0.tar.gz", hash = "sha256:237258b6ff43edf362ffd1f68086bb796466f786adfa002b0ac256dbf2246e9a", size = 348668, upload-time = "2026-02-22T09:46:28.01Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/34/b6f19941adcdaf415b5e8a8d577499f5b6a76b59cbae37f9b125a9ffe9f2/polyfactory-3.3.0-py3-none-any.whl", hash = "sha256:686abcaa761930d3df87b91e95b26b8d8cb9fdbbbe0b03d5f918acff5c72606e", size = 62707, upload-time = "2026-02-22T09:46:25.985Z" },
 ]
 
 [[package]]
@@ -1442,20 +1407,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/52/8d/9ce5904aca760b81adf821c77a1dcf07c98f9caaa7e3b5c991c541ff89d2/sqlglot-28.0.0.tar.gz", hash = "sha256:cc9a651ef4182e61dac58aa955e5fb21845a5865c6a4d7d7b5a7857450285ad4", size = 5520798, upload-time = "2025-11-17T10:34:57.016Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/56/6d/86de134f40199105d2fee1b066741aa870b3ce75ee74018d9c8508bbb182/sqlglot-28.0.0-py3-none-any.whl", hash = "sha256:ac1778e7fa4812f4f7e5881b260632fc167b00ca4c1226868891fb15467122e4", size = 536127, upload-time = "2025-11-17T10:34:55.192Z" },
-]
-
-[[package]]
-name = "sqlmodel"
-version = "0.0.38"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "sqlalchemy" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/64/0d/26ec1329960ea9430131fe63f63a95ea4cb8971d49c891ff7e1f3255421c/sqlmodel-0.0.38.tar.gz", hash = "sha256:d583ec237b14103809f74e8630032bc40ab68cd6b754a610f0813c56911a547b", size = 86710, upload-time = "2026-04-02T21:03:55.571Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/c7/10c60af0607ab6fa136264f7f39d205932218516226d38585324ffda705d/sqlmodel-0.0.38-py3-none-any.whl", hash = "sha256:84e3fa990a77395461ded72a6c73173438ce8449d5c1c4d97fbff1b1df692649", size = 27294, upload-time = "2026-04-02T21:03:56.406Z" },
 ]
 
 [[package]]

@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-04T20:45:24.740104381Z"
+exclude-newer = "2026-06-05T17:05:22.88535441Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -1150,7 +1150,6 @@ dependencies = [
     { name = "ruamel-yaml" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
     { name = "sqlparse" },
 ]
 
@@ -1159,7 +1158,6 @@ clickhouse = [
     { name = "clickhouse-connect" },
     { name = "clickhouse-sqlalchemy" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 dagster = [
     { name = "dagster" },
@@ -1171,18 +1169,15 @@ dbt = [
     { name = "dbt-clickhouse" },
     { name = "livereload" },
     { name = "opentelemetry-sdk" },
-    { name = "polyfactory" },
     { name = "pydantic" },
     { name = "pydash" },
     { name = "ruamel-yaml" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 duckdb = [
     { name = "duckdb" },
     { name = "duckdb-engine" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 loader = [
     { name = "boto3" },
@@ -1201,16 +1196,17 @@ peerdb = [
     { name = "ruamel-yaml" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 psycopg = [
     { name = "psycopg", extra = ["binary"] },
     { name = "sqlglot" },
-    { name = "sqlmodel" },
 ]
 psycopg2 = [
     { name = "psycopg2-binary" },
     { name = "sqlglot" },
+]
+sqlmodel = [
+    { name = "polyfactory" },
     { name = "sqlmodel" },
 ]
 
@@ -1246,7 +1242,7 @@ requires-dist = [
     { name = "livereload", marker = "extra == 'dbt'", specifier = ">=2.7.1" },
     { name = "opentelemetry-sdk", marker = "extra == 'dbt'", specifier = ">=1.39.1" },
     { name = "packaging", specifier = ">=26.0" },
-    { name = "polyfactory", marker = "extra == 'dbt'", specifier = ">=3.0.0" },
+    { name = "polyfactory", marker = "extra == 'sqlmodel'", specifier = ">=3.0.0" },
     { name = "psutil", specifier = ">=7.1.3" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'psycopg'", specifier = ">=3.3.3" },
     { name = "psycopg2-binary", marker = "extra == 'psycopg2'", specifier = ">=2.9.11" },
@@ -1273,16 +1269,10 @@ requires-dist = [
     { name = "sqlglot", marker = "extra == 'peerdb'", specifier = ">=28.0.0" },
     { name = "sqlglot", marker = "extra == 'psycopg'", specifier = ">=28.0.0,<28.1.0" },
     { name = "sqlglot", marker = "extra == 'psycopg2'", specifier = ">=28.0.0,<28.1.0" },
-    { name = "sqlmodel", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'clickhouse'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'dbt'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'duckdb'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'peerdb'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'psycopg'", specifier = ">=0.0.27" },
-    { name = "sqlmodel", marker = "extra == 'psycopg2'", specifier = ">=0.0.27" },
+    { name = "sqlmodel", marker = "extra == 'sqlmodel'", specifier = ">=0.0.27" },
     { name = "sqlparse", specifier = ">=0.5.3" },
 ]
-provides-extras = ["clickhouse", "duckdb", "psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb"]
+provides-extras = ["clickhouse", "duckdb", "psycopg", "psycopg2", "dagster", "dbt", "loader", "peerdb", "sqlmodel"]
 
 [package.metadata.requires-dev]
 dev = [

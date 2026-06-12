@@ -11,8 +11,7 @@ from dw_lib.exceptions import (
 from dw_lib.peerdb import MirrorStatusResponse, PeerDB
 from dw_lib.types import HttpUrl
 from pathlib import Path
-from sqlalchemy import make_url
-from sqlmodel import Table
+from sqlalchemy import make_url, Table
 
 import pydash
 import pytest

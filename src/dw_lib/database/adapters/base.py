@@ -3,11 +3,10 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from dw_lib.types import TableStats
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Engine, URL
+from sqlalchemy import create_engine, Engine, Table, URL
 from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
-from sqlmodel import SQLModel, Table
 from typing import Any, ClassVar, Generic, Literal, overload, TypeVar
 
 T = TypeVar("T", bound=BaseModel)

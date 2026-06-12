@@ -14,9 +14,10 @@ from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.exceptions import DatabaseError
 from collections.abc import Generator
 from contextlib import contextmanager
+from sqlalchemy import MetaData, Table
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm import Session
 from sqlglot.dialects.dialect import Dialects
-from sqlmodel import MetaData, Session, Table
 from typing import Any, Literal
 
 import clickhouse_connect

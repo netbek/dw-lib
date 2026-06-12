@@ -8,7 +8,7 @@ from dw_lib.exceptions import (
     UserNotFoundException,
 )
 from dw_lib.types import ColumnStats, TableStats
-from sqlmodel import Table, text
+from sqlalchemy import Table, text
 from typing import Any
 
 import pytest

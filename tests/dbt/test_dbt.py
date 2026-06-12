@@ -4,7 +4,7 @@ from dw_lib.database import ClickHouseAdapter, ClickHouseRelation
 from dw_lib.dbt import bundle_docs, Dbt, normalize_rows_affected
 from dw_lib.dbt.types import DbtResourceType
 from pathlib import Path
-from sqlmodel import Table
+from sqlalchemy import Table
 from typing import Any
 
 import pytest

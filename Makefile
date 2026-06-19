@@ -8,20 +8,45 @@ ifneq ($(shell which tput),)
 	endif
 endif
 
-lint:
-	@echo "Linting code..."
-	pre-commit run ruff-check --hook-stage manual --all-files
+# ==============================================================================
+# DEPENDENCY MANAGEMENT
+# ==============================================================================
 
-format:
-	@echo "Formatting code..."
-	pre-commit run yamlfmt --all-files
-	pre-commit run pyupgrade --all-files
-	pre-commit run isort --all-files
-	pre-commit run ruff-format --all-files
+deps-scan:
+	@echo "$(YELLOW)Scanning root lockfiles for vulnerabilities...$(RESET)"
+	trivy fs uv.lock --table-mode detailed
+	cd examples/cli && trivy fs uv.lock --table-mode detailed
+	cd examples/cli/packages/example_cli && trivy fs uv.lock --table-mode detailed
 
-autoflake:
-	@echo "Removing unused imports..."
-	pre-commit run autoflake --hook-stage manual --files $(filter-out $@,$(MAKECMDGOALS))
+python-outdated:
+	@echo "$(YELLOW)Listing outdated Python dependencies...$(RESET)"
+	@uv tree --outdated --depth 1
+
+python-upgrade: TOMORROW := $(shell date -d "tomorrow" +%Y-%m-%d)
+python-upgrade: EXCLUDE_NEWER_PACKAGE ?=
+python-upgrade:
+	$(eval OPTIONS := --upgrade $(if $(EXCLUDE_NEWER_PACKAGE),--exclude-newer-package $(EXCLUDE_NEWER_PACKAGE)=$(TOMORROW),))
+	uv lock $(OPTIONS)
+	cd examples/cli && uv lock $(OPTIONS)
+	cd examples/cli/packages/example_cli && uv lock $(OPTIONS)
+
+python-why: PACKAGE := $(word 2,$(MAKECMDGOALS))
+python-why:
+	@if [ -z "$(PACKAGE)" ]; then \
+		echo "$(RED)Error: Package name is required.$(RESET)"; \
+		echo "Usage: make python-why <package>"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Listing Python dependencies of '$(PACKAGE)'...$(RESET)"
+	uv tree --invert --package $(PACKAGE)
+	cd examples/cli && uv tree --invert --package $(PACKAGE)
+	cd examples/cli/packages/example_cli && uv tree --invert --package $(PACKAGE)
+
+# Prevent make from treating arguments to python-why as targets
+ifeq (python-why,$(firstword $(MAKECMDGOALS)))
+%:
+	@:
+endif
 
 uv-sync: TOMORROW := $(shell date -d "tomorrow" +%Y-%m-%d)
 uv-sync: EXCLUDE_NEWER_PACKAGE ?=
@@ -32,13 +57,32 @@ uv-sync:
 	cd examples/cli/packages/example_cli && uv sync $(OPTIONS)
 	uv sync $(OPTIONS)
 
-uv-lock-upgrade: TOMORROW := $(shell date -d "tomorrow" +%Y-%m-%d)
-uv-lock-upgrade: EXCLUDE_NEWER_PACKAGE ?=
-uv-lock-upgrade:
-	$(eval OPTIONS := --upgrade $(if $(EXCLUDE_NEWER_PACKAGE),--exclude-newer-package $(EXCLUDE_NEWER_PACKAGE)=$(TOMORROW),))
-	uv lock $(OPTIONS)
-	cd examples/cli && uv lock $(OPTIONS)
-	cd examples/cli/packages/example_cli && uv lock $(OPTIONS)
+# ==============================================================================
+# FORMAT
+# ==============================================================================
+
+autoflake:
+	@echo "Removing unused imports..."
+	pre-commit run autoflake --hook-stage manual --files $(filter-out $@,$(MAKECMDGOALS))
+
+format:
+	@echo "Formatting code..."
+	pre-commit run yamlfmt --all-files
+	pre-commit run pyupgrade --all-files
+	pre-commit run isort --all-files
+	pre-commit run ruff-format --all-files
+
+# ==============================================================================
+# LINT
+# ==============================================================================
+
+lint:
+	@echo "Linting code..."
+	pre-commit run ruff-check --hook-stage manual --all-files
+
+# ==============================================================================
+# PUBLISH
+# ==============================================================================
 
 bump-version:
 	@BUMP=$(word 2,$(MAKECMDGOALS)); \

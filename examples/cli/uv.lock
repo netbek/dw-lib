@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-12T16:22:33.28211272Z"
+exclude-newer = "2026-06-12T16:33:42.480257813Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -710,7 +710,7 @@ wheels = [
 
 [[package]]
 name = "netbek-dw-lib"
-version = "1.34.1"
+version = "1.34.2"
 source = { editable = "../../" }
 dependencies = [
     { name = "jinja2" },

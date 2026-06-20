@@ -181,10 +181,11 @@ def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
     return stream.getvalue()
 
 
-def dump_model_yaml(data: dict) -> str:
+def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.width = line_length
 
     # Custom representer for multiline strings
     def str_representer(dumper, value):
@@ -509,6 +510,7 @@ class Dbt:
         database: str | None = None,
         table_pattern: str = "%",
         merge: bool = False,
+        line_length: int | None = None,
     ) -> dict[str, str]:
         """Generate the schema YAML for the given models."""
         if database is None:
@@ -565,7 +567,10 @@ class Dbt:
                     model["columns"] = columns
                     data["models"][0] = pydash.pick(model, ["name", "description", "columns"])
 
-        return {table_name: dump_model_yaml(data) for table_name, data in result.items()}
+        return {
+            table_name: dump_model_yaml(data, line_length=line_length)
+            for table_name, data in result.items()
+        }
 
     def docs_generate(
         self,

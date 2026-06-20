@@ -156,10 +156,11 @@ def describe_table(client: Client, database: str, table: str):
     return {**parsed, "columns": columns}
 
 
-def dump_source_yaml(data: dict) -> str:
+def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.width = line_length
     cm = CommentedMap(data)
 
     # Add blank line between version and sources
@@ -180,10 +181,11 @@ def dump_source_yaml(data: dict) -> str:
     return stream.getvalue()
 
 
-def dump_model_yaml(data: dict) -> str:
+def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.width = line_length
 
     # Custom representer for multiline strings
     def str_representer(dumper, value):
@@ -480,6 +482,7 @@ class Dbt:
         table_pattern: str = "%",
         source_props: dict[str, Any] | None = None,
         table_config_meta_props: list[str] | None = None,
+        line_length: int | None = None,
     ) -> str:
         """Generate the schema YAML for the given source."""
         if database is None:
@@ -499,7 +502,7 @@ class Dbt:
                 tables.append({"name": table_name, **config, "columns": metadata["columns"]})
             data["sources"].append({"name": database, **(source_props or {}), "tables": tables})
 
-        return dump_source_yaml(data)
+        return dump_source_yaml(data, line_length=line_length)
 
     def generate_model_yaml(
         self,
@@ -507,6 +510,7 @@ class Dbt:
         database: str | None = None,
         table_pattern: str = "%",
         merge: bool = False,
+        line_length: int | None = None,
     ) -> dict[str, str]:
         """Generate the schema YAML for the given models."""
         if database is None:
@@ -563,7 +567,10 @@ class Dbt:
                     model["columns"] = columns
                     data["models"][0] = pydash.pick(model, ["name", "description", "columns"])
 
-        return {table_name: dump_model_yaml(data) for table_name, data in result.items()}
+        return {
+            table_name: dump_model_yaml(data, line_length=line_length)
+            for table_name, data in result.items()
+        }
 
     def docs_generate(
         self,

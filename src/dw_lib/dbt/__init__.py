@@ -156,10 +156,11 @@ def describe_table(client: Client, database: str, table: str):
     return {**parsed, "columns": columns}
 
 
-def dump_source_yaml(data: dict) -> str:
+def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.width = line_length
     cm = CommentedMap(data)
 
     # Add blank line between version and sources
@@ -480,6 +481,7 @@ class Dbt:
         table_pattern: str = "%",
         source_props: dict[str, Any] | None = None,
         table_config_meta_props: list[str] | None = None,
+        line_length: int | None = None,
     ) -> str:
         """Generate the schema YAML for the given source."""
         if database is None:
@@ -499,7 +501,7 @@ class Dbt:
                 tables.append({"name": table_name, **config, "columns": metadata["columns"]})
             data["sources"].append({"name": database, **(source_props or {}), "tables": tables})
 
-        return dump_source_yaml(data)
+        return dump_source_yaml(data, line_length=line_length)
 
     def generate_model_yaml(
         self,

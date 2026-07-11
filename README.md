@@ -51,7 +51,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     direnv allow
     ```
 
-8. Generate a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
+8. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
 
     ```shell
     keyring set pypi-dw-lib __token__

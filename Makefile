@@ -125,4 +125,9 @@ create-release:
 	git fetch --tags;
 
 publish:
-	twine upload --config-file .pypirc --repository pypi-dw-lib --verbose dist/*
+	@PASSWORD=$$(keyring get pypi-dw-lib __token__); \
+	if [ -z "$$PASSWORD" ]; then \
+		echo "$(RED)Error: PyPI token not found in keyring. Run: keyring set pypi-dw-lib __token__$(RESET)"; \
+		exit 1; \
+	fi; \
+	TWINE_USERNAME=__token__ TWINE_PASSWORD="$$PASSWORD" twine upload --verbose dist/*

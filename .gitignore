@@ -1,7 +1,6 @@
 __pycache__
 .devenv*
 .direnv
-.pypirc
 .pytest_cache
 .ruff_cache
 .venv

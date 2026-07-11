@@ -107,6 +107,12 @@ bump-version:
 		examples/cli/packages/example_cli/uv.lock; \
 	git commit -m $$VERSION;
 
+# Prevent make from treating arguments to bump-version as targets
+ifeq (bump-version,$(firstword $(MAKECMDGOALS)))
+%:
+	@:
+endif
+
 build:
 	find dist -maxdepth 1 ! -name ".gitignore" -type f -exec rm -f {} +
 	uv build -o dist --sdist
@@ -119,10 +125,4 @@ create-release:
 	git fetch --tags;
 
 publish:
-	twine upload --config-file .pypirc --verbose dist/*
-
-# Prevent make from treating arguments to bump-version as targets
-ifeq (bump-version,$(firstword $(MAKECMDGOALS)))
-%:
-	@:
-endif
+	twine upload --config-file .pypirc --repository pypi-dw-lib --verbose dist/*

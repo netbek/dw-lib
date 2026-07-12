@@ -29,7 +29,7 @@ def create(
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == name)
 
         if not peer:
-            raise Exception(f"Peer '{name}' not found in config")
+            raise Exception(f"Peer '{name}' not found in {peerdb._config_file}")
 
         response = peerdb.create_peer(
             {"name": peer.name, **peer.peerdb.model_dump()}, if_exists=if_exists

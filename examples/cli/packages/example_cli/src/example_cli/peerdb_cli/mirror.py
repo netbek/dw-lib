@@ -27,7 +27,7 @@ def create(
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
 
         if not mirror:
-            raise Exception(f"Mirror '{name}' not found in config")
+            raise Exception(f"Mirror '{name}' not found in {peerdb._config_file}")
 
         response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
         console.print(response.message, style="green")

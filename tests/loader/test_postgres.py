@@ -13,7 +13,7 @@ table_defs = [
         "table_1",
         """
         create table table_1 (
-            id bigint,
+            id bigint primary key,
             username text,
             password text,
             age smallint,
@@ -25,7 +25,7 @@ table_defs = [
         "table_2",
         """
         create table table_2 (
-            id bigint,
+            id bigint primary key,
             longitude double precision,
             latitude double precision,
             is_secret boolean,
@@ -37,7 +37,7 @@ table_defs = [
         "table_3",
         """
         create table table_3 (
-            id bigint,
+            id bigint primary key,
             ts timestamp(6),
             modified_at timestamp(6)
         );

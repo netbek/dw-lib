@@ -36,6 +36,9 @@ import time
 # Timeout in seconds for individual HTTP requests to the PeerDB API
 REQUEST_TIMEOUT = 5
 
+# Timeout in seconds for waiting on long-running PeerDB operations (e.g. mirror state changes)
+OPERATION_TIMEOUT = 15
+
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
 
@@ -368,7 +371,7 @@ class ConfigMirror(BaseModel):
 
 class Config(BaseModel):
     peerdb_ui_url: HttpUrl
-    operation_timeout: int = Field(default=15, ge=1)
+    operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
     settings: list[ConfigSetting]
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
@@ -484,7 +487,7 @@ class PeerDB:
 
         return Config(
             peerdb_ui_url=config.get("peerdb_ui_url"),
-            operation_timeout=config.get("operation_timeout", 15),
+            operation_timeout=config.get("operation_timeout", OPERATION_TIMEOUT),
             settings=settings,
             peers=peers,
             mirrors=mirrors,

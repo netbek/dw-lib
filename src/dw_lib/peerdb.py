@@ -371,6 +371,7 @@ class ConfigMirror(BaseModel):
 
 class Config(BaseModel):
     peerdb_ui_url: HttpUrl
+    operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
     settings: list[ConfigSetting]
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
@@ -486,6 +487,7 @@ class PeerDB:
 
         return Config(
             peerdb_ui_url=config.get("peerdb_ui_url"),
+            operation_timeout=config.get("operation_timeout", OPERATION_TIMEOUT),
             settings=settings,
             peers=peers,
             mirrors=mirrors,
@@ -816,8 +818,11 @@ class PeerDB:
         drop_mirrors: bool | None = True,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
-        timeout: int = OPERATION_TIMEOUT,
+        timeout: int | None = None,
     ) -> DropPeerResponse:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         self._console.print(f"Dropping peer '{peer_name}'")
 
         if drop_mirrors:
@@ -854,8 +859,11 @@ class PeerDB:
         self,
         peer_name: str,
         drop_destination_tables: bool | None = False,
-        timeout: int = OPERATION_TIMEOUT,
+        timeout: int | None = None,
     ) -> None:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         for mirror in self.list_mirrors().mirrors:
             if mirror.source_name == peer_name or mirror.destination_name == peer_name:
                 self.drop_mirror(
@@ -919,8 +927,11 @@ class PeerDB:
             )
 
     def wait_for_mirror_status(
-        self, flow_job_name: str, target_statuses: set[str], timeout: int = OPERATION_TIMEOUT
+        self, flow_job_name: str, target_statuses: set[str], timeout: int | None = None
     ) -> str:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         current_status = "UNKNOWN"
 
         for _ in range(timeout):
@@ -1018,8 +1029,11 @@ class PeerDB:
         flow_job_name: str,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
-        timeout: int = OPERATION_TIMEOUT,
+        timeout: int | None = None,
     ) -> DropMirrorResponse:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):
@@ -1061,8 +1075,11 @@ class PeerDB:
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
 
     def resync_mirror(
-        self, flow_job_name: str, if_exists: bool | None = False, timeout: int = OPERATION_TIMEOUT
+        self, flow_job_name: str, if_exists: bool | None = False, timeout: int | None = None
     ) -> ResyncMirrorResponse:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):
@@ -1096,9 +1113,10 @@ class PeerDB:
             message=f"Resync of mirror '{flow_job_name}' has been initiated"
         )
 
-    def pause_mirror(
-        self, flow_job_name: str, timeout: int = OPERATION_TIMEOUT
-    ) -> PauseMirrorResponse:
+    def pause_mirror(self, flow_job_name: str, timeout: int | None = None) -> PauseMirrorResponse:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):
@@ -1130,9 +1148,10 @@ class PeerDB:
 
         return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
 
-    def resume_mirror(
-        self, flow_job_name: str, timeout: int = OPERATION_TIMEOUT
-    ) -> ResumeMirrorResponse:
+    def resume_mirror(self, flow_job_name: str, timeout: int | None = None) -> ResumeMirrorResponse:
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 
         if not self.has_mirror(flow_job_name):

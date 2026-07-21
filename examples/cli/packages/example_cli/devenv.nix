@@ -11,12 +11,16 @@
   languages = {
     python = {
       enable = true;
+      package = pkgs.python313;
       uv = {
         enable = true;
         sync = {
           enable = true;
           allGroups = true;
         };
+      };
+      venv = {
+        enable = true;
       };
     };
   };

@@ -33,7 +33,10 @@ import pydash
 import requests
 import time
 
+# Timeout in seconds for individual HTTP requests to the PeerDB API
 REQUEST_TIMEOUT = 5
+
+# Timeout in seconds for waiting on long-running PeerDB operations (e.g. mirror state changes)
 OPERATION_TIMEOUT = 15
 
 PEERDB_SOURCE_PEER = "source"

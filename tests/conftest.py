@@ -31,9 +31,9 @@ PEERDB_TEST_ENV = {
     "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.36.26",
     "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.36.26",
     "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
-    "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.29.6.1-tctl-1.18.4-cli-1.7.0",
-    "TEMPORAL_SERVER_IMAGE": "temporalio/server:1.29.6.1",
-    "TEMPORAL_UI_IMAGE": "temporalio/ui:2.51.0",
+    "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.29.7-tctl-1.18.4-cli-1.7.2",
+    "TEMPORAL_SERVER_IMAGE": "temporalio/server:1.29.7",
+    "TEMPORAL_UI_IMAGE": "temporalio/ui:2.52.1",
 }
 
 

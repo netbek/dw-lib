@@ -21,6 +21,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
     def test_valid_config(self, all_postgres_tables: list[Table]):
         expected = {
             "peerdb_ui_url": HttpUrl("http://localhost:3000"),
+            "operation_timeout": 30,
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",

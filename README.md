@@ -16,7 +16,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh docker
     ```
 
-3. Install Mise, e.g.
+3. Install Mise and add activation to `~/.bashrc`, e.g.
 
     ```shell
     curl https://mise.run/bash | sh
@@ -24,21 +24,13 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 
     See [other installation methods](https://mise.en.dev/installing-mise.html).
 
-4. Enable Mise in your shell by adding a line to your shell configuration file.
-
-    For Bash, edit `~/.bashrc`:
-
-    ```shell
-    eval "$(mise activate bash)"
-    ```
-
-5. Trust `mise.toml`:
+4. Trust `mise.toml`:
 
     ```shell
     mise trust
     ```
 
-6. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
+5. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
 
     ```shell
     keyring set pypi-dw-lib __token__

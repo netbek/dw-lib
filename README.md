@@ -16,7 +16,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh docker
     ```
 
-3. Install mise, e.g.
+3. Install Mise, e.g.
 
     ```shell
     curl https://mise.run/bash | sh
@@ -24,7 +24,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 
     See [other installation methods](https://mise.en.dev/installing-mise.html).
 
-4. Enable mise in your shell by adding a line to your shell configuration file.
+4. Enable Mise in your shell by adding a line to your shell configuration file.
 
     For Bash, edit `~/.bashrc`:
 

@@ -19,7 +19,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 3. Install Mise and add activation to `~/.bashrc`, e.g.
 
     ```shell
-    curl https://mise.run/bash | sh
+    curl -fsSL https://github.com/jdx/mise/releases/download/v2026.7.13/install.sh | sh
     ```
 
     See [other installation methods](https://mise.en.dev/installing-mise.html).

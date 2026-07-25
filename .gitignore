@@ -1,8 +1,5 @@
 __pycache__
-.devenv*
-.direnv
 .pytest_cache
 .ruff_cache
 .venv
-devenv.local.nix
 venv

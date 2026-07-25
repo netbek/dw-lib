@@ -1,0 +1,19 @@
+[tools]
+python = "3.13"
+tilt = "latest"
+
+[settings]
+lockfile = true
+minimum_release_age = "7d"
+python.uv_venv_auto = "create|source"
+
+[env]
+TILT_PORT = 28000
+DBT_PROFILES_DIR = ".dbt"
+DBT_PROJECT_DIR = "dbt"
+
+[hooks.enter]
+run = """
+mise install --quiet
+uv sync --all-extras --all-groups --quiet
+"""

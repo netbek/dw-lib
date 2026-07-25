@@ -2,10 +2,10 @@
 
 ## Setup
 
-1. Allow `.envrc`:
+1. Trust `mise.toml`:
 
     ```shell
-    direnv allow
+    mise trust
     ```
 
 2. Start the Docker services:

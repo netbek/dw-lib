@@ -16,42 +16,21 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     ./scripts/install.sh docker
     ```
 
-3. Install Nix:
+3. Install Mise and add activation to `~/.bashrc`, e.g.
 
     ```shell
-    sh <(curl -L https://nixos.org/nix/install) --daemon
+    curl https://mise.run/bash | sh
     ```
 
-4. Configure Nix. Edit `/etc/nix/nix.conf` (for a multi-user installation) or `~/.config/nix/nix.conf` (for a single-user installation) to include the following lines:
+    See [other installation methods](https://mise.en.dev/installing-mise.html).
+
+4. Trust `mise.toml`:
 
     ```shell
-    experimental-features = nix-command flakes
-    trusted-users = root <USER>
+    mise trust
     ```
 
-    Replace `<USER>` with your username on your computer.
-
-5. Install direnv:
-
-    ```shell
-    sudo apt install direnv
-    ```
-
-6. Enable direnv in your shell by adding a line to your shell configuration file.
-
-    For Bash, edit `~/.bashrc`:
-
-    ```shell
-    eval "$(direnv hook bash)"
-    ```
-
-7. Allow `.envrc`:
-
-    ```shell
-    direnv allow
-    ```
-
-8. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
+5. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
 
     ```shell
     keyring set pypi-dw-lib __token__

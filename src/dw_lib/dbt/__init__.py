@@ -1,6 +1,6 @@
 from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
@@ -126,7 +126,7 @@ def to_ns(dt: datetime) -> int:
     if dt is None:
         raise ValueError("dt is None")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return int(dt.timestamp() * 1e9)
 
 
@@ -534,7 +534,8 @@ class Dbt:
 
                 for table_name, data in result.items():
                     resource: DbtModel = pydash.find(
-                        resources, lambda resource: resource.name == table_name
+                        resources,
+                        lambda resource: resource.name == table_name,  # noqa: B023
                     )
 
                     if not resource:
@@ -550,7 +551,7 @@ class Dbt:
                     for column in model["columns"]:
                         resource_column = pydash.find(
                             resource.columns,
-                            lambda resource_column: resource_column.name == column["name"],
+                            lambda resource_column: resource_column.name == column["name"],  # noqa: B023
                         )
 
                         if resource_column:
@@ -566,6 +567,8 @@ class Dbt:
 
                     model["columns"] = columns
                     data["models"][0] = pydash.pick(model, ["name", "description", "columns"])
+            else:
+                pass
 
         return {
             table_name: dump_model_yaml(data, line_length=line_length)

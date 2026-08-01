@@ -64,7 +64,7 @@ class DatabaseTest:
     @pytest.fixture(scope="module")
     def clickhouse_adapter(
         self, docker_services, clickhouse_settings: ClickHouseSettings
-    ) -> Generator[ClickHouseAdapter, Any, None]:
+    ) -> Generator[ClickHouseAdapter, Any]:
         clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
 
         def is_responsive():
@@ -85,9 +85,7 @@ class DatabaseTest:
         return DuckDBSettings(database=file)
 
     @pytest.fixture(scope="function")
-    def duckdb_adapter(
-        self, duckdb_settings: DuckDBSettings
-    ) -> Generator[DuckDBAdapter, Any, None]:
+    def duckdb_adapter(self, duckdb_settings: DuckDBSettings) -> Generator[DuckDBAdapter, Any]:
         duckdb_adapter = DuckDBAdapter(duckdb_settings)
         yield duckdb_adapter
 
@@ -105,12 +103,12 @@ class DatabaseTest:
     @pytest.fixture(scope="module")
     def postgres_adapter(
         self, docker_services, postgres_settings: PostgresSettings
-    ) -> Generator[PostgresAdapter, Any, None]:
+    ) -> Generator[PostgresAdapter, Any]:
         postgres_adapter = PostgresAdapter(postgres_settings)
 
         def is_responsive():
             try:
-                with postgres_adapter.create_client() as (conn, cur):
+                with postgres_adapter.create_client() as (_, cur):
                     cur.execute("select 1;")
                 return True
             except Exception:
@@ -138,7 +136,7 @@ class DatabaseTest:
 
 class PeerDBTest:
     @pytest.fixture(scope="module", autouse=True)
-    def set_env(self) -> Generator[None, Any, None]:
+    def set_env(self) -> Generator[None, Any]:
         old_env = os.environ.copy()
         os.environ.update(PEERDB_TEST_ENV)
         yield
@@ -176,7 +174,7 @@ class PeerDBTest:
             yield docker_service
 
     @pytest.fixture(scope="module")
-    def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
+    def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any]:
         postgres_settings = PostgresSettings(
             host="localhost",
             port=25432,
@@ -198,9 +196,7 @@ class PeerDBTest:
         yield postgres_adapter
 
     @pytest.fixture(scope="function")
-    def peerdb(
-        self, request, peerdb_config_path: Path, docker_services
-    ) -> Generator[PeerDB, Any, None]:
+    def peerdb(self, request, peerdb_config_path: Path, docker_services) -> Generator[PeerDB, Any]:
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
@@ -278,8 +274,8 @@ class PeerDBIntegrationTest(PeerDBTest):
         postgres_adapter: PostgresAdapter,
         postgres_schemas: list[str],
         postgres_table_defs: list[dict[str, str]],
-    ) -> Generator[list[Table], Any, None]:
-        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+    ) -> Generator[list[Table], Any]:
+        with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
                 cur.execute(f"create schema if not exists {schema};")
 
@@ -297,7 +293,7 @@ class PeerDBIntegrationTest(PeerDBTest):
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
 
-        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
                 cur.execute(f"drop schema if exists {schema};")
 
@@ -307,8 +303,8 @@ class PeerDBIntegrationTest(PeerDBTest):
         postgres_adapter: PostgresAdapter,
         postgres_schemas: list[str],
         postgres_table_defs: list[dict[str, str]],
-    ) -> Generator[list[Table], Any, None]:
-        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+    ) -> Generator[list[Table], Any]:
+        with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
                 cur.execute(f"create schema if not exists {schema};")
 
@@ -326,12 +322,12 @@ class PeerDBIntegrationTest(PeerDBTest):
         for table_name in table_names:
             postgres_adapter.drop_table(table_name)
 
-        with postgres_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
                 cur.execute(f"drop schema if exists {schema};")
 
     @pytest.fixture(scope="function")
-    def peers(self, peerdb: PeerDB) -> Generator[None, Any, None]:
+    def peers(self, peerdb: PeerDB) -> Generator[None, Any]:
         for peer in peerdb.config.peers:
             peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
 
@@ -341,7 +337,7 @@ class PeerDBIntegrationTest(PeerDBTest):
             peerdb.drop_peer(peer.name, drop_mirrors=True, drop_destination_tables=True)
 
     @pytest.fixture(scope="function")
-    def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any, None]:
+    def peers_and_mirrors(self, peerdb: PeerDB) -> Generator[None, Any]:
         for peer in peerdb.config.peers:
             peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
 
@@ -368,7 +364,7 @@ class LoaderTest:
     #     return ["down -v", "up --build --wait"]  # Stop the stack before starting a new one
 
     @pytest.fixture(scope="module")
-    def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
+    def postgres_adapter(self, docker_services) -> Generator[PostgresAdapter, Any]:
         postgres_settings = PostgresSettings(
             host="localhost",
             port=25432,
@@ -390,7 +386,7 @@ class LoaderTest:
         yield postgres_adapter
 
     @pytest.fixture(scope="module")
-    def s3_adapter(self, docker_services) -> Generator[S3Adapter, Any, None]:
+    def s3_adapter(self, docker_services) -> Generator[S3Adapter, Any]:
         s3_settings = S3Settings(
             key_id="admin",
             secret="password",
@@ -414,5 +410,5 @@ class LoaderTest:
         # clickhouse_adapter: ClickHouseAdapter,
         postgres_adapter: PostgresAdapter,
         s3_adapter: S3Adapter,
-    ) -> Generator[Loader, Any, None]:
+    ) -> Generator[Loader, Any]:
         yield Loader(loader_config_path)

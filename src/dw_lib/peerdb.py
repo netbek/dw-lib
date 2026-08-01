@@ -390,13 +390,13 @@ class PeerDB:
     @cached_property
     def config(self) -> Config:
         def process_node(node: dict) -> dict:
-            default_keys = [key for key in node.keys() if key.startswith("+")]
+            default_keys = [key for key in node if key.startswith("+")]
             defaults = {key.lstrip("+").strip(): node[key] for key in default_keys}
 
             if defaults:
-                for key in node.keys():
+                for key, value in node.items():
                     if not key.startswith("+"):
-                        node[key] = pydash.defaults(node[key], defaults)
+                        node[key] = pydash.defaults(value, defaults)
 
                 node = pydash.omit(node, *default_keys)
 
@@ -480,7 +480,7 @@ class PeerDB:
         if "mirrors" in config:
             config["mirrors"] = process_node(config["mirrors"])
 
-            for key in config["mirrors"].keys():
+            for key in config["mirrors"]:
                 config["mirrors"][key]["flow_job_name"] = key
 
             mirrors = list(config["mirrors"].values())
@@ -545,7 +545,7 @@ class PeerDB:
         # Check settings of source peer
         # https://docs.peerdb.io/usecases/Real-time%20CDC/postgres-to-postgres#prerequisites
         if source_can_connect:
-            with source_adapter.create_client() as (conn, cur):
+            with source_adapter.create_client() as (_, cur):
                 cur.execute("""
                     SELECT
                         current_setting('max_replication_slots')::int,
@@ -941,10 +941,9 @@ class PeerDB:
                 return current_status
 
             time.sleep(1)
-        else:
-            raise Exception(
-                f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
-            )
+        raise Exception(
+            f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
+        )
 
     def create_mirror(
         self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
@@ -979,7 +978,7 @@ class PeerDB:
             source_relation = PostgresRelation.from_string(table_mapping["source_table_identifier"])
             source_table = pydash.find(
                 source_tables,
-                lambda x: x.schema == source_relation.schema_ and x.name == source_relation.table,
+                lambda x: x.schema == source_relation.schema_ and x.name == source_relation.table,  # noqa: B023
             )
 
             if source_table is None:
@@ -1238,7 +1237,8 @@ class PeerDB:
             for mirror in mirrors:
                 replication_slot_name = f"peerflow_slot_{mirror['name']}"
                 replication_slot = pydash.find(
-                    replication_slots, lambda x: x.slot_name == replication_slot_name
+                    replication_slots,
+                    lambda x: x.slot_name == replication_slot_name,  # noqa: B023
                 )
                 mirror["replication_slot"] = replication_slot
 

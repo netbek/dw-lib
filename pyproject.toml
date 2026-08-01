@@ -112,7 +112,7 @@ extend-exclude = ["./vendor"]
 ignore = [
     "D100", "D101", "D102", "D103", "D104", "D107", "D205",
     # Rules that are temporarily ignored after upgrading to ruff 0.16
-    "I001", "TRY002"
+    "BLE001", "I001", "TRY002", "TRY201", "UP046"
 ]
 
 # [tool.pyright]

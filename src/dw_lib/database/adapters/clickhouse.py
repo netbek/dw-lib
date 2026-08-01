@@ -28,7 +28,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
     settings_class = ClickHouseSettings
 
     @contextmanager
-    def create_client(self) -> Generator[Client, Any, None]:
+    def create_client(self) -> Generator[Client, Any]:
         client = clickhouse_connect.get_client(
             host=self.settings.host,
             port=self.settings.port,
@@ -42,7 +42,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         client.close()
 
     @contextmanager
-    def create_session(self) -> Generator[Session, Any, None]:
+    def create_session(self) -> Generator[Session, Any]:
         with self.create_engine() as engine:
             session = Session(engine)
 
@@ -209,7 +209,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
             try:
                 table_metadata = Table(table, metadata, schema=database, autoload_with=engine)
-            except InvalidRequestError as exc:
+            except InvalidRequestError as exc:  # noqa: TRY203
                 raise exc
 
         return table_metadata
@@ -282,7 +282,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 try:
                     table = Table(name, metadata, schema=database, autoload_with=engine)
                     tables.append(table)
-                except Exception:
+                except Exception:  # noqa: S112
                     continue
 
         return sorted(tables, key=lambda table: table.name)

@@ -21,7 +21,7 @@ class InvocationTest:
         return Path(__file__).parent / "data" / "invocation" / "dbt"
 
     @pytest.fixture
-    def dbt(self, profiles_dir: Path, project_dir: Path) -> Generator[Dbt, Any, None]:
+    def dbt(self, profiles_dir: Path, project_dir: Path) -> Generator[Dbt, Any]:
         target_dir = project_dir / "target"
 
         if target_dir.exists() and target_dir.is_dir():

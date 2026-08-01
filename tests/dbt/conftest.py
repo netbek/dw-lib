@@ -8,15 +8,13 @@ import pytest
 
 class CodeGenerationTest(DatabaseTest):
     @pytest.fixture(scope="function")
-    def relation(
-        self, clickhouse_adapter: ClickHouseAdapter
-    ) -> Generator[ClickHouseRelation, Any, None]:
+    def relation(self, clickhouse_adapter: ClickHouseAdapter) -> Generator[ClickHouseRelation, Any]:
         yield ClickHouseRelation(database=clickhouse_adapter.settings.database, table="test_table")
 
     @pytest.fixture(scope="function")
     def table(
         self, clickhouse_adapter: ClickHouseAdapter, relation: ClickHouseRelation
-    ) -> Generator[ClickHouseRelation, Any, None]:
+    ) -> Generator[ClickHouseRelation, Any]:
         create_table_statement = f"""
 create or replace table {relation}
 (

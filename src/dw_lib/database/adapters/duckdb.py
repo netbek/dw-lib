@@ -15,7 +15,7 @@ class DuckDBAdapter(BaseAdapter[DuckDBSettings]):
     settings_class = DuckDBSettings
 
     @contextmanager
-    def create_client(self) -> Generator[duckdb.DuckDBPyConnection, Any, None]:
+    def create_client(self) -> Generator[duckdb.DuckDBPyConnection, Any]:
         conn = duckdb.connect(self.settings.database)
 
         if self.settings.settings:

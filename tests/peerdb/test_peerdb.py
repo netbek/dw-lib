@@ -38,7 +38,7 @@ class TestServicesOffline(PeerDBTest):
 
     def test_get_and_update_settings(self, peerdb: PeerDB):
         with pytest.raises(Exception, match=r".*Failed to get dynamic settings.*"):
-            peerdb.get_settings().settings
+            print(peerdb.get_settings().settings)
 
         with pytest.raises(Exception, match=r".*Failed to set.*"):
             peerdb.update_settings({"PEERDB_NULLABLE": "false"})

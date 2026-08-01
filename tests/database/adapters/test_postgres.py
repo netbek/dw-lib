@@ -15,7 +15,7 @@ import pytest
 
 class TestPostgresAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
-    def postgres_user(self, postgres_adapter: PostgresAdapter) -> Generator[str, Any, None]:
+    def postgres_user(self, postgres_adapter: PostgresAdapter) -> Generator[str, Any]:
         username = "test_user"
         password = "secret"
 
@@ -36,7 +36,7 @@ class TestPostgresAdapter(DatabaseTest):
         assert postgres_settings.model_dump() == adapter.settings.model_dump()
 
     @pytest.fixture(scope="function")
-    def postgres_table(self, postgres_adapter: PostgresAdapter) -> Generator[Table, Any, None]:
+    def postgres_table(self, postgres_adapter: PostgresAdapter) -> Generator[Table, Any]:
         table = "test_table"
         statement = f"""
         create table if not exists {PostgresRelation(table=table)} (
@@ -54,7 +54,7 @@ class TestPostgresAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
     def postgres_publication(
         self, postgres_adapter: PostgresAdapter, postgres_table: Table
-    ) -> Generator[str, Any, None]:
+    ) -> Generator[str, Any]:
         publication = "test_publication"
 
         postgres_adapter.create_publication(publication, tables=[postgres_table.name])
@@ -64,7 +64,7 @@ class TestPostgresAdapter(DatabaseTest):
         postgres_adapter.drop_publication(publication)
 
     def test_create_client(self, postgres_adapter: PostgresAdapter):
-        with postgres_adapter.create_client() as (conn, cur):
+        with postgres_adapter.create_client() as (_, cur):
             cur.execute(
                 "select 1 from information_schema.schemata where catalog_name = %s limit 1;",
                 [postgres_adapter.settings.database],
@@ -88,7 +88,7 @@ class TestPostgresAdapter(DatabaseTest):
     def test_create_client_psycopg2_row_factory(self, postgres_adapter: PostgresAdapter):
         from psycopg2.extras import RealDictCursor
 
-        with postgres_adapter.create_client(row_factory=RealDictCursor) as (conn, cur):
+        with postgres_adapter.create_client(row_factory=RealDictCursor) as (_, cur):
             cur.execute(
                 "select 1 as found from information_schema.schemata where catalog_name = %s limit 1;",
                 [postgres_adapter.settings.database],

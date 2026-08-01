@@ -52,9 +52,7 @@ class TestIntegration(LoaderTest):
         return Path(__file__).parent / "data" / "loader.postgres.yaml"
 
     @pytest.fixture(scope="function")
-    def all_postgres_tables(
-        self, postgres_adapter: PostgresAdapter
-    ) -> Generator[list[Table], Any, None]:
+    def all_postgres_tables(self, postgres_adapter: PostgresAdapter) -> Generator[list[Table], Any]:
         for table_def in table_defs:
             postgres_adapter.create_table(*table_def)
 

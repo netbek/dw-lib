@@ -317,7 +317,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
                     raise TableNotFoundException(f"Table '{table}' not found") from exc
-                raise exc
+                raise
 
         return table_metadata
 

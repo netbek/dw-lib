@@ -15,7 +15,6 @@ from clickhouse_connect.driver.exceptions import DatabaseError
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import inspect, MetaData, Table
-from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session
 from sqlglot.dialects.dialect import Dialects
 from typing import Any, Literal
@@ -161,7 +160,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 if f"Table `{table}` doesn't exist" in str(exc):
                     raise TableNotFoundException(f"Table '{table}' not found")
                 else:
-                    raise exc
+                    raise
 
         return statement
 
@@ -207,10 +206,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
             if not inspector.has_table(table, schema=database):
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-            try:
-                table_metadata = Table(table, metadata, schema=database, autoload_with=engine)
-            except InvalidRequestError as exc:  # noqa: TRY203
-                raise exc
+            table_metadata = Table(table, metadata, schema=database, autoload_with=engine)
 
         return table_metadata
 

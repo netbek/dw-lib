@@ -957,17 +957,11 @@ class PeerDB:
                 f"Failed to get status of mirror '{flow_job_name}' ({error_message or exc})"
             )
 
-        message = response.json().get("message", "")
-
         if response.status_code == 200:
             return MirrorStatusResponse(**response.json())
-        # TODO Check what the canonical status code is. Older versions of PeerDB returned code 500
-        # and the workflow message. PeerDB v0.34.5 returns code 404.
-        elif response.status_code == 404 or (
-            response.status_code == 500
-            and "unable to get the workflow id of mirror" in message.lower()
-        ):
-            raise MirrorNotFoundException()
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/mirror_status.go#L76
+        elif response.status_code == 404:
+            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
         else:
             raise GetMirrorStatusException(
                 f"Failed to get status of mirror '{flow_job_name}' (HTTP {response.status_code})"

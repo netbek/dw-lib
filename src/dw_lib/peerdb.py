@@ -1151,6 +1151,10 @@ class PeerDB:
             "flowJobName": flow_job_name,
             "requestedFlowState": FlowStatus.STATUS_RESYNC,
             "dropMirrorStats": True,
+            # SkipDestinationDrop only controls whether PeerDB cleans up its own internal objects
+            # (e.g. the raw table) at the destination. It never drops the user's destination
+            # tables; those are only dropped when drop_destination_tables = True.
+            "skipDestinationDrop": False,
         }
 
         try:

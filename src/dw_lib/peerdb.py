@@ -42,14 +42,14 @@ OPERATION_TIMEOUT = 15
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/peers.proto#L261
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/peers.proto#L275
 DIALECT_TO_PEERDB_TYPE_MAP = {
     Dialects.POSTGRES: 3,
     Dialects.CLICKHOUSE: 8,
 }
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/flow.proto#L460
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/flow.proto#L518
 class FlowStatus:
     STATUS_UNKNOWN = 0
     STATUS_RUNNING = 1
@@ -99,7 +99,7 @@ class ListReplicationSlotsItem(BaseModel):
     synced: bool
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L39
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L39
 class DynamicSetting(BaseModel):
     name: str
     default_value: str = Field(alias="defaultValue")
@@ -118,7 +118,7 @@ class GetDynamicSettingsResponse(BaseModel):
     settings: list[DynamicSetting]
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/peers.proto#L170
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/peers.proto#L179
 class ClickHouseConfig(BaseModel):
     host: str
     port: int
@@ -139,7 +139,7 @@ class ClickHousePeer(BaseModel):
     clickhouse_config: ClickHouseConfig = Field(alias="clickhouseConfig")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/peers.proto#L117
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/peers.proto#L123
 class PostgresConfig(BaseModel):
     host: str
     port: int
@@ -154,31 +154,31 @@ class PostgresPeer(BaseModel):
     postgres_config: PostgresConfig = Field(alias="postgresConfig")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L216
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L237
 class PeerInfoResponse(BaseModel):
     peer: ClickHousePeer | PostgresPeer
     version: str
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L221
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L242
 class PeerTypeResponse(BaseModel):
     peer_type: str = Field(alias="peerType")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L225
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L246
 class PeerListItem(BaseModel):
     name: str
     type: str
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L230
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L251
 class ListPeersResponse(BaseModel):
     destination_items: list[PeerListItem] = Field(alias="destinationItems")
     items: list[PeerListItem]
     source_items: list[PeerListItem] = Field(alias="sourceItems")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L98
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L98
 class RawCreatePeerResponse(BaseModel):
     message: str
     status: Literal["VALIDATION_UNKNOWN", "CREATED", "FAILED"]
@@ -218,10 +218,10 @@ class ResumeMirrorResponse(BaseModel):
     message: str
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L313
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L334
 class MirrorStatusResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
-    # https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/flow.proto#L460
+    # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/flow.proto#L518
     current_flow_state: Literal[
         "STATUS_UNKNOWN",
         "STATUS_RUNNING",
@@ -239,7 +239,7 @@ class MirrorStatusResponse(BaseModel):
     flow_job_name: str = Field(alias="flowJobName")
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L398
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L419
 class ListMirrorsItem(BaseModel):
     id: str
     workflow_id: str = Field(alias="workflowId")
@@ -253,7 +253,7 @@ class ListMirrorsItem(BaseModel):
     replication_slot: ListReplicationSlotsItem | None = None
 
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.36.6/protos/route.proto#L410
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L432
 class ListMirrorsResponse(BaseModel):
     mirrors: list[ListMirrorsItem]
 
@@ -1293,7 +1293,7 @@ class PeerDB:
 
     def list_replication_slots(self) -> list[ListReplicationSlotsItem]:
         """List the replication slots in the source database."""
-        # Source: https://github.com/PeerDB-io/peerdb/blob/v0.36.8/flow/connectors/postgres/client.go#L281
+        # Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/connectors/postgres/client.go#L295
         POSTGRES_13 = 130000
         POSTGRES_16 = 160000
 

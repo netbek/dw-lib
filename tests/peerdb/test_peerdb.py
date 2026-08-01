@@ -1,4 +1,5 @@
 from ..conftest import PeerDBTest
+from dw_lib.exceptions import GetDynamicSettingsException, SetDynamicSettingsException
 from dw_lib.peerdb import PeerDB
 from pathlib import Path
 
@@ -37,8 +38,8 @@ class TestServicesOffline(PeerDBTest):
         assert peerdb.can_connect() is False
 
     def test_get_and_update_settings(self, peerdb: PeerDB):
-        with pytest.raises(Exception, match=r".*Failed to get dynamic settings.*"):
+        with pytest.raises(GetDynamicSettingsException):
             print(peerdb.get_settings().settings)
 
-        with pytest.raises(Exception, match=r".*Failed to set.*"):
+        with pytest.raises(SetDynamicSettingsException):
             peerdb.update_settings({"PEERDB_NULLABLE": "false"})

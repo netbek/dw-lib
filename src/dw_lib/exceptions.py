@@ -52,6 +52,62 @@ class PeerDBAPIException(Exception):
     pass
 
 
+class GetDynamicSettingsException(PeerDBAPIException):
+    pass
+
+
+class SetDynamicSettingsException(PeerDBAPIException):
+    pass
+
+
+class GetPeerInfoException(PeerDBAPIException):
+    pass
+
+
+class GetPeerTypeException(PeerDBAPIException):
+    pass
+
+
+class CreatePeerException(PeerDBAPIException):
+    pass
+
+
+class DropPeerException(PeerDBAPIException):
+    pass
+
+
+class ListPeersException(PeerDBAPIException):
+    pass
+
+
+class GetMirrorStatusException(PeerDBAPIException):
+    pass
+
+
+class CreateMirrorException(PeerDBAPIException):
+    pass
+
+
+class DropMirrorException(PeerDBAPIException):
+    pass
+
+
+class ResyncMirrorException(PeerDBAPIException):
+    pass
+
+
+class PauseMirrorException(PeerDBAPIException):
+    pass
+
+
+class ResumeMirrorException(PeerDBAPIException):
+    pass
+
+
+class ListMirrorsException(PeerDBAPIException):
+    pass
+
+
 # --- dw_lib.database.adapters ---
 class DatabaseExistsException(Exception):
     pass

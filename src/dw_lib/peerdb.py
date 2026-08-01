@@ -8,13 +8,26 @@ from .database import (
 )
 from .exceptions import (
     ConfigFileNotFoundException,
+    CreateMirrorException,
+    CreatePeerException,
+    DropMirrorException,
+    DropPeerException,
     EmptyConfigException,
+    GetDynamicSettingsException,
+    GetMirrorStatusException,
+    GetPeerInfoException,
+    GetPeerTypeException,
+    ListMirrorsException,
+    ListPeersException,
     MirrorExistsException,
     MirrorNotFoundException,
     MirrorTimeoutException,
-    PeerDBAPIException,
+    PauseMirrorException,
     PeerExistsException,
     PeerNotFoundException,
+    ResumeMirrorException,
+    ResyncMirrorException,
+    SetDynamicSettingsException,
     TableNotFoundException,
     UnsupportedAdapterException,
 )
@@ -714,7 +727,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(f"Failed to get dynamic settings ({error_message or exc})")
+            raise GetDynamicSettingsException(
+                f"Failed to get dynamic settings ({error_message or exc})"
+            )
 
         return GetDynamicSettingsResponse(**response.json())
 
@@ -736,7 +751,9 @@ class PeerDB:
                     error_message = response.json().get("message")
                 except Exception:
                     error_message = None
-                raise PeerDBAPIException(f"Failed to set {key}={value} ({error_message or exc})")
+                raise SetDynamicSettingsException(
+                    f"Failed to set {key}={value} ({error_message or exc})"
+                )
 
     def has_peer(self, peer_name: str) -> bool:
         response = self.list_peers()
@@ -755,7 +772,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise GetPeerInfoException(
                 f"Failed to get peer info of '{peer_name}' ({error_message or exc})"
             )
 
@@ -772,7 +789,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise GetPeerTypeException(
                 f"Failed to get peer type of '{peer_name}' ({error_message or exc})"
             )
 
@@ -806,14 +823,14 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise CreatePeerException(
                 f"Failed to create peer '{peer['name']}' ({error_message or exc})"
             )
 
         deserialized = RawCreatePeerResponse(**response.json())
 
         if deserialized.status != "CREATED":
-            raise PeerDBAPIException(
+            raise CreatePeerException(
                 f"Failed to create peer '{peer['name']}' (status: {deserialized.status})"
             )
 
@@ -863,7 +880,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(f"Failed to drop peer '{peer_name}' ({error_message or exc})")
+            raise DropPeerException(f"Failed to drop peer '{peer_name}' ({error_message or exc})")
 
         return DropPeerResponse(message=f"Dropped peer '{peer_name}'")
 
@@ -895,7 +912,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(f"Failed to list peers ({error_message or exc})")
+            raise ListPeersException(f"Failed to list peers ({error_message or exc})")
 
         return ListPeersResponse(**response.json())
 
@@ -918,7 +935,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise GetMirrorStatusException(
                 f"Failed to get status of mirror '{flow_job_name}' ({error_message or exc})"
             )
 
@@ -934,7 +951,7 @@ class PeerDB:
         ):
             raise MirrorNotFoundException()
         else:
-            raise PeerDBAPIException(
+            raise GetMirrorStatusException(
                 f"Failed to get status of mirror '{flow_job_name}' (HTTP {response.status_code})"
             )
 
@@ -953,6 +970,7 @@ class PeerDB:
                 return current_status
 
             time.sleep(1)
+
         raise MirrorTimeoutException(
             f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
         )
@@ -1019,14 +1037,14 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise CreateMirrorException(
                 f"Failed to create mirror '{mirror['flow_job_name']}' ({error_message or exc})"
             )
 
         workflow_id = response.json().get("workflowId")
 
         if not workflow_id:
-            raise PeerDBAPIException(
+            raise CreateMirrorException(
                 f"Failed to create mirror '{mirror['flow_job_name']}' (HTTP {response.status_code})"
             )
 
@@ -1075,7 +1093,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise DropMirrorException(
                 f"Failed to drop mirror '{flow_job_name}' ({error_message or exc})"
             )
 
@@ -1124,7 +1142,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise ResyncMirrorException(
                 f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
             )
 
@@ -1163,7 +1181,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise PauseMirrorException(
                 f"Failed to pause mirror '{flow_job_name}' ({error_message or exc})"
             )
 
@@ -1200,7 +1218,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(
+            raise ResumeMirrorException(
                 f"Failed to resume mirror '{flow_job_name}' ({error_message or exc})"
             )
 
@@ -1256,7 +1274,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise PeerDBAPIException(f"Failed to list mirrors ({error_message or exc})")
+            raise ListMirrorsException(f"Failed to list mirrors ({error_message or exc})")
 
         mirrors = pydash.sort_by(response.json()["mirrors"], "name")
 

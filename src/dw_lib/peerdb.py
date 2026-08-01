@@ -1021,7 +1021,15 @@ class PeerDB:
                 )
 
         # Step 2: Drop the destination tables
-        self.drop_destination_tables_of_mirror(mirror["flow_job_name"])
+        try:
+            self.drop_destination_tables_of_mirror(mirror["flow_job_name"])
+        except (
+            MirrorNotFoundException,
+            PeerNotFoundException,
+            UnsupportedAdapterException,
+            TableNotFoundException,
+        ) as exc:
+            self._console.print(f"Skipping drop of destination tables because of {exc}")
 
         # Step 3: Create the mirror
         url = self.config.peerdb_api_url.join("v1/flows/cdc/create")
@@ -1082,6 +1090,9 @@ class PeerDB:
             "flowJobName": flow_job_name,
             "requestedFlowState": FlowStatus.STATUS_TERMINATING,
             "dropMirrorStats": True,
+            # SkipDestinationDrop only controls whether PeerDB cleans up its own internal objects
+            # (e.g. the raw table) at the destination. It never drops the user's destination
+            # tables; those are only dropped when drop_destination_tables = True.
             "skipDestinationDrop": False,
         }
 
@@ -1107,7 +1118,15 @@ class PeerDB:
             )
 
         if drop_destination_tables:
-            self.drop_destination_tables_of_mirror(flow_job_name)
+            try:
+                self.drop_destination_tables_of_mirror(flow_job_name)
+            except (
+                MirrorNotFoundException,
+                PeerNotFoundException,
+                UnsupportedAdapterException,
+                TableNotFoundException,
+            ) as exc:
+                self._console.print(f"Skipping drop of destination tables because of {exc}")
 
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
 

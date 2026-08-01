@@ -1,6 +1,5 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
-from datetime import datetime
 from dw_lib.exceptions import (
     MirrorExistsException,
     MirrorNotFoundException,
@@ -13,6 +12,7 @@ from dw_lib.types import HttpUrl
 from pathlib import Path
 from sqlalchemy import make_url, Table
 
+import datetime
 import pydash
 import pytest
 
@@ -341,7 +341,7 @@ class TestPauseMirror(PeerDBClickHouseTest):
             peerdb,
             "get_mirror_status",
             lambda flow_job_name: MirrorStatusResponse(
-                createdAt=datetime.now(),
+                createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_RUNNING",
                 flowJobName=flow_job_name,
             ),
@@ -385,7 +385,7 @@ class TestResumeMirror(PeerDBClickHouseTest):
             peerdb,
             "get_mirror_status",
             lambda flow_job_name: MirrorStatusResponse(
-                createdAt=datetime.now(),
+                createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_PAUSED",
                 flowJobName=flow_job_name,
             ),

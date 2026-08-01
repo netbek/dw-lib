@@ -1,6 +1,5 @@
 from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
-from datetime import datetime, UTC
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
@@ -17,6 +16,7 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from typing import Any
 from uuid import uuid4
 
+import datetime
 import json
 import os
 import pydash
@@ -121,12 +121,12 @@ def normalize_rows_affected(value: int | str | None) -> int | None:
     return None
 
 
-def to_ns(dt: datetime) -> int:
+def to_ns(dt: datetime.datetime) -> int:
     """Convert a timezone-aware (or naive assumed UTC) datetime to nanoseconds since epoch."""
     if dt is None:
         raise ValueError("dt is None")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
+        dt = dt.replace(tzinfo=datetime.UTC)
     return int(dt.timestamp() * 1e9)
 
 
@@ -1056,7 +1056,7 @@ def _trace_invocation(
         raw_command: str
         invocation_id: str
         full_refresh: bool
-        generated_at: datetime
+        generated_at: datetime.datetime
 
     # Based on https://github.com/elementary-data/dbt-data-reliability/blob/6551383e8a37e5814bd2bb9fd74330be8265a3c9/models/run_results.yml#L133
     class ParsedNode(BaseModel):
@@ -1066,10 +1066,10 @@ def _trace_invocation(
         status: RunStatus
         resource_type: str
         execution_time: float
-        compile_started_at: datetime | None = None
-        compile_completed_at: datetime | None = None
-        execute_started_at: datetime | None = None
-        execute_completed_at: datetime | None = None
+        compile_started_at: datetime.datetime | None = None
+        compile_completed_at: datetime.datetime | None = None
+        execute_started_at: datetime.datetime | None = None
+        execute_completed_at: datetime.datetime | None = None
         rows_affected: int | None = 0
         compiled_code: str | None = None
         failures: int | None = 0

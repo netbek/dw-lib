@@ -17,7 +17,6 @@ from .exceptions import (
 from .types import HttpUrl
 from .utils.filesystem import find_up
 from .utils.template import render_template
-from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
@@ -28,6 +27,7 @@ from sqlalchemy import text
 from sqlglot.dialects.dialect import Dialects
 from typing import Any, Literal, Self
 
+import datetime
 import os
 import pydash
 import requests
@@ -79,7 +79,7 @@ class ListReplicationSlotsItem(BaseModel):
     restart_lsn: str | None = None
     current_lsn: str
     active: bool | None = None
-    inactive_since: datetime | None = None
+    inactive_since: datetime.datetime | None = None
     lag_mb: int | None = None
     confirmed_flush_lsn: str | None = None
     sent_lsn: str | None = None
@@ -220,7 +220,7 @@ class ResumeMirrorResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L334
 class MirrorStatusResponse(BaseModel):
-    created_at: datetime = Field(alias="createdAt")
+    created_at: datetime.datetime = Field(alias="createdAt")
     # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/flow.proto#L518
     current_flow_state: Literal[
         "STATUS_UNKNOWN",
@@ -248,7 +248,7 @@ class ListMirrorsItem(BaseModel):
     source_type: str = Field(alias="sourceType")
     destination_name: str = Field(alias="destinationName")
     destination_type: str = Field(alias="destinationType")
-    created_at: datetime = Field(alias="createdAt")
+    created_at: datetime.datetime = Field(alias="createdAt")
     is_cdc: bool = Field(alias="isCdc")
     replication_slot: ListReplicationSlotsItem | None = None
 

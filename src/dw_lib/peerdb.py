@@ -513,6 +513,8 @@ class PeerDB:
         )
 
     def can_connect(self) -> bool:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L790
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/version.go#L10
         url = self.config.peerdb_api_url.join("v1/version")
 
         try:
@@ -717,6 +719,8 @@ class PeerDB:
             raise UnsupportedAdapterException(f"Peer type '{peer.adapter.type}' has no adapter")
 
     def get_settings(self) -> GetDynamicSettingsResponse:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L619
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/settings.go#L17
         url = self.config.peerdb_api_url.join("v1/dynamic_settings")
 
         try:
@@ -736,6 +740,8 @@ class PeerDB:
     def update_settings(self, settings: dict[str, str]) -> None:
         self._console.print("Updating settings")
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L625
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/settings.go#L60
         url = self.config.peerdb_api_url.join("v1/dynamic_settings")
 
         for key, value in settings.items():
@@ -762,6 +768,8 @@ class PeerDB:
         return bool(matched)
 
     def get_peer_info(self, peer_name: str) -> PeerInfoResponse:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L773
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/peer_data.go#L45
         url = self.config.peerdb_api_url.join(f"v1/peers/info/{peer_name}")
 
         try:
@@ -779,6 +787,8 @@ class PeerDB:
         return PeerInfoResponse(**response.json())
 
     def get_peer_type(self, peer_name: str) -> PeerTypeResponse:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L779
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/peer_data.go#L86
         url = self.config.peerdb_api_url.join(f"v1/peers/type/{peer_name}")
 
         try:
@@ -810,6 +820,8 @@ class PeerDB:
             else:
                 raise PeerExistsException(f"Peer '{peer['name']}' exists")
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L572
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L593
         url = self.config.peerdb_api_url.join("v1/peers/create")
         data = {"peer": peer}
 
@@ -869,6 +881,8 @@ class PeerDB:
             else:
                 raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L578
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L618
         url = self.config.peerdb_api_url.join("v1/peers/drop")
         data = {"peerName": peer_name}
 
@@ -902,6 +916,8 @@ class PeerDB:
                 )
 
     def list_peers(self) -> ListPeersResponse:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L784
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/peer_data.go#L105
         url = self.config.peerdb_api_url.join("v1/peers/list")
 
         try:
@@ -923,6 +939,8 @@ class PeerDB:
             return False
 
     def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L739
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/mirror_status.go#L68
         url = self.config.peerdb_api_url.join("v1/mirrors/status")
         data = {"flowJobName": flow_job_name}
 
@@ -1032,6 +1050,8 @@ class PeerDB:
             self._console.print(f"Skipping drop of destination tables because of {exc}")
 
         # Step 3: Create the mirror
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L585
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L158
         url = self.config.peerdb_api_url.join("v1/flows/cdc/create")
         data = {"connection_configs": mirror}
 
@@ -1085,6 +1105,8 @@ class PeerDB:
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L733
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L423
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
@@ -1146,6 +1168,8 @@ class PeerDB:
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L733
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L423
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
@@ -1186,6 +1210,8 @@ class PeerDB:
                 message=f"Not pausing mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L733
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L423
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
@@ -1223,6 +1249,8 @@ class PeerDB:
                 message=f"Not resuming mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )
 
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L733
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/handler.go#L423
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
@@ -1283,6 +1311,8 @@ class PeerDB:
             destination_adapter.drop_table(**relation.model_dump(by_alias=True), if_exists=True)
 
     def list_mirrors(self, include_replication_slot: bool = False) -> ListMirrorsResponse:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L720
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/cmd/mirror_status.go#L26
         url = self.config.peerdb_api_url.join("v1/mirrors/list")
 
         try:

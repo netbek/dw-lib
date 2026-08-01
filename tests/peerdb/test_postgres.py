@@ -1,5 +1,7 @@
 from ..asserts import assert_count_equal
 from ..conftest import PeerDBIntegrationTest
+from .conftest import table_kwargs
+from dw_lib.database import PostgresAdapter
 from dw_lib.exceptions import (
     MirrorExistsException,
     MirrorNotFoundException,
@@ -145,6 +147,10 @@ class PeerDBPostgresTest(PeerDBIntegrationTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
+
+    @pytest.fixture(scope="module")
+    def destination_adapter(self, postgres_adapter: PostgresAdapter) -> PostgresAdapter:
+        return postgres_adapter
 
 
 class TestDebug(PeerDBPostgresTest):
@@ -293,14 +299,71 @@ class TestCreateMirror(PeerDBPostgresTest):
 
 
 class TestDropMirror(PeerDBPostgresTest):
-    def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+    def test_ok(
+        self,
+        all_postgres_tables: list[Table],
+        peerdb: PeerDB,
+        peers: None,
+        destination_adapter: PostgresAdapter,
+        mirror_with_destination_table: None,
+    ):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
-
-        peerdb.create_mirror(mirror.model_dump())
-        assert peerdb.has_mirror(mirror.flow_job_name) is True
+        kwargs = table_kwargs(
+            destination_adapter, mirror.table_mappings[0].destination_table_identifier
+        )
+        assert destination_adapter.has_table(**kwargs) is True
 
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
         assert peerdb.has_mirror(mirror.flow_job_name) is False
+        assert destination_adapter.has_table(**kwargs) is False
+
+    def test_keep_destination_tables(
+        self,
+        all_postgres_tables: list[Table],
+        peerdb: PeerDB,
+        peers: None,
+        destination_adapter: PostgresAdapter,
+        mirror_with_destination_table: None,
+    ):
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=False)
+        assert peerdb.has_mirror(mirror.flow_job_name) is False
+
+        kwargs = table_kwargs(
+            destination_adapter, mirror.table_mappings[0].destination_table_identifier
+        )
+        assert destination_adapter.has_table(**kwargs) is True
+
+        # Clean up
+        destination_adapter.drop_table(if_exists=True, **kwargs)
+
+    def test_create_mirror_not_in_config(
+        self,
+        all_postgres_tables: list[Table],
+        peerdb: PeerDB,
+        peers: None,
+        extra_mirror: dict,
+    ):
+        peerdb.create_mirror(extra_mirror)
+        assert peerdb.has_mirror("extra_mirror") is True
+
+        # Tear down
+        peerdb.drop_mirror("extra_mirror", drop_destination_tables=True)
+
+    def test_drop_mirror_not_in_config(
+        self,
+        all_postgres_tables: list[Table],
+        peerdb: PeerDB,
+        peers: None,
+        extra_mirror: dict,
+    ):
+        peerdb.create_mirror(extra_mirror)
+        assert peerdb.has_mirror("extra_mirror") is True
+
+        response = peerdb.drop_mirror("extra_mirror", drop_destination_tables=True)
+        assert response.message == "Dropped mirror 'extra_mirror'"
+        assert peerdb.has_mirror("extra_mirror") is False
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")

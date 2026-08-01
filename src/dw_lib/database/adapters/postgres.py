@@ -493,7 +493,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
     def grant_user_privileges(self, username: str, schema: str) -> None:
         if not self.has_user(username):
-            raise Exception()
+            raise UserNotFoundException(f"User '{username}' not found")
 
         if self.settings.driver == "psycopg":
             from psycopg import sql

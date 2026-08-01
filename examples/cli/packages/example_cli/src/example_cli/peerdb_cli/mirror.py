@@ -1,3 +1,4 @@
+from dw_lib.exceptions import MirrorNotFoundException
 from dw_lib.peerdb import PeerDB
 from rich.console import Console
 from typing import Literal
@@ -27,7 +28,7 @@ def create(
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
 
         if not mirror:
-            raise Exception(f"Mirror '{name}' not found in {peerdb._config_file}")
+            raise MirrorNotFoundException(f"Mirror '{name}' not found in {peerdb._config_file}")
 
         response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
         console.print(response.message, style="green")

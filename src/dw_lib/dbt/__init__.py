@@ -4,6 +4,12 @@ from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
 from dw_lib.database import ClickHouseAdapter, parse_create_table_statement
+from dw_lib.exceptions import (
+    ConfigFileNotFoundException,
+    DbtManifestNotFoundException,
+    UnsupportedCommandException,
+    UnsupportedRunStatusException,
+)
 from dw_lib.utils.filesystem import find_up
 from functools import cached_property
 from io import StringIO
@@ -47,7 +53,7 @@ def find_project_config_file() -> Path:
     project_config_file = find_up(cwd, "dbt_project.yml")
 
     if not project_config_file:
-        raise Exception(f"dbt_project.yml not found in {cwd} or higher")
+        raise ConfigFileNotFoundException(f"dbt_project.yml not found in {cwd} or higher")
 
     return project_config_file
 
@@ -273,7 +279,7 @@ class Dbt:
             self.parse(quiet=True)
 
             if not os.path.exists(manifest_file):
-                raise Exception(
+                raise DbtManifestNotFoundException(
                     f"'{manifest_file}' not found. Run 'dbt parse' or 'dbt compile' first."
                 )
 
@@ -1166,7 +1172,7 @@ def _trace_invocation(
             parsed_nodes.append(parsed_node)
 
     else:
-        raise Exception(f"Command '{command}' is not supported")
+        raise UnsupportedCommandException(f"Command '{command}' is not supported")
 
     parsed_root = ParsedRoot(
         raw_command=raw_command,
@@ -1267,7 +1273,7 @@ def _trace_invocation(
                 elif n.status == RunStatus.Skipped:
                     node_span.set_status(trace.Status(trace.StatusCode.UNSET))
                 else:
-                    raise Exception(f"Run status '{n.status}' is not supported")
+                    raise UnsupportedRunStatusException(f"Run status '{n.status}' is not supported")
 
                 # attach the textual message as an event
                 if n.message:

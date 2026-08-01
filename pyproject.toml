@@ -109,7 +109,7 @@ target-version = "py313"
 extend-exclude = ["./vendor"]
 
 [tool.ruff.lint]
-ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205"]
+ignore = ["D100", "D101", "D102", "D103", "D104", "D107", "D205", "I001"]
 
 # [tool.pyright]
 # include = ["src", "tests"]

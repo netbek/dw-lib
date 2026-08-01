@@ -17,7 +17,7 @@ import requests
 
 class TestReplicationSlots:
     @pytest.fixture(scope="function", autouse=True)
-    def set_env(self) -> Generator[None, Any, None]:
+    def set_env(self) -> Generator[None, Any]:
         old_env = os.environ.copy()
         os.environ.update(PEERDB_TEST_ENV)
         yield
@@ -56,9 +56,7 @@ class TestReplicationSlots:
         return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
 
     @pytest.fixture(scope="function")
-    def peerdb(
-        self, request, peerdb_config_path: Path, docker_services
-    ) -> Generator[PeerDB, Any, None]:
+    def peerdb(self, request, peerdb_config_path: Path, docker_services) -> Generator[PeerDB, Any]:
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
@@ -84,7 +82,7 @@ class TestReplicationSlots:
         yield peerdb
 
     @pytest.fixture(scope="function")
-    def postgres_primary_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
+    def postgres_primary_adapter(self, docker_services) -> Generator[PostgresAdapter, Any]:
         postgres_settings = PostgresSettings(
             host="localhost",
             port=25432,
@@ -106,7 +104,7 @@ class TestReplicationSlots:
         yield postgres_adapter
 
     @pytest.fixture(scope="function")
-    def postgres_replica_adapter(self, docker_services) -> Generator[PostgresAdapter, Any, None]:
+    def postgres_replica_adapter(self, docker_services) -> Generator[PostgresAdapter, Any]:
         postgres_settings = PostgresSettings(
             host="localhost",
             port=25433,
@@ -130,11 +128,11 @@ class TestReplicationSlots:
     def setup_replication(
         self, postgres_primary_adapter: PostgresAdapter, postgres_replica_adapter: PostgresAdapter
     ):
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_primary_adapter.create_client(autocommit=True) as (_, cur):
             cur.execute("create table test_table (id serial primary key, data text);")
             cur.execute("create publication test_publication for table test_table;")
 
-        with postgres_replica_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_replica_adapter.create_client(autocommit=True) as (_, cur):
             cur.execute("create table test_table (id serial primary key, data text);")
             cur.execute(
                 """
@@ -225,7 +223,7 @@ class TestReplicationSlots:
         postgres_replica_container.reload()
         assert postgres_replica_container.status == "exited"
 
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_primary_adapter.create_client(autocommit=True) as (_, cur):
             # Generate ~80MB of data (between 64MB max_wal_size and 128MB max_slot_wal_keep_size)
             cur.execute(
                 "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 80000);"
@@ -283,7 +281,7 @@ class TestReplicationSlots:
         postgres_replica_container.reload()
         assert postgres_replica_container.status == "exited"
 
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_primary_adapter.create_client(autocommit=True) as (_, cur):
             # Generate ~45MB of data (between 32MB max_slot_wal_keep_size and 64MB max_wal_size)
             cur.execute(
                 "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 45000);"
@@ -339,7 +337,7 @@ class TestReplicationSlots:
         postgres_replica_container.reload()
         assert postgres_replica_container.status == "exited"
 
-        with postgres_primary_adapter.create_client(autocommit=True) as (conn, cur):
+        with postgres_primary_adapter.create_client(autocommit=True) as (_, cur):
             # Generate ~80MB of data
             cur.execute(
                 "insert into test_table (data) select repeat('a', 1000) from generate_series(1, 80000);"

@@ -69,7 +69,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         conn.close()
 
     @contextmanager
-    def create_session(self) -> Generator[Session, Any, None]:
+    def create_session(self) -> Generator[Session, Any]:
         with self.create_engine() as engine:
             session = Session(engine)
 
@@ -79,7 +79,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
     def can_connect(self) -> bool:
         try:
-            with self.create_client() as (conn, cur):
+            with self.create_client() as (_, cur):
                 cur.execute("select 1;")
                 result = cur.fetchone() == (1,)
         except Exception:
@@ -94,7 +94,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         limit 1;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"database": database})
             result = bool(cur.fetchall())
 
@@ -119,7 +119,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         limit 1;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"database": database, "schema": schema})
             result = bool(cur.fetchall())
 
@@ -152,7 +152,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         and table_name = %(table)s;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"database": database, "schema": schema, "table": table})
             result = bool(cur.fetchall())
 
@@ -317,7 +317,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             except InvalidRequestError as exc:
                 if "requested table(s) not available" in str(exc):
                     raise TableNotFoundException(f"Table '{table}' not found") from exc
-                raise exc
+                raise
 
         return table_metadata
 
@@ -357,7 +357,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             and t.table_name = %(table)s;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"database": database, "schema": schema, "table": table})
             result = cur.fetchone()
 
@@ -429,7 +429,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         where usename = %(username)s;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"username": username})
             result = bool(cur.fetchall())
 
@@ -493,7 +493,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
 
     def grant_user_privileges(self, username: str, schema: str) -> None:
         if not self.has_user(username):
-            raise Exception()
+            raise UserNotFoundException(f"User '{username}' not found")
 
         if self.settings.driver == "psycopg":
             from psycopg import sql
@@ -545,7 +545,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         order by 1, 2, 3, 4;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"username": username})
             result = cur.fetchall()
 
@@ -554,7 +554,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
     def has_publication(self, publication: str) -> bool:
         statement = "select 1 from pg_publication where pubname = %(publication)s;"
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement, {"publication": publication})
             result = bool(cur.fetchall())
 
@@ -609,7 +609,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
         from pg_catalog.pg_publication;
         """
 
-        with self.create_client() as (conn, cur):
+        with self.create_client() as (_, cur):
             cur.execute(statement)
             result = [row[0] for row in cur.fetchall()]
 

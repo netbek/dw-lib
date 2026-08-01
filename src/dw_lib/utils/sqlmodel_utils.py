@@ -1,4 +1,5 @@
 from clickhouse_connect.cc_sqlalchemy.dialect import ClickHouseDialect
+from dw_lib.exceptions import TableExpressionNotFoundException
 from sqlalchemy import Table
 from sqlalchemy.sql.ddl import CreateTable
 from sqlglot import exp
@@ -49,7 +50,7 @@ def make_create_table_statement_from_model(
         table_exp = tree.find(exp.Table)
 
         if table_exp is None:
-            raise Exception("Table expression not found")
+            raise TableExpressionNotFoundException("Table expression not found")
 
         if table is not None:
             table_exp.set("this", exp.Identifier(this=table))

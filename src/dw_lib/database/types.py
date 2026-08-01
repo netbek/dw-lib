@@ -92,7 +92,7 @@ def calculate_memory_limit(percent) -> str:
 
 
 def calculate_threads(percent) -> int:
-    return max(1, int(math.floor(psutil.cpu_count(logical=True) * percent / 100)))
+    return max(1, math.floor(psutil.cpu_count(logical=True) * percent / 100))
 
 
 class DuckDBSystemSettings(BaseModel):

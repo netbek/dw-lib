@@ -44,7 +44,7 @@ class BaseAdapter(ABC, Generic[T]):
     def create_client(): ...
 
     @contextmanager
-    def create_engine(self, url: URL | None = None) -> Generator[Engine, Any, None]:
+    def create_engine(self, url: URL | None = None) -> Generator[Engine, Any]:
         url = url or self.settings.to_sqlalchemy_url()
         engine = create_engine(url.render_as_string(hide_password=False), echo=False)
 

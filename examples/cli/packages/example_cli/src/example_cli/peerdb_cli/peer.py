@@ -1,3 +1,4 @@
+from dw_lib.exceptions import PeerNotFoundException
 from dw_lib.peerdb import PeerDB
 from rich.console import Console
 from typing import Literal
@@ -29,7 +30,7 @@ def create(
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == name)
 
         if not peer:
-            raise Exception(f"Peer '{name}' not found in {peerdb._config_file}")
+            raise PeerNotFoundException(f"Peer '{name}' not found in {peerdb._config_file}")
 
         response = peerdb.create_peer(
             {"name": peer.name, **peer.peerdb.model_dump()}, if_exists=if_exists

@@ -16,9 +16,7 @@ import pytest
 
 class TestClickHouseAdapter(DatabaseTest):
     @pytest.fixture(scope="function")
-    def clickhouse_table(
-        self, clickhouse_adapter: ClickHouseAdapter
-    ) -> Generator[Table, Any, None]:
+    def clickhouse_table(self, clickhouse_adapter: ClickHouseAdapter) -> Generator[Table, Any]:
         table = "test_table"
         statement = f"""
         create or replace table {ClickHouseRelation(table=table)}

@@ -33,9 +33,9 @@ __all__ = [
     "DuckDBAdapter",
     "DuckDBRelation",
     "DuckDBSettings",
-    "parse_create_table_statement",
     "PostgresAdapter",
     "PostgresRelation",
     "PostgresSettings",
+    "parse_create_table_statement",
     "render_statement",
 ]

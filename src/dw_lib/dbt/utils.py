@@ -81,7 +81,8 @@ def generate_sqlmodel_code(
 
     for column in parsed_statement["columns"]:
         dbt_column = pydash.find(
-            dbt_resource.original_config.columns, lambda c: c.name == column["name"]
+            dbt_resource.original_config.columns,
+            lambda c: c.name == column["name"],  # noqa: B023
         )
         field_name = to_field_name(column["name"])
 
@@ -136,7 +137,7 @@ def generate_sqlmodel_code(
         lines.append(INDENT + column)
 
     # Add statement for reference, add imports
-    imports = sorted(list(set(imports)))
+    imports = sorted(set(imports))
     lines = ['"""\nCreated from:\n\n' + statement + '\n"""', ""] + imports + ["", ""] + lines
 
     model_code = "\n".join(lines) + "\n"
@@ -168,7 +169,7 @@ def generate_sqlmodel_code(
             imports.append("import pydash")
 
     # Add imports
-    imports = sorted(list(set(imports)))
+    imports = sorted(set(imports))
     lines = imports + ["", ""] + lines
 
     factory_code = "\n".join(lines) + "\n"

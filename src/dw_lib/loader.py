@@ -1,6 +1,11 @@
 from .cloud import s3_to_endpoint_uri, S3Adapter, S3Settings
 from .database import PostgresAdapter, PostgresRelation, PostgresSettings
-from .exceptions import ConnectionNotFoundException, StreamNotFoundException
+from .exceptions import (
+    ConfigFileNotFoundException,
+    ConnectionNotFoundException,
+    StreamNotFoundException,
+    TableCopyException,
+)
 from .utils.filesystem import find_up
 from chdb import session
 from enum import StrEnum
@@ -283,7 +288,7 @@ class Loader:
         stream_source_identifier = f"{stream.source.schema_}.{stream.source.table}"
 
         if not objects:
-            raise Exception(
+            raise TableCopyException(
                 f"Failed to copy table '{stream_source_identifier}' from '{source_connection_name}' to '{destination_connection_name}'"
             )
 
@@ -297,6 +302,6 @@ def find_config_file(filename: str = "loader.yaml") -> Path:
     config_file = find_up(cwd, filename)
 
     if not config_file:
-        raise Exception(f"{filename} not found in {cwd} or higher")
+        raise ConfigFileNotFoundException(f"{filename} not found in {cwd} or higher")
 
     return config_file

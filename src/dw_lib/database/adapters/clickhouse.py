@@ -15,7 +15,6 @@ from clickhouse_connect.driver.exceptions import DatabaseError
 from collections.abc import Generator
 from contextlib import contextmanager
 from sqlalchemy import inspect, MetaData, Table
-from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session
 from sqlglot.dialects.dialect import Dialects
 from typing import Any, Literal
@@ -28,7 +27,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
     settings_class = ClickHouseSettings
 
     @contextmanager
-    def create_client(self) -> Generator[Client, Any, None]:
+    def create_client(self) -> Generator[Client, Any]:
         client = clickhouse_connect.get_client(
             host=self.settings.host,
             port=self.settings.port,
@@ -42,7 +41,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         client.close()
 
     @contextmanager
-    def create_session(self) -> Generator[Session, Any, None]:
+    def create_session(self) -> Generator[Session, Any]:
         with self.create_engine() as engine:
             session = Session(engine)
 
@@ -161,7 +160,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 if f"Table `{table}` doesn't exist" in str(exc):
                     raise TableNotFoundException(f"Table '{table}' not found")
                 else:
-                    raise exc
+                    raise
 
         return statement
 
@@ -207,10 +206,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
             if not inspector.has_table(table, schema=database):
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-            try:
-                table_metadata = Table(table, metadata, schema=database, autoload_with=engine)
-            except InvalidRequestError as exc:
-                raise exc
+            table_metadata = Table(table, metadata, schema=database, autoload_with=engine)
 
         return table_metadata
 
@@ -282,7 +278,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 try:
                     table = Table(name, metadata, schema=database, autoload_with=engine)
                     tables.append(table)
-                except Exception:
+                except Exception:  # noqa: S112
                     continue
 
         return sorted(tables, key=lambda table: table.name)

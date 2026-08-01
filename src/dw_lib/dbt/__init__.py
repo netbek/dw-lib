@@ -1,10 +1,15 @@
 from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
 from clickhouse_connect.driver.client import Client
-from datetime import datetime, timezone
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
 from dw_lib.database import ClickHouseAdapter, parse_create_table_statement
+from dw_lib.exceptions import (
+    ConfigFileNotFoundException,
+    DbtManifestNotFoundException,
+    UnsupportedCommandException,
+    UnsupportedRunStatusException,
+)
 from dw_lib.utils.filesystem import find_up
 from functools import cached_property
 from io import StringIO
@@ -17,6 +22,7 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from typing import Any
 from uuid import uuid4
 
+import datetime
 import json
 import os
 import pydash
@@ -47,7 +53,7 @@ def find_project_config_file() -> Path:
     project_config_file = find_up(cwd, "dbt_project.yml")
 
     if not project_config_file:
-        raise Exception(f"dbt_project.yml not found in {cwd} or higher")
+        raise ConfigFileNotFoundException(f"dbt_project.yml not found in {cwd} or higher")
 
     return project_config_file
 
@@ -121,12 +127,12 @@ def normalize_rows_affected(value: int | str | None) -> int | None:
     return None
 
 
-def to_ns(dt: datetime) -> int:
+def to_ns(dt: datetime.datetime) -> int:
     """Convert a timezone-aware (or naive assumed UTC) datetime to nanoseconds since epoch."""
     if dt is None:
         raise ValueError("dt is None")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=datetime.UTC)
     return int(dt.timestamp() * 1e9)
 
 
@@ -273,7 +279,7 @@ class Dbt:
             self.parse(quiet=True)
 
             if not os.path.exists(manifest_file):
-                raise Exception(
+                raise DbtManifestNotFoundException(
                     f"'{manifest_file}' not found. Run 'dbt parse' or 'dbt compile' first."
                 )
 
@@ -534,7 +540,8 @@ class Dbt:
 
                 for table_name, data in result.items():
                     resource: DbtModel = pydash.find(
-                        resources, lambda resource: resource.name == table_name
+                        resources,
+                        lambda resource: resource.name == table_name,  # noqa: B023
                     )
 
                     if not resource:
@@ -550,7 +557,7 @@ class Dbt:
                     for column in model["columns"]:
                         resource_column = pydash.find(
                             resource.columns,
-                            lambda resource_column: resource_column.name == column["name"],
+                            lambda resource_column: resource_column.name == column["name"],  # noqa: B023
                         )
 
                         if resource_column:
@@ -566,6 +573,8 @@ class Dbt:
 
                     model["columns"] = columns
                     data["models"][0] = pydash.pick(model, ["name", "description", "columns"])
+            else:
+                pass
 
         return {
             table_name: dump_model_yaml(data, line_length=line_length)
@@ -1053,7 +1062,7 @@ def _trace_invocation(
         raw_command: str
         invocation_id: str
         full_refresh: bool
-        generated_at: datetime
+        generated_at: datetime.datetime
 
     # Based on https://github.com/elementary-data/dbt-data-reliability/blob/6551383e8a37e5814bd2bb9fd74330be8265a3c9/models/run_results.yml#L133
     class ParsedNode(BaseModel):
@@ -1063,10 +1072,10 @@ def _trace_invocation(
         status: RunStatus
         resource_type: str
         execution_time: float
-        compile_started_at: datetime | None = None
-        compile_completed_at: datetime | None = None
-        execute_started_at: datetime | None = None
-        execute_completed_at: datetime | None = None
+        compile_started_at: datetime.datetime | None = None
+        compile_completed_at: datetime.datetime | None = None
+        execute_started_at: datetime.datetime | None = None
+        execute_completed_at: datetime.datetime | None = None
         rows_affected: int | None = 0
         compiled_code: str | None = None
         failures: int | None = 0
@@ -1163,7 +1172,7 @@ def _trace_invocation(
             parsed_nodes.append(parsed_node)
 
     else:
-        raise Exception(f"Command '{command}' is not supported")
+        raise UnsupportedCommandException(f"Command '{command}' is not supported")
 
     parsed_root = ParsedRoot(
         raw_command=raw_command,
@@ -1264,7 +1273,7 @@ def _trace_invocation(
                 elif n.status == RunStatus.Skipped:
                     node_span.set_status(trace.Status(trace.StatusCode.UNSET))
                 else:
-                    raise Exception(f"Run status '{n.status}' is not supported")
+                    raise UnsupportedRunStatusException(f"Run status '{n.status}' is not supported")
 
                 # attach the textual message as an event
                 if n.message:

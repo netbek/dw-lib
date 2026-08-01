@@ -7,17 +7,33 @@ from .database import (
     PostgresSettings,
 )
 from .exceptions import (
+    ConfigFileNotFoundException,
+    CreateMirrorException,
+    CreatePeerException,
+    DropMirrorException,
+    DropPeerException,
     EmptyConfigException,
+    GetDynamicSettingsException,
+    GetMirrorStatusException,
+    GetPeerInfoException,
+    GetPeerTypeException,
+    ListMirrorsException,
+    ListPeersException,
     MirrorExistsException,
     MirrorNotFoundException,
+    MirrorTimeoutException,
+    PauseMirrorException,
     PeerExistsException,
     PeerNotFoundException,
+    ResumeMirrorException,
+    ResyncMirrorException,
+    SetDynamicSettingsException,
     TableNotFoundException,
+    UnsupportedAdapterException,
 )
 from .types import HttpUrl
 from .utils.filesystem import find_up
 from .utils.template import render_template
-from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
@@ -28,6 +44,7 @@ from sqlalchemy import text
 from sqlglot.dialects.dialect import Dialects
 from typing import Any, Literal, Self
 
+import datetime
 import os
 import pydash
 import requests
@@ -79,7 +96,7 @@ class ListReplicationSlotsItem(BaseModel):
     restart_lsn: str | None = None
     current_lsn: str
     active: bool | None = None
-    inactive_since: datetime | None = None
+    inactive_since: datetime.datetime | None = None
     lag_mb: int | None = None
     confirmed_flush_lsn: str | None = None
     sent_lsn: str | None = None
@@ -220,7 +237,7 @@ class ResumeMirrorResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/route.proto#L334
 class MirrorStatusResponse(BaseModel):
-    created_at: datetime = Field(alias="createdAt")
+    created_at: datetime.datetime = Field(alias="createdAt")
     # https://github.com/PeerDB-io/peerdb/blob/v0.37.1/protos/flow.proto#L518
     current_flow_state: Literal[
         "STATUS_UNKNOWN",
@@ -248,7 +265,7 @@ class ListMirrorsItem(BaseModel):
     source_type: str = Field(alias="sourceType")
     destination_name: str = Field(alias="destinationName")
     destination_type: str = Field(alias="destinationType")
-    created_at: datetime = Field(alias="createdAt")
+    created_at: datetime.datetime = Field(alias="createdAt")
     is_cdc: bool = Field(alias="isCdc")
     replication_slot: ListReplicationSlotsItem | None = None
 
@@ -390,13 +407,13 @@ class PeerDB:
     @cached_property
     def config(self) -> Config:
         def process_node(node: dict) -> dict:
-            default_keys = [key for key in node.keys() if key.startswith("+")]
+            default_keys = [key for key in node if key.startswith("+")]
             defaults = {key.lstrip("+").strip(): node[key] for key in default_keys}
 
             if defaults:
-                for key in node.keys():
+                for key, value in node.items():
                     if not key.startswith("+"):
-                        node[key] = pydash.defaults(node[key], defaults)
+                        node[key] = pydash.defaults(value, defaults)
 
                 node = pydash.omit(node, *default_keys)
 
@@ -467,7 +484,9 @@ class PeerDB:
                     }
 
                 else:
-                    raise Exception(f"Adapter type '{value['type']}' is not supported")
+                    raise UnsupportedAdapterException(
+                        f"Adapter type '{value['type']}' is not supported"
+                    )
 
                 peers.append(
                     {
@@ -480,7 +499,7 @@ class PeerDB:
         if "mirrors" in config:
             config["mirrors"] = process_node(config["mirrors"])
 
-            for key in config["mirrors"].keys():
+            for key in config["mirrors"]:
                 config["mirrors"][key]["flow_job_name"] = key
 
             mirrors = list(config["mirrors"].values())
@@ -545,7 +564,7 @@ class PeerDB:
         # Check settings of source peer
         # https://docs.peerdb.io/usecases/Real-time%20CDC/postgres-to-postgres#prerequisites
         if source_can_connect:
-            with source_adapter.create_client() as (conn, cur):
+            with source_adapter.create_client() as (_, cur):
                 cur.execute("""
                     SELECT
                         current_setting('max_replication_slots')::int,
@@ -695,7 +714,7 @@ class PeerDB:
         elif peer.adapter.type == Dialects.POSTGRES:
             return PostgresAdapter(peer.adapter.settings)
         else:
-            raise Exception(f"Peer type '{peer.adapter.type}' has no adapter")
+            raise UnsupportedAdapterException(f"Peer type '{peer.adapter.type}' has no adapter")
 
     def get_settings(self) -> GetDynamicSettingsResponse:
         url = self.config.peerdb_api_url.join("v1/dynamic_settings")
@@ -708,7 +727,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to get dynamic settings ({error_message or exc})")
+            raise GetDynamicSettingsException(
+                f"Failed to get dynamic settings ({error_message or exc})"
+            )
 
         return GetDynamicSettingsResponse(**response.json())
 
@@ -730,7 +751,9 @@ class PeerDB:
                     error_message = response.json().get("message")
                 except Exception:
                     error_message = None
-                raise Exception(f"Failed to set {key}={value} ({error_message or exc})")
+                raise SetDynamicSettingsException(
+                    f"Failed to set {key}={value} ({error_message or exc})"
+                )
 
     def has_peer(self, peer_name: str) -> bool:
         response = self.list_peers()
@@ -749,7 +772,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to peer info of '{peer_name}' ({error_message or exc})")
+            raise GetPeerInfoException(
+                f"Failed to get peer info of '{peer_name}' ({error_message or exc})"
+            )
 
         return PeerInfoResponse(**response.json())
 
@@ -764,7 +789,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to peer type of '{peer_name}' ({error_message or exc})")
+            raise GetPeerTypeException(
+                f"Failed to get peer type of '{peer_name}' ({error_message or exc})"
+            )
 
         return PeerTypeResponse(**response.json())
 
@@ -796,12 +823,14 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to create peer '{peer['name']}' ({error_message or exc})")
+            raise CreatePeerException(
+                f"Failed to create peer '{peer['name']}' ({error_message or exc})"
+            )
 
         deserialized = RawCreatePeerResponse(**response.json())
 
         if deserialized.status != "CREATED":
-            raise Exception(
+            raise CreatePeerException(
                 f"Failed to create peer '{peer['name']}' (status: {deserialized.status})"
             )
 
@@ -851,7 +880,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to drop peer '{peer_name}' ({error_message or exc})")
+            raise DropPeerException(f"Failed to drop peer '{peer_name}' ({error_message or exc})")
 
         return DropPeerResponse(message=f"Dropped peer '{peer_name}'")
 
@@ -883,7 +912,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to list peers ({error_message or exc})")
+            raise ListPeersException(f"Failed to list peers ({error_message or exc})")
 
         return ListPeersResponse(**response.json())
 
@@ -906,7 +935,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(
+            raise GetMirrorStatusException(
                 f"Failed to get status of mirror '{flow_job_name}' ({error_message or exc})"
             )
 
@@ -922,7 +951,7 @@ class PeerDB:
         ):
             raise MirrorNotFoundException()
         else:
-            raise Exception(
+            raise GetMirrorStatusException(
                 f"Failed to get status of mirror '{flow_job_name}' (HTTP {response.status_code})"
             )
 
@@ -941,10 +970,10 @@ class PeerDB:
                 return current_status
 
             time.sleep(1)
-        else:
-            raise Exception(
-                f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
-            )
+
+        raise MirrorTimeoutException(
+            f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
+        )
 
     def create_mirror(
         self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
@@ -965,10 +994,14 @@ class PeerDB:
         source_peer = pydash.find(self.config.peers, lambda x: x.name == mirror["source_name"])
 
         if source_peer is None:
-            raise Exception(f"Peer '{mirror['source_name']}' not found in PeerDB config")
+            raise PeerNotFoundException(
+                f"Peer '{mirror['source_name']}' not found in PeerDB config"
+            )
 
         if source_peer.adapter.type != Dialects.POSTGRES:
-            raise Exception(f"Adapter type '{source_peer.adapter.type}' is not supported")
+            raise UnsupportedAdapterException(
+                f"Adapter type '{source_peer.adapter.type}' is not supported"
+            )
 
         source_adapter = PostgresAdapter(
             PostgresSettings(**source_peer.adapter.settings.model_dump())
@@ -979,7 +1012,7 @@ class PeerDB:
             source_relation = PostgresRelation.from_string(table_mapping["source_table_identifier"])
             source_table = pydash.find(
                 source_tables,
-                lambda x: x.schema == source_relation.schema_ and x.name == source_relation.table,
+                lambda x: x.schema == source_relation.schema_ and x.name == source_relation.table,  # noqa: B023
             )
 
             if source_table is None:
@@ -1004,14 +1037,14 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(
+            raise CreateMirrorException(
                 f"Failed to create mirror '{mirror['flow_job_name']}' ({error_message or exc})"
             )
 
         workflow_id = response.json().get("workflowId")
 
         if not workflow_id:
-            raise Exception(
+            raise CreateMirrorException(
                 f"Failed to create mirror '{mirror['flow_job_name']}' (HTTP {response.status_code})"
             )
 
@@ -1060,14 +1093,18 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to drop mirror '{flow_job_name}' ({error_message or exc})")
+            raise DropMirrorException(
+                f"Failed to drop mirror '{flow_job_name}' ({error_message or exc})"
+            )
 
         for _ in range(timeout):
             if not self.has_mirror(flow_job_name):
                 break
             time.sleep(1)
         else:
-            raise Exception(f"Failed to drop mirror '{flow_job_name}' after {timeout}s")
+            raise MirrorTimeoutException(
+                f"Failed to drop mirror '{flow_job_name}' after {timeout}s"
+            )
 
         if drop_destination_tables:
             self.drop_destination_tables_of_mirror(flow_job_name)
@@ -1105,7 +1142,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})")
+            raise ResyncMirrorException(
+                f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
+            )
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
 
@@ -1142,7 +1181,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to pause mirror '{flow_job_name}' ({error_message or exc})")
+            raise PauseMirrorException(
+                f"Failed to pause mirror '{flow_job_name}' ({error_message or exc})"
+            )
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_PAUSED"}, timeout=timeout)
 
@@ -1177,7 +1218,9 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to resume mirror '{flow_job_name}' ({error_message or exc})")
+            raise ResumeMirrorException(
+                f"Failed to resume mirror '{flow_job_name}' ({error_message or exc})"
+            )
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RUNNING"}, timeout=timeout)
 
@@ -1205,7 +1248,9 @@ class PeerDB:
             settings_class = PostgresSettings
             relation_class = PostgresRelation
         else:
-            raise Exception(f"Adapter type '{destination_peer.adapter.type}' is not supported")
+            raise UnsupportedAdapterException(
+                f"Adapter type '{destination_peer.adapter.type}' is not supported"
+            )
 
         destination_adapter = adapter_class(
             settings_class(**destination_peer.adapter.settings.model_dump())
@@ -1229,7 +1274,7 @@ class PeerDB:
                 error_message = response.json().get("message")
             except Exception:
                 error_message = None
-            raise Exception(f"Failed to list mirrors ({error_message or exc})")
+            raise ListMirrorsException(f"Failed to list mirrors ({error_message or exc})")
 
         mirrors = pydash.sort_by(response.json()["mirrors"], "name")
 
@@ -1238,7 +1283,8 @@ class PeerDB:
             for mirror in mirrors:
                 replication_slot_name = f"peerflow_slot_{mirror['name']}"
                 replication_slot = pydash.find(
-                    replication_slots, lambda x: x.slot_name == replication_slot_name
+                    replication_slots,
+                    lambda x: x.slot_name == replication_slot_name,  # noqa: B023
                 )
                 mirror["replication_slot"] = replication_slot
 
@@ -1394,6 +1440,6 @@ def find_config_file() -> Path:
     config_file = find_up(cwd, filename)
 
     if not config_file:
-        raise Exception(f"{filename} not found in {cwd} or higher")
+        raise ConfigFileNotFoundException(f"{filename} not found in {cwd} or higher")
 
     return config_file

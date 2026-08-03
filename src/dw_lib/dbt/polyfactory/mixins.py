@@ -32,4 +32,4 @@ class PeerDBFactoryMixin:
 
     @classmethod
     def peerdb_synced_at(cls) -> datetime.datetime:
-        return datetime.datetime.now()
+        return datetime.datetime.now()  # noqa: DTZ005

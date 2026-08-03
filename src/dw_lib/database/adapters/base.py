@@ -7,9 +7,7 @@ from sqlalchemy import create_engine, Engine, Table, URL
 from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlglot import exp, parse_one
 from sqlglot.dialects.dialect import Dialects, DialectType
-from typing import Any, ClassVar, Generic, Literal, overload, TypeVar
-
-T = TypeVar("T", bound=BaseModel)
+from typing import Any, ClassVar, Literal, overload
 
 
 class BaseRelation(BaseModel):
@@ -30,7 +28,7 @@ class BaseRelation(BaseModel):
             raise ValueError(f"Invalid table identifier: {identifier}")
 
 
-class BaseAdapter(ABC, Generic[T]):
+class BaseAdapter[T: BaseModel](ABC):
     dialect: Dialects
     settings_class: type[T]
 

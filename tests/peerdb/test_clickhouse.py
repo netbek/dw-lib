@@ -169,7 +169,7 @@ class PeerDBClickHouseTest(PeerDBIntegrationTest):
                 with clickhouse_adapter.create_client() as client:
                     client.query("select 1;")
                 return True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)

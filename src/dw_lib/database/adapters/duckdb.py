@@ -51,7 +51,7 @@ class DuckDBAdapter(BaseAdapter[DuckDBSettings]):
             with self.create_client() as conn:
                 conn.execute("select 1;")
                 result = conn.fetchone() == (1,)
-        except Exception:
+        except Exception:  # noqa: BLE001
             result = False
 
         return result

@@ -53,7 +53,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         try:
             with self.create_client() as client:
                 result = client.query("select 1;").first_row == (1,)
-        except Exception:
+        except Exception:  # noqa: BLE001
             result = False
 
         return result
@@ -278,7 +278,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
                 try:
                     table = Table(name, metadata, schema=database, autoload_with=engine)
                     tables.append(table)
-                except Exception:  # noqa: S112
+                except Exception:  # noqa: BLE001, S112
                     continue
 
         return sorted(tables, key=lambda table: table.name)

@@ -37,7 +37,7 @@ class S3Adapter:
 
         try:
             client.head_bucket(Bucket=self.settings.bucket)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
         return True

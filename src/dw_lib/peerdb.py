@@ -555,7 +555,7 @@ class PeerDB:
         try:
             self.get_settings()
             api_can_connect = True
-        except Exception:
+        except Exception:  # noqa: BLE001
             api_can_connect = False
 
         source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
@@ -729,7 +729,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise GetDynamicSettingsException(
                 f"Failed to get dynamic settings ({error_message or exc})"
@@ -755,7 +755,7 @@ class PeerDB:
             except (requests.HTTPError, requests.ConnectionError) as exc:
                 try:
                     error_message = response.json().get("message")
-                except Exception:
+                except Exception:  # noqa: BLE001
                     error_message = None
                 raise SetDynamicSettingsException(
                     f"Failed to set {key}={value} ({error_message or exc})"
@@ -778,7 +778,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise GetPeerInfoException(
                 f"Failed to get peer info of '{peer_name}' ({error_message or exc})"
@@ -797,7 +797,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise GetPeerTypeException(
                 f"Failed to get peer type of '{peer_name}' ({error_message or exc})"
@@ -833,7 +833,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise CreatePeerException(
                 f"Failed to create peer '{peer['name']}' ({error_message or exc})"
@@ -892,7 +892,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise DropPeerException(f"Failed to drop peer '{peer_name}' ({error_message or exc})")
 
@@ -926,7 +926,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise ListPeersException(f"Failed to list peers ({error_message or exc})")
 
@@ -951,7 +951,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise GetMirrorStatusException(
                 f"Failed to get status of mirror '{flow_job_name}' ({error_message or exc})"
@@ -1057,7 +1057,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise CreateMirrorException(
                 f"Failed to create mirror '{mirror['flow_job_name']}' ({error_message or exc})"
@@ -1118,7 +1118,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise DropMirrorException(
                 f"Failed to drop mirror '{flow_job_name}' ({error_message or exc})"
@@ -1177,7 +1177,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise ResyncMirrorException(
                 f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
@@ -1218,7 +1218,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise PauseMirrorException(
                 f"Failed to pause mirror '{flow_job_name}' ({error_message or exc})"
@@ -1257,7 +1257,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise ResumeMirrorException(
                 f"Failed to resume mirror '{flow_job_name}' ({error_message or exc})"
@@ -1315,7 +1315,7 @@ class PeerDB:
         except (requests.HTTPError, requests.ConnectionError) as exc:
             try:
                 error_message = response.json().get("message")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 error_message = None
             raise ListMirrorsException(f"Failed to list mirrors ({error_message or exc})")
 

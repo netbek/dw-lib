@@ -142,6 +142,10 @@ class DbtManifestNotFoundException(Exception):
     pass
 
 
+class DbtResourceNotFoundException(Exception):
+    pass
+
+
 class UnsupportedCommandException(Exception):
     pass
 

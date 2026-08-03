@@ -72,7 +72,7 @@ class TestReplicationSlots:
                         "status": "INSTANCE_STATUS_READY"
                     }:
                         return True
-                except Exception:
+                except Exception:  # noqa: BLE001
                     return False
 
             docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -96,7 +96,7 @@ class TestReplicationSlots:
         def is_responsive():
             try:
                 return postgres_adapter.can_connect()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -118,7 +118,7 @@ class TestReplicationSlots:
         def is_responsive():
             try:
                 return postgres_adapter.can_connect()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)

@@ -82,7 +82,7 @@ class PostgresAdapter(BaseAdapter[PostgresSettings]):
             with self.create_client() as (_, cur):
                 cur.execute("select 1;")
                 result = cur.fetchone() == (1,)
-        except Exception:
+        except Exception:  # noqa: BLE001
             result = False
 
         return result

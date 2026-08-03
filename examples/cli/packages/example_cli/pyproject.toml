@@ -38,7 +38,7 @@ target-version = "py313"
 ignore = [
     "D100", "D101", "D102", "D103", "D104", "D107", "D205",
     # Rules that are temporarily ignored after upgrading to ruff 0.16
-    "BLE001", "DTZ005", "I001", "UP046"
+    "I001"
 ]
 
 [tool.uv]

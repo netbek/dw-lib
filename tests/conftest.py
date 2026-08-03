@@ -72,7 +72,7 @@ class DatabaseTest:
                 with clickhouse_adapter.create_client() as client:
                     client.query("select 1;")
                 return True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -111,7 +111,7 @@ class DatabaseTest:
                 with postgres_adapter.create_client() as (_, cur):
                     cur.execute("select 1;")
                 return True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -188,7 +188,7 @@ class PeerDBTest:
         def is_responsive():
             try:
                 return postgres_adapter.can_connect()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -212,7 +212,7 @@ class PeerDBTest:
                         "status": "INSTANCE_STATUS_READY"
                     }:
                         return True
-                except Exception:
+                except Exception:  # noqa: BLE001
                     return False
 
             docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -378,7 +378,7 @@ class LoaderTest:
         def is_responsive():
             try:
                 return postgres_adapter.can_connect()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)

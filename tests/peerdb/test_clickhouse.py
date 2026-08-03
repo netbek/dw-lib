@@ -169,7 +169,7 @@ class PeerDBClickHouseTest(PeerDBIntegrationTest):
                 with clickhouse_adapter.create_client() as client:
                     client.query("select 1;")
                 return True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)
@@ -426,7 +426,7 @@ class TestPauseMirror(PeerDBClickHouseTest):
             peerdb,
             "get_mirror_status",
             lambda flow_job_name: MirrorStatusResponse(
-                createdAt=datetime.datetime.now(),
+                createdAt=datetime.datetime.now(),  # noqa: DTZ005
                 currentFlowState="STATUS_RUNNING",
                 flowJobName=flow_job_name,
             ),
@@ -470,7 +470,7 @@ class TestResumeMirror(PeerDBClickHouseTest):
             peerdb,
             "get_mirror_status",
             lambda flow_job_name: MirrorStatusResponse(
-                createdAt=datetime.datetime.now(),
+                createdAt=datetime.datetime.now(),  # noqa: DTZ005
                 currentFlowState="STATUS_PAUSED",
                 flowJobName=flow_job_name,
             ),

@@ -44,7 +44,7 @@ def _make_fake_tracer(spans: list, record: bool = True):
                     if isinstance(value, bool) is False and isinstance(value, (int,))
                     else value
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.attributes[key] = value
 
         def set_attributes(self, attrs: dict):

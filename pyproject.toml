@@ -111,7 +111,7 @@ extend-exclude = ["./vendor"]
 [tool.ruff.lint]
 ignore = [
     "D100", "D101", "D102", "D103", "D104", "D107", "D205",
-    # Rules that are temporarily ignored after upgrading to ruff 0.16
+    # Rule is ignored for ruff >= 0.16. TODO Configure isort and ruff to work together.
     "I001"
 ]
 

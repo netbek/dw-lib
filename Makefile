@@ -97,10 +97,10 @@ lint:
 
 bump-version:
 	@BUMP=$(word 2,$(MAKECMDGOALS)); \
-	VALID_BUMP="major minor patch stable alpha beta rc post dev"; \
+	VALID_BUMP="major minor patch"; \
 	if [ -z "$$BUMP" ]; then \
 		echo "$(RED)Error: Bump is required.$(RESET)"; \
-		echo "Usage: make bump-version [major|minor|patch|stable|alpha|beta|rc|post|dev]"; \
+		echo "Usage: make bump-version [major|minor|patch]"; \
 		exit 1; \
 	fi; \
 	if ! echo "$$VALID_BUMP" | grep -qw "$$BUMP"; then \
@@ -108,6 +108,7 @@ bump-version:
 		echo "Must be one of: $(CYAN)$$VALID_BUMP$(RESET)"; \
 		exit 1; \
 	fi; \
+	pnpm version $$BUMP; \
 	uv version --bump $$BUMP; \
 	VERSION=$$(uv version --short); \
 	$(MAKE) --no-print-directory uv-sync; \

@@ -2,4 +2,6 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .venv
+node_modules
+renovate-report.json
 venv

@@ -18,6 +18,17 @@ deps-scan:
 	cd examples/cli && trivy fs uv.lock --table-mode detailed
 	cd examples/cli/packages/example_cli && trivy fs uv.lock --table-mode detailed
 
+renovate:
+	@echo "$(YELLOW)Checking GitHub Action updates with Renovate...$(RESET)"
+	RENOVATE_CONFIG_FILE="renovate.json" \
+	GITHUB_COM_TOKEN="$$(gh auth token 2>/dev/null || true)" \
+		renovate --platform=local --onboarding=false \
+		--report-type=file --report-path=renovate-report.json
+
+renovate-apply: renovate
+	@echo "$(YELLOW)Applying GitHub Action updates...$(RESET)"
+	uv run scripts/apply-renovate-report.py renovate-report.json
+
 python-outdated:
 	@echo "$(YELLOW)Listing outdated Python dependencies...$(RESET)"
 	@uv tree --outdated --depth 1

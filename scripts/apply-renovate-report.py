@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """Apply GitHub Action ref updates from a Renovate report."""
 
+from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import json
 import re
@@ -13,7 +15,7 @@ USES_RE = re.compile(
 )
 
 
-def load_updates(report_path: Path) -> list[tuple[str, str, dict, dict]]:
+def load_updates(report_path: Path) -> Generator[tuple[Any, Any, Any, Any], Any]:
     """Read proposed updates as (file, depName, update, dep) tuples."""
     data = json.loads(report_path.read_text())
     for repo in data.get("repositories", {}).values():

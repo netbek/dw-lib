@@ -18,6 +18,7 @@
     "url": "https://github.com/netbek/dw-lib/issues"
   },
   "devDependencies": {
-    "renovate": "^44.24.2"
+    "npm-check-updates": "23.0.2",
+    "renovate": "44.24.2"
   }
 }

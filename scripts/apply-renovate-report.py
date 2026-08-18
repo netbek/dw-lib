@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Apply GitHub Action ref updates from a Renovate report."""
 
 from pathlib import Path

@@ -1,6 +1,7 @@
 {
   "name": "dw-lib",
   "version": "1.36.4",
+  "private": true,
   "description": "Tools for working with Postgres, ClickHouse, and DuckDB.",
   "main": "index.js",
   "repository": {

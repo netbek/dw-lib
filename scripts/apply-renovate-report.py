@@ -7,11 +7,14 @@ import json
 import re
 import sys
 
-USES_RE = re.compile(r"^(?P<indent>\s*)uses:\s*(?P<dep>[^\s@]+)@(?P<ref>\S+)(?P<comment>\s+#.*)?$")
+VERSION_RE = re.compile(r"^[vV]?(\d+)(?:\.(\d+))?(?:\.(\d+))?")
+USES_RE = re.compile(
+    r"^(?P<indent>\s*(?:-\s+)?)uses:\s*(?P<dep>[^\s@]+)@(?P<ref>\S+)(?P<comment>\s+#.*)?$"
+)
 
 
-def load_updates(report_path: Path) -> list[tuple[str, str, dict]]:
-    """Read proposed updates as (file, depName, update) triples."""
+def load_updates(report_path: Path) -> list[tuple[str, str, dict, dict]]:
+    """Read proposed updates as (file, depName, update, dep) tuples."""
     data = json.loads(report_path.read_text())
     for repo in data.get("repositories", {}).values():
         for package_file in repo.get("packageFiles", {}).get("github-actions", []):
@@ -19,25 +22,32 @@ def load_updates(report_path: Path) -> list[tuple[str, str, dict]]:
             for dep in package_file.get("deps", []):
                 updates = dep.get("updates") or []
                 if updates:
-                    yield (
-                        file,
-                        dep["depName"],
-                        max(updates, key=lambda u: u.get("newVersion") or ""),
-                    )
+                    chosen = max(updates, key=lambda u: u.get("newVersion") or "")
+                    yield (file, dep["depName"], chosen, dep)
 
 
-def new_ref(update: dict) -> tuple[str, str | None] | None:
+def comment_version(update: dict, dep: dict) -> str | None:
+    """Version text for a digest comment, in vX.Y.Z form."""
+    version = update.get("newVersion") or dep.get("currentVersion") or update.get("newValue")
+    if not version:
+        return None
+    match = VERSION_RE.match(str(version))
+    if not match:
+        return str(version)
+    major, minor, patch = match.groups()
+    return f"v{major}.{minor or 0}.{patch or 0}"
+
+
+def new_ref(update: dict, dep: dict) -> tuple[str, str | None] | None:
     """Compute the ref to write, plus the version comment."""
-    digest = update.get("newDigest")
-    value = update.get("newValue")
-    if digest:
-        return digest, value or None
-    if value:
-        return value, None
+    if update.get("newDigest"):
+        return update["newDigest"], comment_version(update, dep)
+    if update.get("newValue"):
+        return update["newValue"], None
     return None
 
 
-def apply_updates(path: Path, updates: list[tuple[str, str, dict]]) -> bool:
+def apply_updates(path: Path, updates: list[tuple[str, str, dict, dict]]) -> bool:
     """Rewrite action refs in one workflow file."""
     lines = path.read_text().splitlines()
     changed = False
@@ -48,15 +58,15 @@ def apply_updates(path: Path, updates: list[tuple[str, str, dict]]) -> bool:
         dep = match.group("dep")
         update = next(
             (
-                up
-                for file, dep_name, up in updates
+                (up, dep_dict)
+                for file, dep_name, up, dep_dict in updates
                 if file == str(path) and (dep == dep_name or dep.endswith("/" + dep_name))
             ),
             None,
         )
         if not update:
             continue
-        ref = new_ref(update)
+        ref = new_ref(*update)
         if not ref:
             continue
         new_ref_value, comment = ref
@@ -75,7 +85,7 @@ def main() -> int:
         print(f"Report not found: {report_path}", file=sys.stderr)
         return 1
     updates = list(load_updates(report_path))
-    files = sorted({file for file, _, _ in updates})
+    files = sorted({file for file, *_ in updates})
     any_changed = False
     for file in files:
         path = Path(file)

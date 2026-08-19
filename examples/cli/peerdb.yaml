@@ -1,6 +1,6 @@
 peerdb_ui_url: http://localhost:3000
 
-# Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.1/flow/internal/dynamicconf.go
+# Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.4/flow/internal/dynamicconf.go
 settings:
   PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: "peerdb"
   PEERDB_CLICKHOUSE_BINARY_FORMAT: "raw"

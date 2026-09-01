@@ -1,0 +1,14 @@
+allowBuilds:
+  core-js-pure: false
+  dtrace-provider: false
+  re2: true
+
+blockExoticSubdeps: true
+
+minimumReleaseAge: 10080
+
+trustPolicy: no-downgrade
+
+trustPolicyExclude:
+  - "@yarnpkg/libzip@3.2.2"
+  - "semver@6.3.1"

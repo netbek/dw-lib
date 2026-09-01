@@ -18,6 +18,17 @@ deps-scan:
 	cd examples/cli && trivy fs uv.lock --table-mode detailed
 	cd examples/cli/packages/example_cli && trivy fs uv.lock --table-mode detailed
 
+renovate:
+	@echo "$(YELLOW)Checking GitHub Action updates with Renovate...$(RESET)"
+	RENOVATE_CONFIG_FILE="renovate.json" \
+	GITHUB_COM_TOKEN="$$(gh auth token 2>/dev/null || true)" \
+		renovate --platform=local --onboarding=false \
+		--report-type=file --report-path=renovate-report.json
+
+renovate-apply: renovate
+	@echo "$(YELLOW)Applying GitHub Action updates...$(RESET)"
+	uv run scripts/apply-renovate-report.py renovate-report.json
+
 python-outdated:
 	@echo "$(YELLOW)Listing outdated Python dependencies...$(RESET)"
 	@uv tree --outdated --depth 1
@@ -86,10 +97,10 @@ lint:
 
 bump-version:
 	@BUMP=$(word 2,$(MAKECMDGOALS)); \
-	VALID_BUMP="major minor patch stable alpha beta rc post dev"; \
+	VALID_BUMP="major minor patch"; \
 	if [ -z "$$BUMP" ]; then \
 		echo "$(RED)Error: Bump is required.$(RESET)"; \
-		echo "Usage: make bump-version [major|minor|patch|stable|alpha|beta|rc|post|dev]"; \
+		echo "Usage: make bump-version [major|minor|patch]"; \
 		exit 1; \
 	fi; \
 	if ! echo "$$VALID_BUMP" | grep -qw "$$BUMP"; then \
@@ -97,6 +108,7 @@ bump-version:
 		echo "Must be one of: $(CYAN)$$VALID_BUMP$(RESET)"; \
 		exit 1; \
 	fi; \
+	pnpm version $$BUMP; \
 	uv version --bump $$BUMP; \
 	VERSION=$$(uv version --short); \
 	$(MAKE) --no-print-directory uv-sync; \

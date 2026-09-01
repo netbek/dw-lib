@@ -1,4 +1,6 @@
 [tools]
+node = "24"
+pnpm = "latest"
 python = "3.13"
 ripgrep = "latest"
 trivy = "latest"
@@ -8,11 +10,23 @@ zizmor = "latest"
 [settings]
 lockfile = true
 minimum_release_age = "7d"
+npm.package_manager = "pnpm"
 python.uv_venv_auto = "create|source"
+
+[env]
+_.path = ["{{config_root}}/node_modules/.bin"]
 
 [hooks.enter]
 run = """
 mise install --quiet
+mise run pnpm-install
 uv sync --all-extras --all-groups --quiet
 if [ -d .git ]; then pre-commit install --overwrite > /dev/null 2>&1; fi
 """
+
+[tasks.pnpm-install]
+description = "Installs dependencies with pnpm"
+quiet = true
+run = "pnpm install --loglevel error"
+sources = ["package.json", "pnpm-lock.yaml", "mise.toml"]
+outputs = ["node_modules/.pnpm/lock.yaml"]

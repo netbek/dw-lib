@@ -1,0 +1,25 @@
+{
+  "name": "dw-lib",
+  "version": "1.36.4",
+  "private": true,
+  "description": "Tools for working with Postgres, ClickHouse, and DuckDB.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/netbek/dw-lib.git"
+  },
+  "scripts": {},
+  "author": {
+    "name": "Hein Bekker",
+    "email": "hein@netbek.co.za",
+    "url": "http://netbek.co.za"
+  },
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/netbek/dw-lib/issues"
+  },
+  "devDependencies": {
+    "npm-check-updates": "23.0.2",
+    "renovate": "44.24.2"
+  }
+}

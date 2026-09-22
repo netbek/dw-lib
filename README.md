@@ -42,7 +42,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 
 Build and publish the Python distribution package:
 
-1. Run `make bump-version [major|minor|patch]`. This bumps `pyproject.toml`, then commits.
+1. Run `make bump-version [major|minor|patch]`. This bumps `pyproject.toml` and `package.json`, then commits.
 2. Push the commit.
 3. Run `make build`. This builds the distribution package.
 4. Check the tree is clean, then run `make create-release`.

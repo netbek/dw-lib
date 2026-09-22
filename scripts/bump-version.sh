@@ -35,9 +35,9 @@ fi
 
 cd "${ROOT_DIR}"
 
-pnpm version --no-git-tag-version "${BUMP}"
 uv version --bump "${BUMP}"
 VERSION="$(uv version --short)"
+pnpm version --no-git-tag-version ${VERSION}"
 
 make uv-sync
 

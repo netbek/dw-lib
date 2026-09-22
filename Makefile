@@ -57,6 +57,14 @@ uv-sync:
 	cd examples/cli/packages/example_cli && uv sync $(OPTIONS)
 	uv sync $(OPTIONS)
 
+skills-install:
+	@echo "$(YELLOW)Installing agent skills...$(RESET)"
+	pnpm exec skills-manager install --force
+
+skills-uninstall:
+	@echo "$(YELLOW)Uninstalling agent skills...$(RESET)"
+	pnpm exec skills-manager uninstall
+
 # ==============================================================================
 # FORMAT
 # ==============================================================================

@@ -37,9 +37,8 @@ cd "${ROOT_DIR}"
 
 uv version --bump "${BUMP}"
 VERSION="$(uv version --short)"
-pnpm version --no-git-tag-version ${VERSION}"
-
 make uv-sync
+pnpm version --no-git-tag-version ${VERSION}"
 
 git add \
     package.json \
@@ -47,5 +46,4 @@ git add \
     uv.lock \
     examples/cli/uv.lock \
     examples/cli/packages/example_cli/uv.lock
-
 git commit -m "chore(release): ${VERSION}"

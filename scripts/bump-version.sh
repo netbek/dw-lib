@@ -38,7 +38,7 @@ cd "${ROOT_DIR}"
 uv version --bump "${BUMP}"
 VERSION="$(uv version --short)"
 make uv-sync
-pnpm version --no-git-tag-version ${VERSION}"
+pnpm version --no-git-tag-version "${VERSION}"
 
 git add \
     package.json \

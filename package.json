@@ -1,0 +1,18 @@
+{
+  "name": "netbek-dw-lib",
+  "private": true,
+  "version": "1.36.8",
+  "description": "Tools for working with Postgres, ClickHouse, and DuckDB",
+  "author": {
+    "name": "Hein Bekker",
+    "email": "hein@netbek.co.za",
+    "url": "https://www.netbek.co.za"
+  },
+  "license": "AGPL-3.0",
+  "type": "module",
+  "main": "index.js",
+  "devDependencies": {
+    "@netbek/skills-manager": "^0.2.1",
+    "npm-check-updates": "^23.1.0"
+  }
+}

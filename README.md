@@ -2,7 +2,9 @@
 
 Tools for working with Postgres, ClickHouse, and DuckDB.
 
-## Development: Installation
+## Development
+
+### Prerequisites
 
 1. Clone the repo:
 
@@ -36,17 +38,15 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     keyring set pypi-dw-lib __token__
     ```
 
-## Development: Usage
+### Release
 
 Build and publish the Python distribution package:
 
-```shell
-make bump-version [major|minor|patch]
-git push
-make build
-make create-release
-make publish
-```
+1. Run `make bump-version [major|minor|patch]`. This bumps `pyproject.toml` and `package.json`, then commits.
+2. Push the commit.
+3. Run `make build`. This builds the distribution package.
+4. Check the tree is clean, then run `make create-release`.
+5. Run `make publish`. This publishes the distribution package.
 
 ## License
 

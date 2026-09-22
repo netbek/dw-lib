@@ -20,6 +20,8 @@ from typing import Any
 import os
 import pytest
 import requests
+import urllib.error
+import urllib.request
 
 # Environment variables for PeerDB tests
 # Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.4/docker-compose.yml
@@ -68,11 +70,11 @@ class DatabaseTest:
         clickhouse_adapter = ClickHouseAdapter(clickhouse_settings)
 
         def is_responsive():
+            url = f"http://{clickhouse_settings.host}:{clickhouse_settings.port}/ping"
             try:
-                with clickhouse_adapter.create_client() as client:
-                    client.query("select 1;")
-                return True
-            except Exception:  # noqa: BLE001
+                with urllib.request.urlopen(url, timeout=1) as response:
+                    return response.status == 200
+            except (urllib.error.URLError, TimeoutError, OSError):
                 return False
 
         docker_services.wait_until_responsive(check=is_responsive, timeout=10, pause=1)

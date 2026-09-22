@@ -35,13 +35,14 @@ fi
 
 cd "${ROOT_DIR}"
 
-pnpm version "${BUMP}"
+pnpm version --no-git-tag-version "${BUMP}"
 uv version --bump "${BUMP}"
 VERSION="$(uv version --short)"
 
 make uv-sync
 
 git add \
+    package.json \
     pyproject.toml \
     uv.lock \
     examples/cli/uv.lock \

@@ -26,6 +26,7 @@ import datetime
 import json
 import os
 import pydash
+import shlex
 
 RESOURCE_TYPE_TO_CLASS = {
     DbtResourceType.MODEL: DbtModel,
@@ -336,7 +337,7 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        raw_command = " ".join(cmd)
+        raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
         _trace_invocation(
             DbtCommand.BUILD,
@@ -415,7 +416,7 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        raw_command = " ".join(cmd)
+        raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
         _trace_invocation(
             DbtCommand.RUN,
@@ -450,7 +451,7 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        raw_command = " ".join(cmd)
+        raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
         _trace_invocation(DbtCommand.RUN_OPERATION, raw_command, invocation_id, runner_result)
 
@@ -475,7 +476,7 @@ class Dbt:
         )
         runner_result = dbtRunner().invoke(cmd[1:])
 
-        raw_command = " ".join(cmd)
+        raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
         _trace_invocation(DbtCommand.SEED, raw_command, invocation_id, runner_result)
 
@@ -696,7 +697,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+            cmd.extend(["--vars", json.dumps(vars)])
 
         return cmd
 
@@ -757,7 +758,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+            cmd.extend(["--vars", json.dumps(vars)])
 
         return cmd
 
@@ -806,7 +807,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+            cmd.extend(["--vars", json.dumps(vars)])
 
         return cmd
 
@@ -871,7 +872,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+            cmd.extend(["--vars", json.dumps(vars)])
 
         return cmd
 
@@ -926,7 +927,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+            cmd.extend(["--vars", json.dumps(vars)])
 
         return cmd
 
@@ -1037,7 +1038,7 @@ class Dbt:
             cmd.extend(["--no-use-colors"])
 
         if vars:
-            cmd.extend(["--vars", f"'{json.dumps(vars)}'"])
+            cmd.extend(["--vars", json.dumps(vars)])
 
         return cmd
 

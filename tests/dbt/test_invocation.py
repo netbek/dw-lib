@@ -1,9 +1,13 @@
 from ..conftest import DatabaseTest
+from dbt.config.utils import parse_cli_yaml_string
 from dw_lib.database import ClickHouseAdapter
 from dw_lib.dbt import Dbt
 from pathlib import Path
+from typing import ClassVar
 
+import json
 import pytest
+import shlex
 
 
 class InvocationTest(DatabaseTest):
@@ -225,3 +229,80 @@ class TestSeed(InvocationTest):
         assert node_spans, "no node spans created"
         for ns in node_spans:
             assert ns.end_time is not None
+
+
+class TestVarsFlag(InvocationTest):
+    sample_vars: ClassVar[dict] = {
+        "answer": 42,
+        "enabled": True,
+        "name": "example",
+        "nested": {"a": [1, 2]},
+    }
+
+    builders: ClassVar[list] = [
+        ("_build_command", {}),
+        ("_compile_command", {}),
+        ("_parse_command", {}),
+        ("_run_command", {}),
+        ("_run_operation_command", {"macro": "select_answer"}),
+        ("_docs_generate_command", {}),
+    ]
+
+    @pytest.mark.parametrize("builder,kwargs", builders)
+    def test_vars_flag_is_unquoted_json(self, dbt: Dbt, builder: str, kwargs: dict):
+        cmd = getattr(dbt, builder)(**kwargs, vars=self.sample_vars)
+        value = cmd[cmd.index("--vars") + 1]
+        assert value == json.dumps(self.sample_vars)
+        assert not value.startswith("'")
+        assert not value.endswith("'")
+
+    @pytest.mark.parametrize("builder,kwargs", builders)
+    def test_vars_flag_round_trips_through_dbt_parser(self, dbt: Dbt, builder: str, kwargs: dict):
+        cmd = getattr(dbt, builder)(**kwargs, vars=self.sample_vars)
+        value = cmd[cmd.index("--vars") + 1]
+        assert parse_cli_yaml_string(value, "vars") == self.sample_vars
+
+    @pytest.mark.parametrize("builder,kwargs", builders)
+    @pytest.mark.parametrize("vars_", [None, {}])
+    def test_vars_flag_omitted_when_none_or_empty(
+        self, dbt: Dbt, builder: str, kwargs: dict, vars_: dict | None
+    ):
+        cmd = getattr(dbt, builder)(**kwargs, vars=vars_)
+        assert "--vars" not in cmd
+
+    def test_args_flag_is_unquoted_json(self, dbt: Dbt):
+        args = {"arg_1": "value_1"}
+        cmd = dbt._run_operation_command("select_answer", args=args)
+        value = cmd[cmd.index("--args") + 1]
+        assert value == json.dumps(args)
+        assert not value.startswith("'")
+        assert not value.endswith("'")
+
+
+class TestRunOperationVars(InvocationTest):
+    def test_vars_passed_to_dbt(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        spans = []
+        monkeypatch.setattr(
+            "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
+        )
+
+        vars_ = {"answer": 42}
+        runner_result = dbt.run_operation("select_answer", vars=vars_)
+        assert runner_result.success is True
+
+        root_spans = [s for s in spans if s.name.startswith("dbt.invoke")]
+        assert root_spans, "no root span created"
+        root = root_spans[0]
+        expected_cmd = dbt._run_operation_command("select_answer", vars=vars_)
+        assert root.attributes["dbt.invoke.raw_command"] == shlex.join(expected_cmd)
+
+    def test_vars_required_when_missing(
+        self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
+    ):
+        spans = []
+        monkeypatch.setattr(
+            "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
+        )
+
+        runner_result = dbt.run_operation("select_answer")
+        assert runner_result.success is False

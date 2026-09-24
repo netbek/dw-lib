@@ -619,7 +619,7 @@ class TestMethodCaptureWiring(InvocationTest):
         assert out.runner_result is fake_result
 
     def test_docs_generate_forwards_capture_events(self, dbt: Dbt, monkeypatch, tmp_path: Path):
-        """Verify `docs_generate` forwards `capture_events` and returns the bundled file."""
+        """Verify `docs_generate` returns the bundled output file."""
         import dw_lib.dbt as dbt_module
 
         fake_result = dbtRunnerResult(success=True)

@@ -309,7 +309,7 @@ class TestBundleDocs:
     """Tests for `bundle_docs` output bundling."""
 
     def test_bundle_docs(self, pytestconfig):
-        """Verify docs are bundled to an existing output file."""
+        """Verify docs are bundled to a written output file."""
         project_dir = Path(__file__).parent / "fixtures" / "bundle_docs"
         output_dir = pytestconfig.rootpath / "tests" / "temp" / "bundle_docs"
         output_file = bundle_docs(project_dir, output_dir=output_dir)

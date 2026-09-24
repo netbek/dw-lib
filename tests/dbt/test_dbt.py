@@ -14,11 +14,11 @@ import shutil
 class InvocationTest:
     @pytest.fixture
     def profiles_dir(self) -> Path:
-        return Path(__file__).parent / "data" / "invocation" / ".dbt"
+        return Path(__file__).parent / "fixtures" / "invocation" / ".dbt"
 
     @pytest.fixture
     def project_dir(self) -> Path:
-        return Path(__file__).parent / "data" / "invocation" / "dbt"
+        return Path(__file__).parent / "fixtures" / "invocation" / "dbt"
 
     @pytest.fixture
     def dbt(self, profiles_dir: Path, project_dir: Path) -> Generator[Dbt, Any]:
@@ -280,9 +280,9 @@ class TestNormalizeRowsAffected:
 
 class TestBundleDocs:
     def test_bundle_docs(self, pytestconfig):
-        project_dir = Path(__file__).parent / "data" / "bundle_docs"
-        dest_dir = pytestconfig.rootpath / "tests" / "temp" / "bundle_docs"
-        dest_file = bundle_docs(project_dir, dest_dir=dest_dir)
+        project_dir = Path(__file__).parent / "fixtures" / "bundle_docs"
+        output_dir = pytestconfig.rootpath / "tests" / "temp" / "bundle_docs"
+        output_file = bundle_docs(project_dir, output_dir=output_dir)
 
-        assert dest_file.is_file() is True
-        assert dest_file.exists() is True
+        assert output_file.is_file() is True
+        assert output_file.exists() is True

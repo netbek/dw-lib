@@ -7,14 +7,18 @@ import pytest
 
 
 class CodeGenerationTest(DatabaseTest):
+    """Shared context for code generation tests backed by ClickHouse."""
+
     @pytest.fixture(scope="function")
     def relation(self, clickhouse_adapter: ClickHouseAdapter) -> Generator[ClickHouseRelation, Any]:
+        """Provide a reference to the `test_table` relation."""
         yield ClickHouseRelation(database=clickhouse_adapter.settings.database, table="test_table")
 
     @pytest.fixture(scope="function")
     def table(
         self, clickhouse_adapter: ClickHouseAdapter, relation: ClickHouseRelation
     ) -> Generator[ClickHouseRelation, Any]:
+        """Provide a `test_table` covering all types plus PeerDB columns."""
         create_table_statement = f"""
 create or replace table {relation}
 (

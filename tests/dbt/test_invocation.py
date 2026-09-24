@@ -15,16 +15,21 @@ import shlex
 
 
 class InvocationTest(DatabaseTest):
+    """Shared context for live `Dbt` invocation tests backed by ClickHouse."""
+
     @pytest.fixture
     def profiles_dir(self) -> Path:
+        """Provide the fixture profiles directory."""
         return Path(__file__).parent / "fixtures" / "invocation" / ".dbt"
 
     @pytest.fixture
     def project_dir(self) -> Path:
+        """Provide the fixture dbt project directory."""
         return Path(__file__).parent / "fixtures" / "invocation" / "dbt"
 
     @pytest.fixture
     def dbt(self, profiles_dir, project_dir) -> Dbt:
+        """Provide a `Dbt` instance bound to the fixture project."""
         return Dbt(profiles_dir=profiles_dir, project_dir=project_dir)
 
 
@@ -92,9 +97,12 @@ def _make_fake_tracer(spans: list, record: bool = True):
 
 
 class TestBuild(InvocationTest):
+    """Tests for `Dbt.build` tracing and event capture."""
+
     def test_success_tracing_disabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `build` succeeds without spans or events when tracing is disabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
@@ -108,6 +116,7 @@ class TestBuild(InvocationTest):
     def test_success_tracing_enabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `build` emits root and node spans when tracing is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -129,6 +138,7 @@ class TestBuild(InvocationTest):
             assert ns.end_time is not None
 
     def test_capture_events(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        """Verify `build` collects events and writes logs when capture is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -144,9 +154,12 @@ class TestBuild(InvocationTest):
 
 
 class TestRun(InvocationTest):
+    """Tests for `Dbt.run` tracing and event capture."""
+
     def test_success_tracing_disabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `run` succeeds without spans or events when tracing is disabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
@@ -160,6 +173,7 @@ class TestRun(InvocationTest):
     def test_success_tracing_enabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `run` emits root and node spans when tracing is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -181,6 +195,7 @@ class TestRun(InvocationTest):
             assert ns.end_time is not None
 
     def test_capture_events(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        """Verify `run` collects events and writes logs when capture is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -196,9 +211,12 @@ class TestRun(InvocationTest):
 
 
 class TestRunOperation(InvocationTest):
+    """Tests for `Dbt.run_operation` tracing and event capture."""
+
     def test_success_tracing_disabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `run_operation` succeeds without spans when tracing is disabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
@@ -212,6 +230,7 @@ class TestRunOperation(InvocationTest):
     def test_success_tracing_enabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `run_operation` emits root and node spans when tracing is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -233,6 +252,7 @@ class TestRunOperation(InvocationTest):
             assert ns.end_time is not None
 
     def test_capture_events(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        """Verify `run_operation` collects events and writes logs when capture is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -248,9 +268,12 @@ class TestRunOperation(InvocationTest):
 
 
 class TestSeed(InvocationTest):
+    """Tests for `Dbt.seed` tracing and event capture."""
+
     def test_success_tracing_disabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `seed` succeeds without spans or events when tracing is disabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
@@ -264,6 +287,7 @@ class TestSeed(InvocationTest):
     def test_success_tracing_enabled(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `seed` emits root and node spans when tracing is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -285,6 +309,7 @@ class TestSeed(InvocationTest):
             assert ns.end_time is not None
 
     def test_capture_events(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        """Verify `seed` collects events and writes logs when capture is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -300,12 +325,16 @@ class TestSeed(InvocationTest):
 
 
 class TestCompile(InvocationTest):
+    """Tests for `Dbt.compile` success and event capture."""
+
     def test_success(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt):
+        """Verify `compile` succeeds without captured events by default."""
         out = dbt.compile()
         assert out.runner_result.success is True
         assert out.events == []
 
     def test_capture_events(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt):
+        """Verify `compile` collects events and writes logs when capture is enabled."""
         out = dbt.compile(capture_events=True)
         assert out.runner_result.success is True
         assert len(out.events) > 0
@@ -316,12 +345,16 @@ class TestCompile(InvocationTest):
 
 
 class TestParse(InvocationTest):
+    """Tests for `Dbt.parse` success and event capture."""
+
     def test_success(self, dbt: Dbt):
+        """Verify `parse` succeeds without captured events by default."""
         out = dbt.parse()
         assert out.runner_result.success is True
         assert out.events == []
 
     def test_capture_events(self, dbt: Dbt):
+        """Verify `parse` collects events and writes logs when capture is enabled."""
         out = dbt.parse(capture_events=True)
         assert out.runner_result.success is True
         assert len(out.events) > 0
@@ -332,13 +365,17 @@ class TestParse(InvocationTest):
 
 
 class TestDocsGenerate(InvocationTest):
+    """Tests for `Dbt.docs_generate` output and event capture."""
+
     def test_success(self, dbt: Dbt):
+        """Verify `docs_generate` succeeds and writes the output file."""
         out = dbt.docs_generate()
         assert out.runner_result.success is True
         assert out.events == []
         assert out.output_file.exists() is True
 
     def test_capture_events(self, dbt: Dbt):
+        """Verify `docs_generate` collects events and writes logs when capture is enabled."""
         out = dbt.docs_generate(capture_events=True)
         assert out.runner_result.success is True
         assert len(out.events) > 0
@@ -350,6 +387,8 @@ class TestDocsGenerate(InvocationTest):
 
 
 class TestVarsFlag(InvocationTest):
+    """Tests for `--vars` and `--args` flag serialization on command builders."""
+
     sample_vars: ClassVar[dict] = {
         "answer": 42,
         "enabled": True,
@@ -368,6 +407,7 @@ class TestVarsFlag(InvocationTest):
 
     @pytest.mark.parametrize("builder,kwargs", builders)
     def test_vars_flag_is_unquoted_json(self, dbt: Dbt, builder: str, kwargs: dict):
+        """Verify `--vars` is serialized as unquoted JSON."""
         cmd = getattr(dbt, builder)(**kwargs, vars=self.sample_vars)
         value = cmd[cmd.index("--vars") + 1]
         assert value == json.dumps(self.sample_vars)
@@ -376,6 +416,7 @@ class TestVarsFlag(InvocationTest):
 
     @pytest.mark.parametrize("builder,kwargs", builders)
     def test_vars_flag_round_trips_through_dbt_parser(self, dbt: Dbt, builder: str, kwargs: dict):
+        """Verify `--vars` value round-trips through the dbt YAML parser."""
         cmd = getattr(dbt, builder)(**kwargs, vars=self.sample_vars)
         value = cmd[cmd.index("--vars") + 1]
         assert parse_cli_yaml_string(value, "vars") == self.sample_vars
@@ -385,10 +426,12 @@ class TestVarsFlag(InvocationTest):
     def test_vars_flag_omitted_when_none_or_empty(
         self, dbt: Dbt, builder: str, kwargs: dict, vars_: dict | None
     ):
+        """Verify `--vars` is omitted when vars are `None` or empty."""
         cmd = getattr(dbt, builder)(**kwargs, vars=vars_)
         assert "--vars" not in cmd
 
     def test_args_flag_is_unquoted_json(self, dbt: Dbt):
+        """Verify `--args` is serialized as unquoted JSON."""
         args = {"arg_1": "value_1"}
         cmd = dbt._run_operation_command("select_answer", args=args)
         value = cmd[cmd.index("--args") + 1]
@@ -398,7 +441,10 @@ class TestVarsFlag(InvocationTest):
 
 
 class TestRunOperationVars(InvocationTest):
+    """Tests for `Dbt.run_operation` variable passing and tracing."""
+
     def test_vars_passed_to_dbt(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        """Verify `run_operation` forwards vars and records the raw command."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -418,6 +464,7 @@ class TestRunOperationVars(InvocationTest):
     def test_vars_required_when_missing(
         self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch
     ):
+        """Verify `run_operation` fails when required vars are missing."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=False)
@@ -428,6 +475,7 @@ class TestRunOperationVars(InvocationTest):
         assert out.events == []
 
     def test_capture_events(self, clickhouse_adapter: ClickHouseAdapter, dbt: Dbt, monkeypatch):
+        """Verify `run_operation` with vars collects events when capture is enabled."""
         spans = []
         monkeypatch.setattr(
             "dw_lib.dbt.trace.get_tracer", lambda name: _make_fake_tracer(spans, record=True)
@@ -463,13 +511,17 @@ def _make_fake_dbt_runner(monkeypatch, events_to_fire=None, result=None):
 
 
 class TestResultDataclasses:
+    """Tests for invocation result dataclass defaults."""
+
     def test_invocation_defaults(self):
+        """Verify `DbtInvocationResult` defaults to no captured events."""
         result = dbtRunnerResult(success=True)
         out = DbtInvocationResult(runner_result=result)
         assert out.runner_result is result
         assert out.events == []
 
     def test_docs_generate_defaults(self, tmp_path: Path):
+        """Verify `DbtDocsGenerateResult` retains the output file and defaults events."""
         result = dbtRunnerResult(success=True)
         out = DbtDocsGenerateResult(runner_result=result, output_file=tmp_path / "index.html")
         assert out.runner_result is result
@@ -478,7 +530,10 @@ class TestResultDataclasses:
 
 
 class TestInvokeHelper:
+    """Tests for the `_invoke` helper callback and isolation behavior."""
+
     def test_no_capture_passes_no_callbacks(self, monkeypatch):
+        """Verify `_invoke` registers no callbacks when capture is disabled."""
         import dw_lib.dbt as dbt_module
 
         seen = _make_fake_dbt_runner(monkeypatch)
@@ -492,6 +547,7 @@ class TestInvokeHelper:
         assert seen["invoke_args"] == cmd[1:]
 
     def test_capture_collects_real_events_in_order(self, monkeypatch):
+        """Verify `_invoke` collects fired events in order when capture is enabled."""
         import dw_lib.dbt as dbt_module
 
         msg_one = _make_event("first")
@@ -507,6 +563,7 @@ class TestInvokeHelper:
         assert seen["invoke_args"] == cmd[1:]
 
     def test_per_call_isolation(self, monkeypatch):
+        """Verify `_invoke` returns an isolated event list per call."""
         import dw_lib.dbt as dbt_module
 
         _make_fake_dbt_runner(monkeypatch, events_to_fire=[_make_event("x")])
@@ -520,8 +577,11 @@ class TestInvokeHelper:
 
 
 class TestMethodCaptureWiring(InvocationTest):
+    """Tests for `capture_events` forwarding on `Dbt` methods."""
+
     @pytest.mark.parametrize("method", ["build", "compile", "parse", "run", "seed"])
     def test_methods_forward_capture_events(self, dbt: Dbt, monkeypatch, method: str):
+        """Verify methods forward `capture_events` to `_invoke`."""
         import dw_lib.dbt as dbt_module
 
         calls: list = []
@@ -547,6 +607,7 @@ class TestMethodCaptureWiring(InvocationTest):
         assert calls[1][1] is True
 
     def test_run_operation_forwards_capture_events(self, dbt: Dbt, monkeypatch):
+        """Verify `run_operation` forwards `capture_events` to `_invoke`."""
         import dw_lib.dbt as dbt_module
 
         fake_result = dbtRunnerResult(success=True)
@@ -558,6 +619,7 @@ class TestMethodCaptureWiring(InvocationTest):
         assert out.runner_result is fake_result
 
     def test_docs_generate_forwards_capture_events(self, dbt: Dbt, monkeypatch, tmp_path: Path):
+        """Verify `docs_generate` forwards `capture_events` and returns the bundled file."""
         import dw_lib.dbt as dbt_module
 
         fake_result = dbtRunnerResult(success=True)

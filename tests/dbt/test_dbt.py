@@ -12,16 +12,21 @@ import shutil
 
 
 class InvocationTest:
+    """Shared context for `Dbt` tests using the invocation fixture project."""
+
     @pytest.fixture
     def profiles_dir(self) -> Path:
+        """Provide the fixture profiles directory."""
         return Path(__file__).parent / "fixtures" / "invocation" / ".dbt"
 
     @pytest.fixture
     def project_dir(self) -> Path:
+        """Provide the fixture dbt project directory."""
         return Path(__file__).parent / "fixtures" / "invocation" / "dbt"
 
     @pytest.fixture
     def dbt(self, profiles_dir: Path, project_dir: Path) -> Generator[Dbt, Any]:
+        """Provide an isolated `Dbt` instance with a cleaned `target/` directory."""
         target_dir = project_dir / "target"
 
         if target_dir.exists() and target_dir.is_dir():
@@ -34,13 +39,18 @@ class InvocationTest:
 
 
 class TestAttributes(InvocationTest):
+    """Tests for `Dbt` path and config attribute resolution."""
+
     def test_profiles_file(self, profiles_dir: Path, dbt: Dbt):
+        """Verify `profiles_file` resolves inside the profiles directory."""
         assert dbt.profiles_file == profiles_dir / "profiles.yml"
 
     def test_project_config_file(self, project_dir: Path, dbt: Dbt):
+        """Verify `project_config_file` resolves inside the project directory."""
         assert dbt.project_config_file == project_dir / "dbt_project.yml"
 
     def test_project_config(self, dbt: Dbt):
+        """Verify `project_config` parses the fixture `dbt_project.yml`."""
         assert dbt.project_config == {
             "name": "example",
             "version": "1.0.0",
@@ -62,23 +72,30 @@ class TestAttributes(InvocationTest):
         }
 
     def test_docs_dir(self, project_dir: Path, dbt: Dbt):
+        """Verify `docs_dir` resolves inside the project directory."""
         assert dbt.docs_dir == project_dir / "docs"
 
     def test_models_dir(self, project_dir: Path, dbt: Dbt):
+        """Verify `models_dir` resolves inside the project directory."""
         assert dbt.models_dir == project_dir / "models"
 
 
 class TestListResources(InvocationTest):
+    """Tests for `Dbt.list_resources` filtering and selection."""
+
     def test_resource_types_one(self, dbt: Dbt):
+        """Verify listing filters to a single resource type."""
         resources = dbt.list_resources(resource_types=[DbtResourceType.SEED])
         resource_names = [resource.name for resource in resources]
         assert resource_names == ["my_first_dbt_seed"]
 
     def test_resource_types_non_existant(self, dbt: Dbt):
+        """Verify listing rejects an unsupported resource type."""
         with pytest.raises(ValueError, match="'resource_types' must be any of: model, seed"):
             dbt.list_resources(resource_types=["non_existant"])
 
     def test_select_all(self, dbt: Dbt):
+        """Verify listing without a selector returns all resources."""
         resources = dbt.list_resources()
         resource_names = [resource.name for resource in resources]
         assert resource_names == [
@@ -89,17 +106,21 @@ class TestListResources(InvocationTest):
         ]
 
     def test_select_one(self, dbt: Dbt):
+        """Verify listing selects a single resource by name."""
         resources = dbt.list_resources(select="my_second_dbt_model")
         resource_names = [resource.name for resource in resources]
         assert resource_names == ["my_second_dbt_model"]
 
     def test_select_non_existant(self, dbt: Dbt):
+        """Verify listing an unknown selector returns no resources."""
         resources = dbt.list_resources(select="non_existant")
         resource_names = [resource.name for resource in resources]
         assert resource_names == []
 
 
 class TestGenerateModelYAML(InvocationTest, CodeGenerationTest):
+    """Tests for `Dbt.generate_model_yaml` replace and merge behavior."""
+
     def test_replace(
         self,
         dbt: Dbt,
@@ -107,6 +128,7 @@ class TestGenerateModelYAML(InvocationTest, CodeGenerationTest):
         relation: ClickHouseRelation,
         table: Table,
     ):
+        """Verify generated YAML replaces existing content when merge is disabled."""
         actual = dbt.generate_model_yaml(clickhouse_adapter, merge=False)
         expected_yaml = """
 version: 2
@@ -183,6 +205,7 @@ models:
         relation: ClickHouseRelation,
         table: Table,
     ):
+        """Verify generated YAML preserves descriptions when merge is enabled."""
         actual = dbt.generate_model_yaml(clickhouse_adapter, merge=True)
         expected_yaml = """
 version: 2
@@ -261,7 +284,10 @@ models:
 
 
 class TestNormalizeRowsAffected:
+    """Tests for `normalize_rows_affected` literal and string handling."""
+
     def test_literal(self):
+        """Verify literal row counts map negatives and `None` to `None`."""
         assert normalize_rows_affected(None) is None
         assert normalize_rows_affected(-1) is None
         assert normalize_rows_affected(-100) is None
@@ -270,6 +296,7 @@ class TestNormalizeRowsAffected:
         assert normalize_rows_affected(100) == 100
 
     def test_string(self):
+        """Verify string row counts map blanks and negatives to `None`."""
         assert normalize_rows_affected("") is None
         assert normalize_rows_affected("-1") is None
         assert normalize_rows_affected("-100") is None
@@ -279,7 +306,10 @@ class TestNormalizeRowsAffected:
 
 
 class TestBundleDocs:
+    """Tests for `bundle_docs` output bundling."""
+
     def test_bundle_docs(self, pytestconfig):
+        """Verify docs are bundled to an existing output file."""
         project_dir = Path(__file__).parent / "fixtures" / "bundle_docs"
         output_dir = pytestconfig.rootpath / "tests" / "temp" / "bundle_docs"
         output_file = bundle_docs(project_dir, output_dir=output_dir)

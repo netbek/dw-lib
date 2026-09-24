@@ -12,6 +12,14 @@ endif
 # DEPENDENCY MANAGEMENT
 # ==============================================================================
 
+install:
+	@echo "$(YELLOW)Installing...$(RESET)"
+	@./scripts/install-node.sh
+	@./scripts/install-python.sh
+	@./scripts/install-precommit.sh
+	@./scripts/install-skills.sh
+	@./scripts/install-vendor.sh
+
 deps-scan:
 	@echo "$(YELLOW)Scanning root lockfiles for vulnerabilities...$(RESET)"
 	trivy fs pnpm-lock.yaml --table-mode detailed
@@ -25,7 +33,7 @@ repo-scan:
 
 node-install:
 	@echo "$(YELLOW)Installing Node dependencies...$(RESET)"
-	rm -fr node_modules && pnpm install
+	@./scripts/install-node.sh
 
 node-outdated:
 	@echo "$(YELLOW)Listing outdated Node dependencies...$(RESET)"
@@ -65,7 +73,7 @@ endif
 
 python-install:
 	@echo "$(YELLOW)Installing Python dependencies...$(RESET)"
-	rm -fr .venv examples/cli/.venv examples/cli/packages/example_cli/.venv && uv sync --all-extras --all-groups
+	@./scripts/install-python.sh
 
 python-outdated:
 	@echo "$(YELLOW)Listing outdated Python dependencies...$(RESET)"

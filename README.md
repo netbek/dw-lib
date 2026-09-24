@@ -15,7 +15,7 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
 2. Install [Docker Engine v23 or higher](https://docs.docker.com/engine/install/) and [Docker Compose v2 or higher](https://docs.docker.com/compose/install/). Follow the links for instructions or run this script:
 
     ```shell
-    ./scripts/install.sh docker
+    ./scripts/install-docker.sh
     ```
 
 3. Install Mise and add activation to `~/.bashrc`, e.g.
@@ -32,7 +32,9 @@ Tools for working with Postgres, ClickHouse, and DuckDB.
     mise trust
     ```
 
-5. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
+5. Run `make install` to install Node dependencies, Python dependencies, pre-commit hooks, agent skills, and pinned vendor sources.
+
+6. Create a [PyPI API token](https://pypi.org/manage/account/#api-tokens), and add the token to the system keyring as the password:
 
     ```shell
     keyring set pypi-dw-lib __token__

@@ -43,7 +43,8 @@ RESOURCE_TYPE_TO_CLASS = {
 
 
 def _invoke(cmd: list[str], capture_events: bool) -> tuple[dbtRunnerResult, list[EventMsg]]:
-    """Invoke a dbt command, optionally capturing dbt events.
+    """
+    Invoke a dbt command, optionally capturing dbt events.
 
     Args:
         cmd (list[str]): Full command argv starting with `"dbt"`. Only
@@ -63,7 +64,8 @@ def _invoke(cmd: list[str], capture_events: bool) -> tuple[dbtRunnerResult, list
 
 
 def find_profiles_dir() -> Path:
-    """Find the dbt profiles directory.
+    """
+    Find the dbt profiles directory.
 
     Returns:
         Path: The `DBT_PROFILES_DIR` environment variable when set,
@@ -78,7 +80,8 @@ def find_profiles_dir() -> Path:
 
 
 def find_project_config_file() -> Path:
-    """Find the `dbt_project.yml` config file.
+    """
+    Find the `dbt_project.yml` config file.
 
     Searches upward from the `DBT_PROJECT_DIR` environment variable when set,
     otherwise from the current working directory.
@@ -105,7 +108,8 @@ def find_project_config_file() -> Path:
 
 
 def find_project_dir() -> Path:
-    """Find the dbt project directory.
+    """
+    Find the dbt project directory.
 
     Returns:
         Path: The parent directory of the located `dbt_project.yml` file.
@@ -114,7 +118,8 @@ def find_project_dir() -> Path:
 
 
 def resolve_resource_path(project_dir: Path, resource: dict) -> Path | None:
-    """Resolve the filesystem path of a manifest resource.
+    """
+    Resolve the filesystem path of a manifest resource.
 
     Args:
         project_dir (Path): The dbt project directory.
@@ -138,7 +143,8 @@ def resolve_resource_path(project_dir: Path, resource: dict) -> Path | None:
 
 
 def bundle_docs(project_dir: Path, output_dir: Path | None = None) -> Path:
-    """Bundle `dbt docs generate` output into a single HTML file.
+    """
+    Bundle `dbt docs generate` output into a single HTML file.
 
     Embeds `target/manifest.json` and `target/catalog.json` into
     `target/index.html` and writes the result to the destination directory.
@@ -189,7 +195,8 @@ def bundle_docs(project_dir: Path, output_dir: Path | None = None) -> Path:
 
 
 def normalize_rows_affected(value: int | str | None) -> int | None:
-    """Normalize a dbt adapter `rows_affected` response value.
+    """
+    Normalize a dbt adapter `rows_affected` response value.
 
     Args:
         value (int | str | None): The raw `rows_affected` value, which may be
@@ -211,7 +218,8 @@ def normalize_rows_affected(value: int | str | None) -> int | None:
 
 
 def to_ns(dt: datetime.datetime) -> int:
-    """Convert a datetime to nanoseconds since the epoch.
+    """
+    Convert a datetime to nanoseconds since the epoch.
 
     Args:
         dt (datetime.datetime): The datetime to convert. Naive datetimes are
@@ -231,7 +239,8 @@ def to_ns(dt: datetime.datetime) -> int:
 
 
 def list_tables(client: Client, database: str, table_pattern: str = "%") -> list[str]:
-    """List table names in a ClickHouse database.
+    """
+    List table names in a ClickHouse database.
 
     Args:
         client (Client): The ClickHouse client.
@@ -256,7 +265,8 @@ def list_tables(client: Client, database: str, table_pattern: str = "%") -> list
 
 
 def describe_table(client: Client, database: str, table: str):
-    """Describe a ClickHouse table's schema and columns.
+    """
+    Describe a ClickHouse table's schema and columns.
 
     Runs `SHOW CREATE TABLE` (parsed via `parse_create_table_statement`) and
     `DESCRIBE TABLE` against the given table.
@@ -282,7 +292,8 @@ def describe_table(client: Client, database: str, table: str):
 
 
 def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
-    """Dump a dbt sources YAML document with blank lines between blocks.
+    """
+    Dump a dbt sources YAML document with blank lines between blocks.
 
     Args:
         data (dict): The `{"version": 2, "sources": [...]}` document.
@@ -317,7 +328,8 @@ def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
 
 
 def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
-    """Dump a dbt models YAML document with blank lines between blocks.
+    """
+    Dump a dbt models YAML document with blank lines between blocks.
 
     Multiline strings are rendered in literal (`|`) style with trailing
     newlines stripped.
@@ -356,7 +368,8 @@ def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
 
 
 class Dbt:
-    """Programmatic interface to a dbt project via `dbtRunner`.
+    """
+    Programmatic interface to a dbt project via `dbtRunner`.
 
     Invocation methods (`build`, `compile`, `parse`, `run`, `run_operation`,
     `seed`, `docs_generate`) return dataclass wrappers holding the
@@ -371,7 +384,8 @@ class Dbt:
         project_dir: Path | None = None,
         target: str | None = None,
     ) -> None:
-        """Initialize the dbt project interface.
+        """
+        Initialize the dbt project interface.
 
         Args:
             profiles_dir (Path | None, optional): Directory containing
@@ -387,7 +401,8 @@ class Dbt:
 
     @cached_property
     def profiles_file(self) -> Path:
-        """Return the `profiles.yml` file path.
+        """
+        Return the `profiles.yml` file path.
 
         Returns:
             Path: `profiles_dir / "profiles.yml"`.
@@ -396,7 +411,8 @@ class Dbt:
 
     @cached_property
     def project_dir(self) -> Path:
-        """Return the dbt project directory.
+        """
+        Return the dbt project directory.
 
         Returns:
             Path: The configured project directory.
@@ -405,7 +421,8 @@ class Dbt:
 
     @cached_property
     def project_config_file(self) -> Path:
-        """Return the `dbt_project.yml` file path.
+        """
+        Return the `dbt_project.yml` file path.
 
         Returns:
             Path: `project_dir / "dbt_project.yml"`.
@@ -414,7 +431,8 @@ class Dbt:
 
     @cached_property
     def project_config(self):
-        """Load the parsed `dbt_project.yml` configuration.
+        """
+        Load the parsed `dbt_project.yml` configuration.
 
         Returns:
             dict: The project configuration (e.g. `macro-paths`,
@@ -425,7 +443,8 @@ class Dbt:
 
     @cached_property
     def docs_dir(self) -> Path:
-        """Return the generated docs directory.
+        """
+        Return the generated docs directory.
 
         Returns:
             Path: `project_dir / "docs"`.
@@ -434,7 +453,8 @@ class Dbt:
 
     @cached_property
     def models_dir(self) -> Path:
-        """Return the models directory.
+        """
+        Return the models directory.
 
         Returns:
             Path: `project_dir / "models"`.
@@ -442,7 +462,8 @@ class Dbt:
         return self._project_dir / "models"
 
     def get_resource(self, name: str, invalidate_cache: bool = False) -> DbtModel | DbtSeed | None:
-        """Get a single manifest resource by name.
+        """
+        Get a single manifest resource by name.
 
         Args:
             name (str): The resource name to select.
@@ -466,7 +487,8 @@ class Dbt:
         select: str | None = None,
         invalidate_cache: bool = False,
     ) -> list[DbtModel | DbtSeed]:
-        """List manifest resources, parsing the manifest on a cold cache.
+        """
+        List manifest resources, parsing the manifest on a cold cache.
 
         Args:
             resource_types (list[DbtResourceType] | None, optional): Resource
@@ -544,7 +566,8 @@ class Dbt:
         vars: dict[str, Any] | None = None,
         capture_events: bool = False,
     ) -> DbtInvocationResult:
-        """Run `dbt build` (seeds, models, snapshots, and tests in DAG order).
+        """
+        Run `dbt build` (seeds, models, snapshots, and tests in DAG order).
 
         Emits OpenTelemetry tracing spans for the invocation and each node.
 
@@ -612,7 +635,8 @@ class Dbt:
         use_colors: bool | None = False,
         capture_events: bool = False,
     ) -> DbtInvocationResult:
-        """Run `dbt compile` (generate executable SQL into `target/`).
+        """
+        Run `dbt compile` (generate executable SQL into `target/`).
 
         Args:
             debug (bool | None, optional): Pass `--debug` instead of
@@ -655,7 +679,8 @@ class Dbt:
         use_colors: bool | None = False,
         capture_events: bool = False,
     ) -> DbtInvocationResult:
-        """Run `dbt parse` (parse the project and return the manifest).
+        """
+        Run `dbt parse` (parse the project and return the manifest).
 
         Args:
             debug (bool | None, optional): Pass `--debug` instead of
@@ -700,7 +725,8 @@ class Dbt:
         vars: dict[str, Any] | None = None,
         capture_events: bool = False,
     ) -> DbtInvocationResult:
-        """Run `dbt run` (compile SQL and execute against the target database).
+        """
+        Run `dbt run` (compile SQL and execute against the target database).
 
         Emits OpenTelemetry tracing spans for the invocation and each node.
 
@@ -770,7 +796,8 @@ class Dbt:
         vars: dict[str, Any] | None = None,
         capture_events: bool = False,
     ) -> DbtInvocationResult:
-        """Run the named macro with `dbt run-operation`.
+        """
+        Run the named macro with `dbt run-operation`.
 
         Emits OpenTelemetry tracing spans for the invocation and its nodes.
 
@@ -825,7 +852,8 @@ class Dbt:
         use_colors: bool | None = False,
         capture_events: bool = False,
     ) -> DbtInvocationResult:
-        """Run `dbt seed` (load CSV files into the warehouse).
+        """
+        Run `dbt seed` (load CSV files into the warehouse).
 
         Emits OpenTelemetry tracing spans for the invocation and each node.
 
@@ -874,7 +902,8 @@ class Dbt:
         table_config_meta_props: list[str] | None = None,
         line_length: int | None = None,
     ) -> str:
-        """Generate the source schema YAML for ClickHouse tables.
+        """
+        Generate the source schema YAML for ClickHouse tables.
 
         Introspects each matching table and emits a `{version: 2, sources: ...}`
         document via `dump_source_yaml`.
@@ -923,7 +952,8 @@ class Dbt:
         merge: bool = False,
         line_length: int | None = None,
     ) -> dict[str, str]:
-        """Generate per-model schema YAML documents for ClickHouse tables.
+        """
+        Generate per-model schema YAML documents for ClickHouse tables.
 
         With `merge=True`, existing model/column descriptions and `meta`
         from the manifest are preserved, and columns are narrowed to
@@ -1018,7 +1048,8 @@ class Dbt:
         vars: dict[str, Any] | None = None,
         capture_events: bool = False,
     ) -> DbtDocsGenerateResult:
-        """Run `dbt docs generate` and bundle the site into a single HTML file.
+        """
+        Run `dbt docs generate` and bundle the site into a single HTML file.
 
         Args:
             debug (bool | None, optional): Pass `--debug` instead of
@@ -1066,7 +1097,8 @@ class Dbt:
         )
 
     def docs_serve(self):
-        """Serve the generated docs site with live reload.
+        """
+        Serve the generated docs site with live reload.
 
         Generates the docs first when `docs/index.html` does not exist, then
         watches `macro-paths` (`*.sql`) and `model-paths` (`*.sql`, `*.yml`)
@@ -1114,7 +1146,8 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Build the `dbt build` command argv.
+        """
+        Build the `dbt build` command argv.
 
         Args:
             debug (bool | None, optional): Emit `--debug` instead of
@@ -1205,7 +1238,8 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Build the `dbt compile` command argv.
+        """
+        Build the `dbt compile` command argv.
 
         Args:
             debug (bool | None, optional): Emit `--debug` instead of
@@ -1288,7 +1322,8 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Build the `dbt parse` command argv.
+        """
+        Build the `dbt parse` command argv.
 
         Args:
             debug (bool | None, optional): Emit `--debug` instead of
@@ -1360,7 +1395,8 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Build the `dbt run` command argv.
+        """
+        Build the `dbt run` command argv.
 
         Args:
             debug (bool | None, optional): Emit `--debug` instead of
@@ -1450,7 +1486,8 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Build the `dbt run-operation` command argv.
+        """
+        Build the `dbt run-operation` command argv.
 
         Args:
             macro (str): The macro to run, passed positionally.
@@ -1525,7 +1562,8 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
     ) -> list[str]:
-        """Build the `dbt seed` command argv.
+        """
+        Build the `dbt seed` command argv.
 
         Note: unlike the other builders, this command accepts no `vars`.
 
@@ -1598,7 +1636,8 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Build the `dbt docs generate` command argv.
+        """
+        Build the `dbt docs generate` command argv.
 
         Args:
             debug (bool | None, optional): Emit `--debug` instead of
@@ -1681,7 +1720,8 @@ def _trace_invocation(
     runner_result: dbtRunnerResult,
     full_refresh: bool | None = False,
 ) -> None:
-    """Emit OpenTelemetry spans for a dbt invocation and its nodes.
+    """
+    Emit OpenTelemetry spans for a dbt invocation and its nodes.
 
     Creates a root `dbt.invoke` span with per-node `dbt.node.invoke` child
     spans (plus nested `dbt.node.compile` / `dbt.node.execute` spans when
@@ -1708,7 +1748,8 @@ def _trace_invocation(
     tracer = trace.get_tracer(__name__)
 
     def truncate_str(value: str | None, max_length: int = 200) -> str | None:
-        """Truncate a string with a `"... (truncated)"` suffix.
+        """
+        Truncate a string with a `"... (truncated)"` suffix.
 
         Args:
             value (str | None): The value to truncate.

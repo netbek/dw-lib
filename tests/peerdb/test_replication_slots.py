@@ -64,7 +64,7 @@ class TestReplicationSlots:
 
     @pytest.fixture(scope="function")
     def peerdb(self, request, peerdb_config_path: Path, docker_services) -> Generator[PeerDB, Any]:
-        """Provide a `PeerDB` client waiting for instance readiness."""
+        """Provide a `PeerDB` client waiting for readiness unless skipped."""
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
@@ -225,7 +225,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
-        """Verify the slot reports `extended` after stopping the replica and loading ~80MB."""
+        """Verify the slot reports `extended` after stop, ~80MB load, and checkpoint."""
         self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL
@@ -341,7 +341,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
-        """Verify the slot reports `lost` after stopping the replica and loading ~80MB."""
+        """Verify the slot reports `lost` after stop, ~80MB load, and checkpoint."""
         self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL

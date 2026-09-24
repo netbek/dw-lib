@@ -164,7 +164,7 @@ class TestDebug(PeerDBPostgresTest):
     """Tests for `PeerDB.debug` connection reporting."""
 
     def test_ok(self, peerdb: PeerDB):
-        """Verify `debug` reports OK for the API and peers."""
+        """Verify `debug` reports OK for API, peers, and source prerequisites."""
         actual = peerdb.debug()
         expected = {
             "API": {
@@ -377,7 +377,7 @@ class TestDropMirror(PeerDBPostgresTest):
         peers: None,
         extra_mirror: dict,
     ):
-        """Verify a mirror outside the config can be created."""
+        """Verify an `extra_mirror` derived from `cdc_one` can be created."""
         peerdb.create_mirror(extra_mirror)
         assert peerdb.has_mirror("extra_mirror") is True
 
@@ -391,7 +391,7 @@ class TestDropMirror(PeerDBPostgresTest):
         peers: None,
         extra_mirror: dict,
     ):
-        """Verify a mirror outside the config can be dropped."""
+        """Verify an `extra_mirror` derived from `cdc_one` can be dropped."""
         peerdb.create_mirror(extra_mirror)
         assert peerdb.has_mirror("extra_mirror") is True
 

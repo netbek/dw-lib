@@ -31,4 +31,4 @@ Follow these steps when the user asks to upgrade PeerDB.
 
 3. Run `scripts/install-vendor.sh` to checkout the next version of PeerDB `vendor/peerdb`.
 
-4. Search `src/dw_lib/peerdb.py` for comments that link to source code at `https://github.com/PeerDB-io/peerdb/blob/<vX.YY.Z>`. Verify that the line numbers are correct after upgrading to the next version of PeerDB. Either check the local copy `vendor/peerdb` or clone the remote repo to a temporary directory.
+4. Search `src/dw_lib/peerdb.py` for comments and docstrings that link to source code at `https://github.com/PeerDB-io/peerdb/blob/<vX.YY.Z>`. Verify that the line numbers are correct after upgrading to the next version of PeerDB. Either check the local copy `vendor/peerdb` or clone the remote repo to a temporary directory.

@@ -1,8 +1,16 @@
-from .types import DbtCommand, DbtModel, DbtResourceType, DbtSeed
+from .types import (
+    DbtCommand,
+    DbtDocsGenerateResult,
+    DbtInvocationResult,
+    DbtModel,
+    DbtResourceType,
+    DbtSeed,
+)
 from clickhouse_connect.driver.client import Client
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from dbt.contracts.graph.nodes import ModelNode
+from dbt_common.events.base_types import EventMsg
 from dw_lib.database import ClickHouseAdapter, parse_create_table_statement
 from dw_lib.exceptions import (
     ConfigFileNotFoundException,
@@ -34,7 +42,33 @@ RESOURCE_TYPE_TO_CLASS = {
 }
 
 
+def _invoke(cmd: list[str], capture_events: bool) -> tuple[dbtRunnerResult, list[EventMsg]]:
+    """Invoke a dbt command, optionally capturing dbt events.
+
+    Args:
+        cmd (list[str]): Full command argv starting with `"dbt"`. Only
+            `cmd[1:]` is passed to `dbtRunner.invoke`.
+        capture_events (bool): If True, register an event callback so dbt
+            events (EventMsg) are collected during the invocation. The dbt
+            file logger runs in both modes.
+
+    Returns:
+        tuple[dbtRunnerResult, list[EventMsg]]: The runner result and the
+            captured events in fire order (`[]` when `capture_events` is False).
+    """
+    if not capture_events:
+        return dbtRunner().invoke(cmd[1:]), []
+    events: list[EventMsg] = []
+    return dbtRunner(callbacks=[events.append]).invoke(cmd[1:]), events
+
+
 def find_profiles_dir() -> Path:
+    """Find the dbt profiles directory.
+
+    Returns:
+        Path: The `DBT_PROFILES_DIR` environment variable when set,
+            otherwise `~/.dbt`.
+    """
     dbt_profiles_dir = os.environ.get("DBT_PROFILES_DIR")
 
     if dbt_profiles_dir:
@@ -44,6 +78,17 @@ def find_profiles_dir() -> Path:
 
 
 def find_project_config_file() -> Path:
+    """Find the `dbt_project.yml` config file.
+
+    Searches upward from the `DBT_PROJECT_DIR` environment variable when set,
+    otherwise from the current working directory.
+
+    Returns:
+        Path: The located `dbt_project.yml` file.
+
+    Raises:
+        ConfigFileNotFoundException: If no `dbt_project.yml` is found.
+    """
     dbt_project_dir = os.environ.get("DBT_PROJECT_DIR")
 
     if dbt_project_dir:
@@ -60,10 +105,27 @@ def find_project_config_file() -> Path:
 
 
 def find_project_dir() -> Path:
+    """Find the dbt project directory.
+
+    Returns:
+        Path: The parent directory of the located `dbt_project.yml` file.
+    """
     return find_project_config_file().parent
 
 
 def resolve_resource_path(project_dir: Path, resource: dict) -> Path | None:
+    """Resolve the filesystem path of a manifest resource.
+
+    Args:
+        project_dir (Path): The dbt project directory.
+        resource (dict): A manifest node dict with `package_name` and
+            `original_file_path` keys. Resources from the project itself
+            resolve under `project_dir`; dependencies resolve under
+            `project_dir / "dbt_packages"`.
+
+    Returns:
+        Path | None: The resource path when it exists, otherwise None.
+    """
     project_name = project_dir.name
 
     if resource["package_name"] == project_name:
@@ -75,20 +137,30 @@ def resolve_resource_path(project_dir: Path, resource: dict) -> Path | None:
         return path
 
 
-def bundle_docs(project_dir: Path, dest_dir: Path | None = None) -> Path:
-    """
-    Transform output from `dbt docs generate` into a single HTML file.
+def bundle_docs(project_dir: Path, output_dir: Path | None = None) -> Path:
+    """Bundle `dbt docs generate` output into a single HTML file.
+
+    Embeds `target/manifest.json` and `target/catalog.json` into
+    `target/index.html` and writes the result to the destination directory.
 
     Source: https://data-banana.github.io/dbt-generate-doc-in-one-static-html-file.html
+
+    Args:
+        project_dir (Path): The dbt project directory containing `target/`.
+        output_dir (Path | None, optional): Destination directory for the
+            bundled `index.html`. Defaults to `project_dir / "docs"`.
+
+    Returns:
+        Path: The written bundled `index.html` file.
     """
-    if dest_dir is None:
-        dest_dir = project_dir / "docs"
+    if output_dir is None:
+        output_dir = project_dir / "docs"
 
     target_dir = project_dir / "target"
     html_file = target_dir / "index.html"
     manifest_file = target_dir / "manifest.json"
     catalog_file = target_dir / "catalog.json"
-    dest_file = dest_dir / "index.html"
+    output_file = output_dir / "index.html"
 
     with open(html_file) as fp:
         html = fp.read()
@@ -109,14 +181,24 @@ def bundle_docs(project_dir: Path, dest_dir: Path | None = None) -> Path:
     )
     html = html.replace(search_str, replace_str)
 
-    os.makedirs(dest_file.parent, exist_ok=True)
-    with open(dest_file, "w") as fp:
+    os.makedirs(output_file.parent, exist_ok=True)
+    with open(output_file, "w") as fp:
         fp.write(html)
 
-    return dest_file
+    return output_file
 
 
 def normalize_rows_affected(value: int | str | None) -> int | None:
+    """Normalize a dbt adapter `rows_affected` response value.
+
+    Args:
+        value (int | str | None): The raw `rows_affected` value, which may be
+            an int, a numeric string, or None.
+
+    Returns:
+        int | None: The non-negative row count, or None when the value is
+            missing, negative, or not a plain digit string.
+    """
     if value is None:
         return None
     if isinstance(value, int):
@@ -129,7 +211,18 @@ def normalize_rows_affected(value: int | str | None) -> int | None:
 
 
 def to_ns(dt: datetime.datetime) -> int:
-    """Convert a timezone-aware (or naive assumed UTC) datetime to nanoseconds since epoch."""
+    """Convert a datetime to nanoseconds since the epoch.
+
+    Args:
+        dt (datetime.datetime): The datetime to convert. Naive datetimes are
+            assumed to be UTC.
+
+    Returns:
+        int: Nanoseconds since the epoch, for use as span timestamps.
+
+    Raises:
+        ValueError: If `dt` is None.
+    """
     if dt is None:
         raise ValueError("dt is None")
     if dt.tzinfo is None:
@@ -138,6 +231,17 @@ def to_ns(dt: datetime.datetime) -> int:
 
 
 def list_tables(client: Client, database: str, table_pattern: str = "%") -> list[str]:
+    """List table names in a ClickHouse database.
+
+    Args:
+        client (Client): The ClickHouse client.
+        database (str): The database to query via `system.tables`.
+        table_pattern (str, optional): Case-insensitive `ILIKE` pattern.
+            Defaults to "%".
+
+    Returns:
+        list[str]: Matching table names ordered by name.
+    """
     query = """
     select name
     from system.tables
@@ -152,6 +256,20 @@ def list_tables(client: Client, database: str, table_pattern: str = "%") -> list
 
 
 def describe_table(client: Client, database: str, table: str):
+    """Describe a ClickHouse table's schema and columns.
+
+    Runs `SHOW CREATE TABLE` (parsed via `parse_create_table_statement`) and
+    `DESCRIBE TABLE` against the given table.
+
+    Args:
+        client (Client): The ClickHouse client.
+        database (str): The database containing the table.
+        table (str): The table name.
+
+    Returns:
+        dict: The parsed `SHOW CREATE TABLE` statement merged with a
+            `columns` key holding `{"name", "data_type"}` entries.
+    """
     query = "show create table {database:Identifier}.{table:Identifier}"
     statement = client.query(query, parameters={"database": database, "table": table}).first_row[0]
     parsed = parse_create_table_statement(statement)
@@ -164,6 +282,16 @@ def describe_table(client: Client, database: str, table: str):
 
 
 def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
+    """Dump a dbt sources YAML document with blank lines between blocks.
+
+    Args:
+        data (dict): The `{"version": 2, "sources": [...]}` document.
+        line_length (int | None, optional): Maximum line width passed to the
+            YAML dumper. Defaults to None.
+
+    Returns:
+        str: The formatted YAML document.
+    """
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
@@ -189,6 +317,19 @@ def dump_source_yaml(data: dict, line_length: int | None = None) -> str:
 
 
 def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
+    """Dump a dbt models YAML document with blank lines between blocks.
+
+    Multiline strings are rendered in literal (`|`) style with trailing
+    newlines stripped.
+
+    Args:
+        data (dict): The `{"version": 2, "models": [...]}` document.
+        line_length (int | None, optional): Maximum line width passed to the
+            YAML dumper. Defaults to None.
+
+    Returns:
+        str: The formatted YAML document.
+    """
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.indent(mapping=2, sequence=4, offset=2)
@@ -196,6 +337,7 @@ def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
 
     # Custom representer for multiline strings
     def str_representer(dumper, value):
+        """Represent strings, using literal style for multiline values."""
         if "\n" in value:
             return dumper.represent_scalar("tag:yaml.org,2002:str", value.rstrip("\n"), style="|")
         return dumper.represent_scalar("tag:yaml.org,2002:str", value)
@@ -214,42 +356,103 @@ def dump_model_yaml(data: dict, line_length: int | None = None) -> str:
 
 
 class Dbt:
+    """Programmatic interface to a dbt project via `dbtRunner`.
+
+    Invocation methods (`build`, `compile`, `parse`, `run`, `run_operation`,
+    `seed`, `docs_generate`) return dataclass wrappers holding the
+    `dbtRunnerResult` plus optionally captured dbt events. The dbt file logger
+    runs in both modes. `build`, `run`, `run_operation`, and `seed` also emit
+    OpenTelemetry tracing spans.
+    """
+
     def __init__(
         self,
         profiles_dir: Path | None = None,
         project_dir: Path | None = None,
         target: str | None = None,
     ) -> None:
+        """Initialize the dbt project interface.
+
+        Args:
+            profiles_dir (Path | None, optional): Directory containing
+                `profiles.yml`. Defaults to `find_profiles_dir()`.
+            project_dir (Path | None, optional): Project directory containing
+                `dbt_project.yml`. Defaults to `find_project_dir()`.
+            target (str | None, optional): Default dbt target used when a
+                method is called without an explicit `target`. Defaults to None.
+        """
         self._profiles_dir = profiles_dir or find_profiles_dir()
         self._project_dir = project_dir or find_project_dir()
         self._target = target
 
     @cached_property
     def profiles_file(self) -> Path:
+        """Return the `profiles.yml` file path.
+
+        Returns:
+            Path: `profiles_dir / "profiles.yml"`.
+        """
         return self._profiles_dir / "profiles.yml"
 
     @cached_property
     def project_dir(self) -> Path:
+        """Return the dbt project directory.
+
+        Returns:
+            Path: The configured project directory.
+        """
         return self._project_dir
 
     @cached_property
     def project_config_file(self) -> Path:
+        """Return the `dbt_project.yml` file path.
+
+        Returns:
+            Path: `project_dir / "dbt_project.yml"`.
+        """
         return self._project_dir / "dbt_project.yml"
 
     @cached_property
     def project_config(self):
+        """Load the parsed `dbt_project.yml` configuration.
+
+        Returns:
+            dict: The project configuration (e.g. `macro-paths`,
+                `model-paths`).
+        """
         yaml = YAML(typ="safe", pure=True)
         return yaml.load(self.project_config_file)
 
     @cached_property
     def docs_dir(self) -> Path:
+        """Return the generated docs directory.
+
+        Returns:
+            Path: `project_dir / "docs"`.
+        """
         return self._project_dir / "docs"
 
     @cached_property
     def models_dir(self) -> Path:
+        """Return the models directory.
+
+        Returns:
+            Path: `project_dir / "models"`.
+        """
         return self._project_dir / "models"
 
     def get_resource(self, name: str, invalidate_cache: bool = False) -> DbtModel | DbtSeed | None:
+        """Get a single manifest resource by name.
+
+        Args:
+            name (str): The resource name to select.
+            invalidate_cache (bool, optional): Re-parse the manifest before
+                listing. Defaults to False.
+
+        Returns:
+            DbtModel | DbtSeed | None: The first matching resource, or None
+                when no resource matches.
+        """
         resources = self.list_resources(select=name, invalidate_cache=invalidate_cache)
 
         if not resources:
@@ -263,6 +466,23 @@ class Dbt:
         select: str | None = None,
         invalidate_cache: bool = False,
     ) -> list[DbtModel | DbtSeed]:
+        """List manifest resources, parsing the manifest on a cold cache.
+
+        Args:
+            resource_types (list[DbtResourceType] | None, optional): Resource
+                types to include. Defaults to all supported types (model, seed).
+            select (str | None, optional): Return only the resource with this
+                name. Defaults to None (return all).
+            invalidate_cache (bool, optional): Re-parse the manifest before
+                listing. Defaults to False.
+
+        Returns:
+            list[DbtModel | DbtSeed]: Matching resources sorted by name.
+
+        Raises:
+            ValueError: If an unsupported `resource_types` entry is given.
+            DbtManifestNotFoundException: If no `manifest.json` exists after parsing.
+        """
         valid_resource_types = sorted(RESOURCE_TYPE_TO_CLASS.keys())
 
         if resource_types is None:
@@ -322,7 +542,40 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
-    ) -> dbtRunnerResult:
+        capture_events: bool = False,
+    ) -> DbtInvocationResult:
+        """Run `dbt build` (seeds, models, snapshots, and tests in DAG order).
+
+        Emits OpenTelemetry tracing spans for the invocation and each node.
+
+        Args:
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            full_refresh (bool | None, optional): Pass `--full-refresh`.
+                Defaults to False.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtInvocationResult: The runner result plus captured events.
+        """
         cmd = self._build_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -335,7 +588,7 @@ class Dbt:
             use_colors=use_colors,
             vars=vars,
         )
-        runner_result = dbtRunner().invoke(cmd[1:])
+        runner_result, events = _invoke(cmd, capture_events)
 
         raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
@@ -347,7 +600,7 @@ class Dbt:
             full_refresh=full_refresh,
         )
 
-        return runner_result
+        return DbtInvocationResult(runner_result=runner_result, events=events)
 
     def compile(
         self,
@@ -357,7 +610,30 @@ class Dbt:
         select: str | None = None,
         target: str | None = None,
         use_colors: bool | None = False,
-    ) -> dbtRunnerResult:
+        capture_events: bool = False,
+    ) -> DbtInvocationResult:
+        """Run `dbt compile` (generate executable SQL into `target/`).
+
+        Args:
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtInvocationResult: The runner result plus captured events.
+        """
         cmd = self._compile_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -366,9 +642,9 @@ class Dbt:
             target=target,
             use_colors=use_colors,
         )
-        runner_result = dbtRunner().invoke(cmd[1:])
+        runner_result, events = _invoke(cmd, capture_events)
 
-        return runner_result
+        return DbtInvocationResult(runner_result=runner_result, events=events)
 
     def parse(
         self,
@@ -377,7 +653,28 @@ class Dbt:
         quiet: bool | None = False,
         target: str | None = None,
         use_colors: bool | None = False,
-    ) -> dbtRunnerResult:
+        capture_events: bool = False,
+    ) -> DbtInvocationResult:
+        """Run `dbt parse` (parse the project and return the manifest).
+
+        Args:
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtInvocationResult: The runner result plus captured events.
+        """
         cmd = self._parse_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -385,9 +682,9 @@ class Dbt:
             target=target,
             use_colors=use_colors,
         )
-        runner_result = dbtRunner().invoke(cmd[1:])
+        runner_result, events = _invoke(cmd, capture_events)
 
-        return runner_result
+        return DbtInvocationResult(runner_result=runner_result, events=events)
 
     def run(
         self,
@@ -401,7 +698,40 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
-    ) -> dbtRunnerResult:
+        capture_events: bool = False,
+    ) -> DbtInvocationResult:
+        """Run `dbt run` (compile SQL and execute against the target database).
+
+        Emits OpenTelemetry tracing spans for the invocation and each node.
+
+        Args:
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            full_refresh (bool | None, optional): Pass `--full-refresh`.
+                Defaults to False.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtInvocationResult: The runner result plus captured events.
+        """
         cmd = self._run_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -414,7 +744,7 @@ class Dbt:
             use_colors=use_colors,
             vars=vars,
         )
-        runner_result = dbtRunner().invoke(cmd[1:])
+        runner_result, events = _invoke(cmd, capture_events)
 
         raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
@@ -426,7 +756,7 @@ class Dbt:
             full_refresh=full_refresh,
         )
 
-        return runner_result
+        return DbtInvocationResult(runner_result=runner_result, events=events)
 
     def run_operation(
         self,
@@ -438,7 +768,35 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
-    ) -> dbtRunnerResult:
+        capture_events: bool = False,
+    ) -> DbtInvocationResult:
+        """Run the named macro with `dbt run-operation`.
+
+        Emits OpenTelemetry tracing spans for the invocation and its nodes.
+
+        Args:
+            macro (str): The macro to run.
+            args (dict[str, Any] | None, optional): Value for `--args`,
+                serialized as JSON. Defaults to None.
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtInvocationResult: The runner result plus captured events.
+        """
         cmd = self._run_operation_command(
             macro,
             args=args,
@@ -449,13 +807,13 @@ class Dbt:
             use_colors=use_colors,
             vars=vars,
         )
-        runner_result = dbtRunner().invoke(cmd[1:])
+        runner_result, events = _invoke(cmd, capture_events)
 
         raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
         _trace_invocation(DbtCommand.RUN_OPERATION, raw_command, invocation_id, runner_result)
 
-        return runner_result
+        return DbtInvocationResult(runner_result=runner_result, events=events)
 
     def seed(
         self,
@@ -465,7 +823,32 @@ class Dbt:
         select: str | None = None,
         target: str | None = None,
         use_colors: bool | None = False,
-    ) -> dbtRunnerResult:
+        capture_events: bool = False,
+    ) -> DbtInvocationResult:
+        """Run `dbt seed` (load CSV files into the warehouse).
+
+        Emits OpenTelemetry tracing spans for the invocation and each node.
+
+        Args:
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtInvocationResult: The runner result plus captured events.
+        """
         cmd = self._seed_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -474,13 +857,13 @@ class Dbt:
             target=target,
             use_colors=use_colors,
         )
-        runner_result = dbtRunner().invoke(cmd[1:])
+        runner_result, events = _invoke(cmd, capture_events)
 
         raw_command = shlex.join(cmd)
         invocation_id = str(uuid4())
         _trace_invocation(DbtCommand.SEED, raw_command, invocation_id, runner_result)
 
-        return runner_result
+        return DbtInvocationResult(runner_result=runner_result, events=events)
 
     def generate_source_yaml(
         self,
@@ -491,7 +874,28 @@ class Dbt:
         table_config_meta_props: list[str] | None = None,
         line_length: int | None = None,
     ) -> str:
-        """Generate the schema YAML for the given source."""
+        """Generate the source schema YAML for ClickHouse tables.
+
+        Introspects each matching table and emits a `{version: 2, sources: ...}`
+        document via `dump_source_yaml`.
+
+        Args:
+            adapter (ClickHouseAdapter): Adapter used to query table metadata.
+            database (str | None, optional): Database to introspect. Defaults
+                to the adapter's configured database.
+            table_pattern (str, optional): Case-insensitive `ILIKE` pattern.
+                Defaults to "%".
+            source_props (dict[str, Any] | None, optional): Extra properties
+                merged into the generated source entry. Defaults to None.
+            table_config_meta_props (list[str] | None, optional): Table
+                metadata keys picked into each table's `config.meta`.
+                Defaults to None (no `config` block).
+            line_length (int | None, optional): Maximum YAML line width.
+                Defaults to None.
+
+        Returns:
+            str: The formatted sources YAML document.
+        """
         if database is None:
             database = adapter.settings.database
 
@@ -519,7 +923,26 @@ class Dbt:
         merge: bool = False,
         line_length: int | None = None,
     ) -> dict[str, str]:
-        """Generate the schema YAML for the given models."""
+        """Generate per-model schema YAML documents for ClickHouse tables.
+
+        With `merge=True`, existing model/column descriptions and `meta`
+        from the manifest are preserved, and columns are narrowed to
+        `name`, `description`, `meta`, and `data_type`.
+
+        Args:
+            adapter (ClickHouseAdapter): Adapter used to query table metadata.
+            database (str | None, optional): Database to introspect. Defaults
+                to the adapter's configured database.
+            table_pattern (str, optional): Case-insensitive `ILIKE` pattern.
+                Defaults to "%".
+            merge (bool, optional): Merge descriptions and `meta` from the
+                parsed manifest models. Defaults to False.
+            line_length (int | None, optional): Maximum YAML line width.
+                Defaults to None.
+
+        Returns:
+            dict[str, str]: Mapping of table name to formatted models YAML.
+        """
         if database is None:
             database = adapter.settings.database
 
@@ -593,7 +1016,37 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
-    ) -> tuple[dbtRunnerResult, Path]:
+        capture_events: bool = False,
+    ) -> DbtDocsGenerateResult:
+        """Run `dbt docs generate` and bundle the site into a single HTML file.
+
+        Args:
+            debug (bool | None, optional): Pass `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Pass `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Pass `--quiet` instead of
+                `--no-quiet`. Defaults to True.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Pass `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+            capture_events (bool, optional): Collect dbt events (EventMsg) via
+                runner callbacks. The dbt file logger runs in both modes.
+                Defaults to False.
+
+        Returns:
+            DbtDocsGenerateResult: The runner result, the bundled
+                `output_file`, and captured events.
+        """
         cmd = self._docs_generate_command(
             debug=debug,
             fail_fast=fail_fast,
@@ -605,12 +1058,24 @@ class Dbt:
             use_colors=use_colors,
             vars=vars,
         )
-        result = dbtRunner().invoke(cmd[1:])
-        dest_file = bundle_docs(self._project_dir)
+        runner_result, events = _invoke(cmd, capture_events)
+        output_file = bundle_docs(self._project_dir)
 
-        return (result, dest_file)
+        return DbtDocsGenerateResult(
+            runner_result=runner_result, output_file=output_file, events=events
+        )
 
     def docs_serve(self):
+        """Serve the generated docs site with live reload.
+
+        Generates the docs first when `docs/index.html` does not exist, then
+        watches `macro-paths` (`*.sql`) and `model-paths` (`*.sql`, `*.yml`)
+        for changes — regenerating on each change — while serving `docs_dir`
+        on `0.0.0.0:8080`.
+
+        Returns:
+            None: This method blocks while serving.
+        """
         # If the docs page has not been generated before, then do so now
         if not os.path.exists(os.path.join(self.docs_dir, "index.html")):
             self.docs_generate()
@@ -649,6 +1114,33 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
+        """Build the `dbt build` command argv.
+
+        Args:
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            full_refresh (bool | None, optional): Append `--full-refresh` when
+                True. Defaults to False.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -713,6 +1205,31 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
+        """Build the `dbt compile` command argv.
+
+        Args:
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -771,6 +1288,25 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
+        """Build the `dbt parse` command argv.
+
+        Args:
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -824,6 +1360,33 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
+        """Build the `dbt run` command argv.
+
+        Args:
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            full_refresh (bool | None, optional): Append `--full-refresh` when
+                True. Defaults to False.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -887,6 +1450,28 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
+        """Build the `dbt run-operation` command argv.
+
+        Args:
+            macro (str): The macro to run, passed positionally.
+            args (dict[str, Any] | None, optional): Value for `--args`,
+                serialized as JSON. Defaults to None.
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -940,6 +1525,27 @@ class Dbt:
         target: str | None = None,
         use_colors: bool | None = False,
     ) -> list[str]:
+        """Build the `dbt seed` command argv.
+
+        Note: unlike the other builders, this command accepts no `vars`.
+
+        Args:
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -992,6 +1598,31 @@ class Dbt:
         use_colors: bool | None = False,
         vars: dict[str, Any] | None = None,
     ) -> list[str]:
+        """Build the `dbt docs generate` command argv.
+
+        Args:
+            debug (bool | None, optional): Emit `--debug` instead of
+                `--no-debug`. Defaults to False.
+            exclude (str | None, optional): Value for `--exclude`. Defaults
+                to None.
+            fail_fast (bool | None, optional): Emit `--fail-fast` instead of
+                `--no-fail-fast`. Defaults to True.
+            quiet (bool | None, optional): Emit `--quiet` instead of
+                `--no-quiet`. Defaults to False.
+            select (str | None, optional): Value for `--select`. Defaults
+                to None.
+            selector (str | None, optional): Value for `--selector`. Defaults
+                to None.
+            target (str | None, optional): Value for `--target`. Falls back to
+                the instance target. Defaults to None.
+            use_colors (bool | None, optional): Emit `--use-colors` instead of
+                `--no-use-colors`. Defaults to False.
+            vars (dict[str, Any] | None, optional): Value for `--vars`,
+                serialized as JSON. Defaults to None.
+
+        Returns:
+            list[str]: Command argv starting with `"dbt"`.
+        """
         if target is None:
             target = self._target
 
@@ -1050,9 +1681,44 @@ def _trace_invocation(
     runner_result: dbtRunnerResult,
     full_refresh: bool | None = False,
 ) -> None:
+    """Emit OpenTelemetry spans for a dbt invocation and its nodes.
+
+    Creates a root `dbt.invoke` span with per-node `dbt.node.invoke` child
+    spans (plus nested `dbt.node.compile` / `dbt.node.execute` spans when
+    timing is available). `Success` maps to OK, `Error` to ERROR with the
+    failure recorded, `Skipped` to UNSET; any other status raises. Timestamps
+    come from node timings, falling back to the result `generated_at`.
+
+    Args:
+        command (DbtCommand): The invoked dbt command.
+        raw_command (str): The shell-joined command argv for attributes.
+        invocation_id (str): Unique ID naming the root span.
+        runner_result (dbtRunnerResult): The invocation result to trace.
+        full_refresh (bool | None, optional): Recorded as
+            `dbt.invoke.full_refresh`. Defaults to False.
+
+    Returns:
+        None.
+
+    Raises:
+        UnsupportedCommandException: If `command` has no trace mapping.
+        UnsupportedRunStatusException: If a node status is not
+            Success, Error, or Skipped.
+    """
     tracer = trace.get_tracer(__name__)
 
     def truncate_str(value: str | None, max_length: int = 200) -> str | None:
+        """Truncate a string with a `"... (truncated)"` suffix.
+
+        Args:
+            value (str | None): The value to truncate.
+            max_length (int, optional): Maximum length before truncation.
+                Defaults to 200.
+
+        Returns:
+            str | None: The original value when short enough, otherwise the
+                truncated value.
+        """
         if value is None:
             return None
         if len(value) <= max_length:
@@ -1060,6 +1726,8 @@ def _trace_invocation(
         return value[:max_length] + "... (truncated)"
 
     class ParsedRoot(BaseModel):
+        """Validated invocation-level trace attributes."""
+
         raw_command: str
         invocation_id: str
         full_refresh: bool
@@ -1067,6 +1735,8 @@ def _trace_invocation(
 
     # Based on https://github.com/elementary-data/dbt-data-reliability/blob/6551383e8a37e5814bd2bb9fd74330be8265a3c9/models/run_results.yml#L133
     class ParsedNode(BaseModel):
+        """Validated per-node trace attributes."""
+
         unique_id: str
         name: str
         message: str | None = None

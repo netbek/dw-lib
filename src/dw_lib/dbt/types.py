@@ -1,4 +1,8 @@
+from dataclasses import dataclass, field
+from dbt.cli.main import dbtRunnerResult
+from dbt_common.events.base_types import EventMsg
 from enum import StrEnum
+from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import Any
 
@@ -166,3 +170,18 @@ class DbtSource(DbtBaseResource):
     config: DbtSourceConfig
     original_config: DbtTable | None = None
     source_name: str
+
+
+@dataclass
+class DbtInvocationResult:
+    runner_result: dbtRunnerResult
+    #: Captured dbt events (raw EventMsg, in fire order); [] unless capture_events=True.
+    events: list[EventMsg] = field(default_factory=list)
+
+
+@dataclass
+class DbtDocsGenerateResult:
+    runner_result: dbtRunnerResult
+    output_file: Path
+    #: Captured dbt events (raw EventMsg, in fire order); [] unless capture_events=True.
+    events: list[EventMsg] = field(default_factory=list)

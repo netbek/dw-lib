@@ -1,7 +1,7 @@
 {
   "name": "netbek-dw-lib",
   "private": true,
-  "version": "1.37.2",
+  "version": "1.37.3",
   "description": "Tools for working with Postgres, ClickHouse, and DuckDB",
   "author": {
     "name": "Hein Bekker",

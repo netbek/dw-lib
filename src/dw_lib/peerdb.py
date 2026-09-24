@@ -68,7 +68,8 @@ DIALECT_TO_PEERDB_TYPE_MAP = {
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L586
 class FlowStatus:
-    """PeerDB flow status codes.
+    """
+    PeerDB flow status codes.
 
     Mirrors the `FlowStatus` enum in the PeerDB API.
 
@@ -99,7 +100,8 @@ LITERAL_FLOW_STATUS_LABELS = {
 
 # https://www.postgresql.org/docs/17/view-pg-replication-slots.html
 class ListReplicationSlotsItem(BaseModel):
-    """Replication slot details for the source Postgres database.
+    """
+    Replication slot details for the source Postgres database.
 
     Combines `pg_replication_slots`, `pg_control_checkpoint`,
     `pg_stat_activity`, `pg_stat_replication`, and (on Postgres 16+)
@@ -162,7 +164,8 @@ class ListReplicationSlotsItem(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L39
 class DynamicSetting(BaseModel):
-    """A PeerDB dynamic setting.
+    """
+    A PeerDB dynamic setting.
 
     Mirrors the `DynamicSetting` message in the PeerDB API.
 
@@ -193,7 +196,8 @@ class DynamicSetting(BaseModel):
 
 
 class GetDynamicSettingsResponse(BaseModel):
-    """Response listing PeerDB dynamic settings.
+    """
+    Response listing PeerDB dynamic settings.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L49
@@ -207,7 +211,8 @@ class GetDynamicSettingsResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L193
 class ClickHouseConfig(BaseModel):
-    """ClickHouse peer configuration as expected by the PeerDB API.
+    """
+    ClickHouse peer configuration as expected by the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L193
@@ -239,7 +244,8 @@ class ClickHouseConfig(BaseModel):
 
 
 class ClickHousePeer(BaseModel):
-    """ClickHouse peer payload for the PeerDB API.
+    """
+    ClickHouse peer payload for the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L193
@@ -257,7 +263,8 @@ class ClickHousePeer(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L123
 class PostgresConfig(BaseModel):
-    """Postgres peer configuration as expected by the PeerDB API.
+    """
+    Postgres peer configuration as expected by the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L123
@@ -278,7 +285,8 @@ class PostgresConfig(BaseModel):
 
 
 class PostgresPeer(BaseModel):
-    """Postgres peer payload for the PeerDB API.
+    """
+    Postgres peer payload for the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L123
@@ -296,7 +304,8 @@ class PostgresPeer(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L265
 class PeerInfoResponse(BaseModel):
-    """Peer details with the live PeerDB version.
+    """
+    Peer details with the live PeerDB version.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L265
@@ -313,7 +322,8 @@ class PeerInfoResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L270
 class PeerTypeResponse(BaseModel):
-    """Peer type name reported by the PeerDB API.
+    """
+    Peer type name reported by the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L270
@@ -328,7 +338,8 @@ class PeerTypeResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L274
 class PeerListItem(BaseModel):
-    """Single peer entry from the peer list API.
+    """
+    Single peer entry from the peer list API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L274
@@ -344,7 +355,8 @@ class PeerListItem(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L279
 class ListPeersResponse(BaseModel):
-    """Peer list split into source, destination, and combined items.
+    """
+    Peer list split into source, destination, and combined items.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L279
@@ -363,7 +375,8 @@ class ListPeersResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L98
 class RawCreatePeerResponse(BaseModel):
-    """Raw create-peer response from the PeerDB API.
+    """
+    Raw create-peer response from the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L98
@@ -379,7 +392,8 @@ class RawCreatePeerResponse(BaseModel):
 
 
 class CreatePeerResponse(BaseModel):
-    """High-level result of a create-peer operation.
+    """
+    High-level result of a create-peer operation.
 
     Attributes:
         message: Human-readable result (created, kept, or replaced).
@@ -391,7 +405,8 @@ class CreatePeerResponse(BaseModel):
 
 
 class DropPeerResponse(BaseModel):
-    """High-level result of a drop-peer operation.
+    """
+    High-level result of a drop-peer operation.
 
     Attributes:
         message: Human-readable result.
@@ -401,7 +416,8 @@ class DropPeerResponse(BaseModel):
 
 
 class RawCreateMirrorResponse(BaseModel):
-    """Raw create-mirror response from the PeerDB API.
+    """
+    Raw create-mirror response from the PeerDB API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L12
@@ -414,7 +430,8 @@ class RawCreateMirrorResponse(BaseModel):
 
 
 class CreateMirrorResponse(BaseModel):
-    """High-level result of a create-mirror operation.
+    """
+    High-level result of a create-mirror operation.
 
     Attributes:
         message: Human-readable result (created, kept, or replaced).
@@ -426,7 +443,8 @@ class CreateMirrorResponse(BaseModel):
 
 
 class DropMirrorResponse(BaseModel):
-    """High-level result of a drop-mirror operation.
+    """
+    High-level result of a drop-mirror operation.
 
     Attributes:
         message: Human-readable result.
@@ -436,7 +454,8 @@ class DropMirrorResponse(BaseModel):
 
 
 class ResyncMirrorResponse(BaseModel):
-    """High-level result of a resync-mirror operation.
+    """
+    High-level result of a resync-mirror operation.
 
     Attributes:
         message: Human-readable result.
@@ -446,7 +465,8 @@ class ResyncMirrorResponse(BaseModel):
 
 
 class PauseMirrorResponse(BaseModel):
-    """High-level result of a pause-mirror operation.
+    """
+    High-level result of a pause-mirror operation.
 
     Attributes:
         message: Human-readable result.
@@ -456,7 +476,8 @@ class PauseMirrorResponse(BaseModel):
 
 
 class ResumeMirrorResponse(BaseModel):
-    """High-level result of a resume-mirror operation.
+    """
+    High-level result of a resume-mirror operation.
 
     Attributes:
         message: Human-readable result.
@@ -467,7 +488,8 @@ class ResumeMirrorResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L362
 class MirrorStatusResponse(BaseModel):
-    """Current status of a mirror.
+    """
+    Current status of a mirror.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L362
@@ -501,7 +523,8 @@ class MirrorStatusResponse(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L447
 class ListMirrorsItem(BaseModel):
-    """Single mirror entry from the mirror list API.
+    """
+    Single mirror entry from the mirror list API.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L447
@@ -534,7 +557,8 @@ class ListMirrorsItem(BaseModel):
 
 # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L460
 class ListMirrorsResponse(BaseModel):
-    """Response listing mirrors.
+    """
+    Response listing mirrors.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L460
@@ -547,7 +571,8 @@ class ListMirrorsResponse(BaseModel):
 
 
 class ListPublicationsItem(BaseModel):
-    """A Postgres publication-table pair.
+    """
+    A Postgres publication-table pair.
 
     Attributes:
         publication_name: Publication name (may be empty for PeerDB-managed).
@@ -559,7 +584,8 @@ class ListPublicationsItem(BaseModel):
 
 
 class ConfigSetting(BaseModel):
-    """A dynamic setting from the local YAML config.
+    """
+    A dynamic setting from the local YAML config.
 
     Attributes:
         name: Setting name.
@@ -571,7 +597,8 @@ class ConfigSetting(BaseModel):
 
 
 class ConfigPeerAdapterClickHouse(BaseModel):
-    """Local adapter config for a ClickHouse peer.
+    """
+    Local adapter config for a ClickHouse peer.
 
     Attributes:
         type: Adapter type string.
@@ -583,7 +610,8 @@ class ConfigPeerAdapterClickHouse(BaseModel):
 
 
 class ConfigPeerPeerDBClickHouseConfig(BaseModel):
-    """PeerDB-side ClickHouse connection config from local YAML.
+    """
+    PeerDB-side ClickHouse connection config from local YAML.
 
     Attributes:
         host: ClickHouse host.
@@ -609,7 +637,8 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tls_fields(self) -> Self:
-        """Validate TLS field combinations.
+        """
+        Validate TLS field combinations.
 
         Returns:
             Self: This instance when the TLS configuration is consistent.
@@ -635,7 +664,8 @@ class ConfigPeerPeerDBClickHouseConfig(BaseModel):
 
 
 class ConfigPeerPeerDBClickHouse(BaseModel):
-    """PeerDB API payload wrapper for a ClickHouse peer.
+    """
+    PeerDB API payload wrapper for a ClickHouse peer.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
@@ -650,7 +680,8 @@ class ConfigPeerPeerDBClickHouse(BaseModel):
 
 
 class ConfigPeerClickHouse(BaseModel):
-    """Combined local ClickHouse peer entry.
+    """
+    Combined local ClickHouse peer entry.
 
     Attributes:
         name: Peer name.
@@ -664,7 +695,8 @@ class ConfigPeerClickHouse(BaseModel):
 
 
 class ConfigPeerAdapterPostgres(BaseModel):
-    """Local adapter config for a Postgres peer.
+    """
+    Local adapter config for a Postgres peer.
 
     Attributes:
         type: Adapter type string.
@@ -676,7 +708,8 @@ class ConfigPeerAdapterPostgres(BaseModel):
 
 
 class SSHConfig(BaseModel):
-    """SSH tunnel config for a Postgres peer.
+    """
+    SSH tunnel config for a Postgres peer.
 
     Attributes:
         host: SSH host.
@@ -692,7 +725,8 @@ class SSHConfig(BaseModel):
 
 
 class ConfigPeerPeerDBPostgresConfig(BaseModel):
-    """PeerDB-side Postgres connection config from local YAML.
+    """
+    PeerDB-side Postgres connection config from local YAML.
 
     Attributes:
         host: Postgres host.
@@ -712,7 +746,8 @@ class ConfigPeerPeerDBPostgresConfig(BaseModel):
 
 
 class ConfigPeerPeerDBPostgres(BaseModel):
-    """PeerDB API payload wrapper for a Postgres peer.
+    """
+    PeerDB API payload wrapper for a Postgres peer.
 
     See:
         https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
@@ -727,7 +762,8 @@ class ConfigPeerPeerDBPostgres(BaseModel):
 
 
 class ConfigPeerPostgres(BaseModel):
-    """Combined local Postgres peer entry.
+    """
+    Combined local Postgres peer entry.
 
     Attributes:
         name: Peer name.
@@ -741,7 +777,8 @@ class ConfigPeerPostgres(BaseModel):
 
 
 class ConfigMirrorTableMapping(BaseModel):
-    """Source-to-destination table mapping for a mirror.
+    """
+    Source-to-destination table mapping for a mirror.
 
     Attributes:
         source_table_identifier: Source `schema.table` identifier.
@@ -755,7 +792,8 @@ class ConfigMirrorTableMapping(BaseModel):
 
 
 class ConfigMirror(BaseModel):
-    """Mirror definition from the local YAML config.
+    """
+    Mirror definition from the local YAML config.
 
     Mirrors `FlowConnectionConfigs` fields used by `CreateCDCFlow`.
 
@@ -799,7 +837,8 @@ class ConfigMirror(BaseModel):
 
 
 class Config(BaseModel):
-    """Parsed PeerDB YAML config.
+    """
+    Parsed PeerDB YAML config.
 
     Attributes:
         peerdb_ui_url: PeerDB UI base URL; `peerdb_api_url` appends `api`.
@@ -817,7 +856,8 @@ class Config(BaseModel):
 
     @property
     def peerdb_api_url(self) -> HttpUrl:
-        """Return the PeerDB API base URL.
+        """
+        Return the PeerDB API base URL.
 
         Returns:
             HttpUrl: `peerdb_ui_url` joined with `api`.
@@ -826,7 +866,8 @@ class Config(BaseModel):
 
 
 class PeerDB:
-    """Client for the PeerDB API and local PeerDB YAML config.
+    """
+    Client for the PeerDB API and local PeerDB YAML config.
 
     Wraps PeerDB `v1` REST endpoints with local config parsing, peer/mirror
     lifecycle helpers, and source-database introspection.
@@ -843,7 +884,8 @@ class PeerDB:
     """
 
     def __init__(self, config_file: Path | str | None = None) -> None:
-        """Initialize the PeerDB client.
+        """
+        Initialize the PeerDB client.
 
         Args:
             config_file: Explicit config file path. When None, resolves via
@@ -855,7 +897,8 @@ class PeerDB:
 
     @cached_property
     def config(self) -> Config:
-        """Parse and return the local PeerDB config.
+        """
+        Parse and return the local PeerDB config.
 
         Renders the YAML file as a Jinja template, merges `+defaults` blocks
         into sibling peer/mirror entries, and maps adapter settings to PeerDB
@@ -979,7 +1022,8 @@ class PeerDB:
         )
 
     def can_connect(self) -> bool:
-        """Check whether the PeerDB API is reachable.
+        """
+        Check whether the PeerDB API is reachable.
 
         Sends `GET v1/version`.
 
@@ -1002,7 +1046,8 @@ class PeerDB:
             return False
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, Any]]:
-        """Check API, source, and destination connectivity and prerequisites.
+        """
+        Check API, source, and destination connectivity and prerequisites.
 
         Verifies the PeerDB API, source/destination adapter connections, and
         source Postgres settings (`max_replication_slots >= 4`,
@@ -1200,7 +1245,8 @@ class PeerDB:
         return result
 
     def get_peer_adapter(self, peer_name: str) -> ClickHouseAdapter | PostgresAdapter:
-        """Return the database adapter for a configured peer.
+        """
+        Return the database adapter for a configured peer.
 
         Args:
             peer_name: Peer name as defined in the local config.
@@ -1226,7 +1272,8 @@ class PeerDB:
             raise UnsupportedAdapterException(f"Peer type '{peer.adapter.type}' has no adapter")
 
     def get_settings(self) -> GetDynamicSettingsResponse:
-        """Fetch PeerDB dynamic settings.
+        """
+        Fetch PeerDB dynamic settings.
 
         Sends `GET v1/dynamic_settings`.
 
@@ -1259,7 +1306,8 @@ class PeerDB:
         return GetDynamicSettingsResponse(**response.json())
 
     def update_settings(self, settings: dict[str, str]) -> None:
-        """Update PeerDB dynamic settings one by one.
+        """
+        Update PeerDB dynamic settings one by one.
 
         Sends `POST v1/dynamic_settings` with `{name, value}` per entry.
 
@@ -1297,7 +1345,8 @@ class PeerDB:
                 )
 
     def has_peer(self, peer_name: str) -> bool:
-        """Check whether a peer exists on the server.
+        """
+        Check whether a peer exists on the server.
 
         Args:
             peer_name: Peer name to look up.
@@ -1311,7 +1360,8 @@ class PeerDB:
         return bool(matched)
 
     def get_peer_info(self, peer_name: str) -> PeerInfoResponse:
-        """Fetch peer details and live version.
+        """
+        Fetch peer details and live version.
 
         Sends `GET v1/peers/info/{peer_name}`.
 
@@ -1347,7 +1397,8 @@ class PeerDB:
         return PeerInfoResponse(**response.json())
 
     def get_peer_type(self, peer_name: str) -> PeerTypeResponse:
-        """Fetch the type string of a peer.
+        """
+        Fetch the type string of a peer.
 
         Sends `GET v1/peers/type/{peer_name}`.
 
@@ -1385,7 +1436,8 @@ class PeerDB:
     def create_peer(
         self, peer: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
     ) -> CreatePeerResponse:
-        """Create a peer on the server.
+        """
+        Create a peer on the server.
 
         Sends `POST v1/peers/create` with `{peer}` and requires status
         `CREATED`.
@@ -1460,7 +1512,8 @@ class PeerDB:
         if_exists: bool | None = False,
         timeout: int | None = None,
     ) -> DropPeerResponse:
-        """Drop a peer from the server.
+        """
+        Drop a peer from the server.
 
         Optionally drops dependent mirrors first, then sends
         `POST v1/peers/drop` with `{peerName}`.
@@ -1528,7 +1581,8 @@ class PeerDB:
         drop_destination_tables: bool | None = False,
         timeout: int | None = None,
     ) -> None:
-        """Drop all mirrors using a peer as source or destination.
+        """
+        Drop all mirrors using a peer as source or destination.
 
         Args:
             peer_name: Peer name to match against mirror endpoints.
@@ -1549,7 +1603,8 @@ class PeerDB:
                 )
 
     def list_peers(self) -> ListPeersResponse:
-        """List peers from the server.
+        """
+        List peers from the server.
 
         Sends `GET v1/peers/list`.
 
@@ -1580,7 +1635,8 @@ class PeerDB:
         return ListPeersResponse(**response.json())
 
     def has_mirror(self, flow_job_name: str) -> bool:
-        """Check whether a mirror exists on the server.
+        """
+        Check whether a mirror exists on the server.
 
         Args:
             flow_job_name: Mirror (flow job) name to look up.
@@ -1595,7 +1651,8 @@ class PeerDB:
             return False
 
     def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
-        """Fetch the current status of a mirror.
+        """
+        Fetch the current status of a mirror.
 
         Sends `POST v1/mirrors/status` with `{flowJobName}`. HTTP 404 means
         the mirror does not exist.
@@ -1646,7 +1703,8 @@ class PeerDB:
     def wait_for_mirror_status(
         self, flow_job_name: str, target_statuses: set[str], timeout: int | None = None
     ) -> str:
-        """Poll mirror status until a target status is reached.
+        """
+        Poll mirror status until a target status is reached.
 
         Args:
             flow_job_name: Mirror (flow job) name to poll.
@@ -1681,7 +1739,8 @@ class PeerDB:
     def create_mirror(
         self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
     ) -> CreateMirrorResponse:
-        """Create a CDC mirror on the server.
+        """
+        Create a CDC mirror on the server.
 
         Validates that source tables exist, best-effort drops destination
         tables, then sends `POST v1/flows/cdc/create` with
@@ -1803,7 +1862,8 @@ class PeerDB:
         if_exists: bool | None = False,
         timeout: int | None = None,
     ) -> DropMirrorResponse:
-        """Drop a mirror and wait until it disappears.
+        """
+        Drop a mirror and wait until it disappears.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_TERMINATING`,
         `dropMirrorStats=True`, and `skipDestinationDrop=False`, then polls
@@ -1892,7 +1952,8 @@ class PeerDB:
     def resync_mirror(
         self, flow_job_name: str, if_exists: bool | None = False, timeout: int | None = None
     ) -> ResyncMirrorResponse:
-        """Request a resync of a mirror and wait for resync state.
+        """
+        Request a resync of a mirror and wait for resync state.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_RESYNC` and
         `dropMirrorStats=True`.
@@ -1957,7 +2018,8 @@ class PeerDB:
         )
 
     def pause_mirror(self, flow_job_name: str, timeout: int | None = None) -> PauseMirrorResponse:
-        """Pause a running mirror and wait for paused state.
+        """
+        Pause a running mirror and wait for paused state.
 
         Only sends `POST v1/mirrors/state_change` with `STATUS_PAUSED` when
         the current status is `STATUS_RUNNING`; otherwise returns a no-op
@@ -2020,7 +2082,8 @@ class PeerDB:
         return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
 
     def resume_mirror(self, flow_job_name: str, timeout: int | None = None) -> ResumeMirrorResponse:
-        """Resume a paused mirror and wait for running state.
+        """
+        Resume a paused mirror and wait for running state.
 
         Only sends `POST v1/mirrors/state_change` with `STATUS_RUNNING` when
         the current status is `STATUS_PAUSED` or `STATUS_PAUSING`; otherwise
@@ -2083,7 +2146,8 @@ class PeerDB:
         return ResumeMirrorResponse(message=f"Resumed mirror '{flow_job_name}'")
 
     def drop_destination_tables_of_mirror(self, flow_job_name: str) -> None:
-        """Drop destination tables for a mirror defined in local config.
+        """
+        Drop destination tables for a mirror defined in local config.
 
         Args:
             flow_job_name: Mirror (flow job) name to look up in local config.
@@ -2130,7 +2194,8 @@ class PeerDB:
             destination_adapter.drop_table(**relation.model_dump(by_alias=True), if_exists=True)
 
     def list_mirrors(self, include_replication_slot: bool = False) -> ListMirrorsResponse:
-        """List mirrors from the server, sorted by name.
+        """
+        List mirrors from the server, sorted by name.
 
         Sends `GET v1/mirrors/list`. When `include_replication_slot` is True,
         each mirror is enriched with the `peerflow_slot_{mirror}` replication
@@ -2179,7 +2244,8 @@ class PeerDB:
         return ListMirrorsResponse(mirrors=mirrors)
 
     def list_expected_publications(self) -> list[ListPublicationsItem]:
-        """List publication-table pairs expected from local config.
+        """
+        List publication-table pairs expected from local config.
 
         Returns:
             list[ListPublicationsItem]: One item per mirror table mapping with
@@ -2198,7 +2264,8 @@ class PeerDB:
         return data
 
     def list_actual_publications(self) -> list[ListPublicationsItem]:
-        """List publication-table pairs present in the source database.
+        """
+        List publication-table pairs present in the source database.
 
         Queries `pg_publication_tables` on the `source` peer.
 
@@ -2221,7 +2288,8 @@ class PeerDB:
         return data
 
     def list_missing_publications(self) -> list[ListPublicationsItem]:
-        """List expected publications missing from the source database.
+        """
+        List expected publications missing from the source database.
 
         Compares local config (`list_expected_publications()`) against the
         source database (`list_actual_publications()`), ignoring expected
@@ -2239,7 +2307,8 @@ class PeerDB:
         return missing
 
     def list_unused_publications(self) -> list[ListPublicationsItem]:
-        """List source publications not present in the local config.
+        """
+        List source publications not present in the local config.
 
         Compares the source database (`list_actual_publications()`) against
         local config (`list_expected_publications()`).
@@ -2254,7 +2323,8 @@ class PeerDB:
         return unused
 
     def list_replication_slots(self) -> list[ListReplicationSlotsItem]:
-        """List replication slots in the source database.
+        """
+        List replication slots in the source database.
 
         Runs a version-branched query over `pg_replication_slots`,
         `pg_control_checkpoint()`, `pg_stat_activity`, `pg_stat_replication`,
@@ -2356,7 +2426,8 @@ class PeerDB:
 
 
 def find_config_file() -> Path:
-    """Locate the PeerDB YAML config file.
+    """
+    Locate the PeerDB YAML config file.
 
     Uses `PEERDB_CONFIG_FILE` when set, otherwise searches upward from the
     current working directory for `peerdb.yaml`.

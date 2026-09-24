@@ -15,8 +15,11 @@ import pytest
 
 
 class TestClickHouseAdapter(DatabaseTest):
+    """Tests for `ClickHouseAdapter`."""
+
     @pytest.fixture(scope="function")
     def clickhouse_table(self, clickhouse_adapter: ClickHouseAdapter) -> Generator[Table, Any]:
+        """Provide a `ReplacingMergeTree` table and drop it after the test."""
         table = "test_table"
         statement = f"""
         create or replace table {ClickHouseRelation(table=table)}
@@ -38,16 +41,19 @@ class TestClickHouseAdapter(DatabaseTest):
         clickhouse_adapter.drop_table(table)
 
     def test_instantiation_with_sqlalchemy_url(self, clickhouse_settings: ClickHouseSettings):
+        """Verify an adapter can be built from a SQLAlchemy URL."""
         adapter = ClickHouseAdapter(clickhouse_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, ClickHouseSettings)
         assert clickhouse_settings.model_dump() == adapter.settings.model_dump()
 
     def test_instantiation_with_string_url(self, clickhouse_settings: ClickHouseSettings):
+        """Verify an adapter can be built from a string URL."""
         adapter = ClickHouseAdapter(clickhouse_settings.to_string(hide_password=False))
         assert isinstance(adapter.settings, ClickHouseSettings)
         assert clickhouse_settings.model_dump() == adapter.settings.model_dump()
 
     def test_create_client(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `create_client` yields a working ClickHouse client."""
         with clickhouse_adapter.create_client() as client:
             actual = client.query(
                 "select 1 from system.databases where name = {database:String};",
@@ -56,6 +62,7 @@ class TestClickHouseAdapter(DatabaseTest):
         assert actual == [(1,)]
 
     def test_create_session(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `create_session` yields a working SQLAlchemy session."""
         with clickhouse_adapter.create_session() as session:
             actual = session.execute(
                 text("select 1 from system.databases where name = :database;").bindparams(
@@ -65,15 +72,19 @@ class TestClickHouseAdapter(DatabaseTest):
         assert actual == [(1,)]
 
     def test_can_connect(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `can_connect` is true for a reachable server."""
         assert clickhouse_adapter.can_connect() is True
 
     def test_has_database_non_existent(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `has_database` is false for a missing database."""
         assert clickhouse_adapter.has_database("non_existent") is False
 
     def test_has_database_existent(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `has_database` is true for an existing database."""
         assert clickhouse_adapter.has_database(clickhouse_adapter.settings.database) is True
 
     def test_create_and_drop_database(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify database creation and removal, including `if_exists` handling."""
         database = "test_database"
 
         assert clickhouse_adapter.has_database(database) is False
@@ -90,20 +101,24 @@ class TestClickHouseAdapter(DatabaseTest):
         assert clickhouse_adapter.drop_database(database, if_exists=True) is None
 
     def test_has_table_non_existent(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `has_table` is false for a missing table."""
         assert clickhouse_adapter.has_table("non_existent") is False
 
     def test_has_table_existent(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
+        """Verify `has_table` is true for an existing table."""
         assert clickhouse_adapter.has_table(clickhouse_table.name) is True
 
     def test_get_table_non_existent(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `get_table` raises for a missing table."""
         with pytest.raises(TableNotFoundException):
             clickhouse_adapter.get_table("non_existent")
 
     def test_get_table_existent(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
+        """Verify `get_table` returns the table's columns."""
         table = clickhouse_adapter.get_table(clickhouse_table.name)
         assert {
             "id",
@@ -115,6 +130,7 @@ class TestClickHouseAdapter(DatabaseTest):
         } == {column.name for column in table.columns}
 
     def test_create_and_drop_table(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify table creation and removal, including `if_exists` handling."""
         table = "test_table"
         statement = f"""
         create or replace table {ClickHouseRelation(table=table)}
@@ -142,6 +158,7 @@ class TestClickHouseAdapter(DatabaseTest):
     def test_make_create_table_statement_from_table(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
+        """Verify the generated statement matches the source table."""
         with pytest.raises(TableNotFoundException):
             clickhouse_adapter.make_create_table_statement_from_table("non_existent")
 
@@ -165,12 +182,14 @@ class TestClickHouseAdapter(DatabaseTest):
         )
 
     def test_get_table_stats_non_existent_table(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `get_table_stats` raises for a missing table."""
         with pytest.raises(TableNotFoundException):
             clickhouse_adapter.get_table_stats("non_existent_table")
 
     def test_get_table_stats_empty_table(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
+        """Verify `get_table_stats` reports zero counts for an empty table."""
         actual = clickhouse_adapter.get_table_stats(clickhouse_table.name)
         expected = TableStats(
             columns=[
@@ -229,6 +248,7 @@ class TestClickHouseAdapter(DatabaseTest):
     def test_get_table_stats_populated_table(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
+        """Verify `get_table_stats` reports cardinality and null counts."""
         with clickhouse_adapter.create_client() as client:
             client.insert(clickhouse_table.name, [(1,), (2,), (3,)], column_names=["id"])
 
@@ -288,20 +308,25 @@ class TestClickHouseAdapter(DatabaseTest):
         assert actual == expected
 
     def test_list_tables_empty_database(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `list_tables` is empty for an empty database."""
         assert clickhouse_adapter.list_tables() == []
 
     def test_list_tables_populated_database(
         self, clickhouse_adapter: ClickHouseAdapter, clickhouse_table: Table
     ):
+        """Verify `list_tables` returns the database's tables."""
         assert {clickhouse_table.name} == {table.name for table in clickhouse_adapter.list_tables()}
 
     def test_has_user_non_existent_user(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `has_user` is false for a missing user."""
         assert clickhouse_adapter.has_user("non_existent_user") is False
 
     def test_has_user_existent_user(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify `has_user` is true for an existing user."""
         assert clickhouse_adapter.has_user(clickhouse_adapter.settings.username) is True
 
     def test_create_and_drop_user(self, clickhouse_adapter: ClickHouseAdapter):
+        """Verify user creation and removal, including `if_exists` handling."""
         username = "test_user"
         password = "secret"
 

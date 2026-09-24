@@ -3,15 +3,20 @@ from dw_lib.database import DuckDBAdapter, DuckDBSettings
 
 
 class TestDuckDBSettings:
+    """Tests for `DuckDBSettings`."""
+
     def test_from_url_has_memory_database(self):
+        """Verify a memory URL parses to an in-memory database."""
         settings = DuckDBSettings.from_url("duckdb:///:memory:")
         assert settings.database == ":memory:"
 
     def test_from_url_has_file_database(self):
+        """Verify a file URL parses to a file-backed database."""
         settings = DuckDBSettings.from_url("duckdb:////path/to/data.duckdb")
         assert settings.database == "/path/to/data.duckdb"
 
     def test_to_string(self):
+        """Verify settings render to the expected string and SQLAlchemy URLs."""
         settings = DuckDBSettings(database=":memory:")
         assert str(settings) == "duckdb:///:memory:"
         assert settings.to_string() == "duckdb:///:memory:"
@@ -24,17 +29,22 @@ class TestDuckDBSettings:
 
 
 class TestDuckDBAdapter(DatabaseTest):
+    """Tests for `DuckDBAdapter`."""
+
     def test_instantiation_with_sqlalchemy_url(self, duckdb_settings: DuckDBSettings):
+        """Verify an adapter can be built from a SQLAlchemy URL."""
         adapter = DuckDBAdapter(duckdb_settings.to_sqlalchemy_url())
         assert isinstance(adapter.settings, DuckDBSettings)
         assert str(duckdb_settings.database) == adapter.settings.database
 
     def test_instantiation_with_string_url(self, duckdb_settings: DuckDBSettings):
+        """Verify an adapter can be built from a string URL."""
         adapter = DuckDBAdapter(duckdb_settings.to_string(hide_password=False))
         assert isinstance(adapter.settings, DuckDBSettings)
         assert str(duckdb_settings.database) == adapter.settings.database
 
     def test_create_client(self, duckdb_adapter: DuckDBAdapter):
+        """Verify `create_client` yields a working DuckDB connection."""
         with duckdb_adapter.create_client() as conn:
             conn.execute(
                 "select 1 from information_schema.schemata where catalog_name = $1 limit 1;",
@@ -53,4 +63,5 @@ class TestDuckDBAdapter(DatabaseTest):
     #     assert actual == [(1,)]
 
     def test_can_connect(self, duckdb_adapter: DuckDBAdapter):
+        """Verify `can_connect` is true for a reachable database."""
         assert duckdb_adapter.can_connect() is True

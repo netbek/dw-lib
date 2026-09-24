@@ -16,8 +16,11 @@ import requests
 
 
 class TestReplicationSlots:
+    """Tests for `PeerDB.list_replication_slots` WAL status reporting."""
+
     @pytest.fixture(scope="function", autouse=True)
     def set_env(self) -> Generator[None, Any]:
+        """Pin PeerDB test environment variables for the test."""
         old_env = os.environ.copy()
         os.environ.update(PEERDB_TEST_ENV)
         yield
@@ -26,11 +29,13 @@ class TestReplicationSlots:
 
     @pytest.fixture(scope="function")
     def docker_compose_file(self, request) -> Path:
+        """Resolve the compose file from the `docker_compose_file` marker."""
         marker = request.node.get_closest_marker("docker_compose_file")
         return Path(__file__).parent.parent / marker.args[0]
 
     @pytest.fixture(scope="function")
     def docker_api(self) -> docker.client.DockerClient:
+        """Provide a Docker client for container control."""
         return docker.from_env()
 
     @pytest.fixture(scope="function")
@@ -42,6 +47,7 @@ class TestReplicationSlots:
         docker_setup: list[str] | str,
         docker_cleanup: list[str] | str,
     ) -> Iterator[Services]:
+        """Provide managed Docker services for the test compose stack."""
         with get_docker_services(
             docker_compose_command,
             docker_compose_file,
@@ -53,10 +59,12 @@ class TestReplicationSlots:
 
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
+        """Provide the Postgres PeerDB config path."""
         return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
 
     @pytest.fixture(scope="function")
     def peerdb(self, request, peerdb_config_path: Path, docker_services) -> Generator[PeerDB, Any]:
+        """Provide a `PeerDB` client waiting for readiness unless skipped."""
         skip_wait = request.node.get_closest_marker("docker_skip_wait_until_responsive")
 
         if not skip_wait:
@@ -83,6 +91,7 @@ class TestReplicationSlots:
 
     @pytest.fixture(scope="function")
     def postgres_primary_adapter(self, docker_services) -> Generator[PostgresAdapter, Any]:
+        """Provide the primary Postgres adapter on port 25432."""
         postgres_settings = PostgresSettings(
             host="localhost",
             port=25432,
@@ -105,6 +114,7 @@ class TestReplicationSlots:
 
     @pytest.fixture(scope="function")
     def postgres_replica_adapter(self, docker_services) -> Generator[PostgresAdapter, Any]:
+        """Provide the replica Postgres adapter on port 25433."""
         postgres_settings = PostgresSettings(
             host="localhost",
             port=25433,
@@ -128,6 +138,7 @@ class TestReplicationSlots:
     def setup_replication(
         self, postgres_primary_adapter: PostgresAdapter, postgres_replica_adapter: PostgresAdapter
     ):
+        """Create a test table, publication, and subscription for replication."""
         with postgres_primary_adapter.create_client(autocommit=True) as (_, cur):
             cur.execute("create table test_table (id serial primary key, data text);")
             cur.execute("create publication test_publication for table test_table;")
@@ -145,6 +156,7 @@ class TestReplicationSlots:
     def assert_replication_slot(
         self, replication_slot: ListReplicationSlotsItem, expected: dict[str, Any]
     ) -> None:
+        """Verify stable slot fields while ignoring LSN and timing values."""
         actual = pydash.omit(
             replication_slot.model_dump(),
             [
@@ -171,6 +183,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
+        """Verify the slot reports `reserved` while the replica is running."""
         self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         replication_slot = pydash.find(
@@ -212,6 +225,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
+        """Verify the slot reports `extended` after stop, ~80MB load, and checkpoint."""
         self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL
@@ -270,6 +284,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
+        """Verify the slot reports `unreserved` after stopping the replica and loading ~45MB."""
         self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL
@@ -326,6 +341,7 @@ class TestReplicationSlots:
         postgres_replica_adapter: PostgresAdapter,
         peerdb: PeerDB,
     ):
+        """Verify the slot reports `lost` after stop, ~80MB load, and checkpoint."""
         self.setup_replication(postgres_primary_adapter, postgres_replica_adapter)
 
         # Ensure the replica is running, then stop it to accumulate WAL

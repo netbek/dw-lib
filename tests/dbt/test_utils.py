@@ -6,12 +6,15 @@ from sqlalchemy import Table
 
 
 class TestGenerateSQLModelCode(CodeGenerationTest):
+    """Tests for `generate_sqlmodel_code` model and factory generation."""
+
     def test_ok(
         self,
         clickhouse_adapter: ClickHouseAdapter,
         relation: ClickHouseRelation,
         table: Table,
     ):
+        """Verify model and factory code match the expected `test_table` output."""
         python_class = "TestTable"
 
         dbt_source = {

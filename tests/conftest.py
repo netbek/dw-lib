@@ -24,14 +24,14 @@ import urllib.error
 import urllib.request
 
 # Environment variables for PeerDB tests
-# Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.4/docker-compose.yml
+# Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/docker-compose.yml
 PEERDB_TEST_ENV = {
     "MINIO_IMAGE": "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
-    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.37.4",
-    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.37.4",
-    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.37.4",
-    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.37.4",
-    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.37.4",
+    "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.37.10",
+    "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.37.10",
+    "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.37.10",
+    "PEERDB_SERVER_IMAGE": "ghcr.io/peerdb-io/peerdb-server:stable-v0.37.10",
+    "PEERDB_UI_IMAGE": "ghcr.io/peerdb-io/peerdb-ui:stable-v0.37.10",
     "POSTGRES_IMAGE": "postgres:18.3-alpine3.23",
     "TEMPORAL_ADMIN_TOOLS_IMAGE": "temporalio/admin-tools:1.29.7-tctl-1.18.4-cli-1.7.2",
     "TEMPORAL_SERVER_IMAGE": "temporalio/server:1.29.7",

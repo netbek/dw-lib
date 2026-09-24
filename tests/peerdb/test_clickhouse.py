@@ -22,7 +22,10 @@ import pytest
 
 
 class TestLoadConfig(PeerDBIntegrationTest):
+    """Tests for `PeerDB` config parsing."""
+
     def test_valid_config(self, all_postgres_tables: list[Table]):
+        """Verify the ClickHouse YAML config parses to expected peers and mirrors."""
         expected = {
             "peerdb_ui_url": HttpUrl("http://localhost:3000"),
             "operation_timeout": 30,
@@ -148,12 +151,16 @@ class TestLoadConfig(PeerDBIntegrationTest):
 
 
 class PeerDBClickHouseTest(PeerDBIntegrationTest):
+    """Shared context for ClickHouse-backed PeerDB integration tests."""
+
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
+        """Provide the ClickHouse PeerDB config path."""
         return Path(__file__).parent / "data" / "peerdb.clickhouse.yaml"
 
     @pytest.fixture(scope="module")
     def destination_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any]:
+        """Provide the ClickHouse destination adapter."""
         clickhouse_settings = ClickHouseSettings(
             host="localhost",
             port=28123,
@@ -178,7 +185,10 @@ class PeerDBClickHouseTest(PeerDBIntegrationTest):
 
 
 class TestDebug(PeerDBClickHouseTest):
+    """Tests for `PeerDB.debug` connection reporting."""
+
     def test_ok(self, peerdb: PeerDB):
+        """Verify `debug` reports OK for the API and peers."""
         actual = peerdb.debug()
         expected = {
             "API": {
@@ -201,7 +211,10 @@ class TestDebug(PeerDBClickHouseTest):
 
 
 class TestCreatePeer(PeerDBClickHouseTest):
+    """Tests for `PeerDB.create_peer` creation and idempotency."""
+
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB):
+        """Verify creating a peer makes it discoverable."""
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
@@ -211,6 +224,7 @@ class TestCreatePeer(PeerDBClickHouseTest):
         peerdb.drop_peer(peer.name)
 
     def test_existant_peer_raises_exception_if_exists_fail(self, peerdb: PeerDB):
+        """Verify recreating a peer with `if_exists=fail` raises."""
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
@@ -225,6 +239,7 @@ class TestCreatePeer(PeerDBClickHouseTest):
         peerdb.drop_peer(peer.name)
 
     def test_existant_peer_if_exists_keep(self, peerdb: PeerDB):
+        """Verify recreating a peer with `if_exists=keep` keeps it."""
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
@@ -240,7 +255,10 @@ class TestCreatePeer(PeerDBClickHouseTest):
 
 
 class TestDropPeer(PeerDBClickHouseTest):
+    """Tests for `PeerDB.drop_peer` removal and error handling."""
+
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB):
+        """Verify dropping a peer removes it."""
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         peerdb.create_peer({"name": peer.name, **peer.peerdb.model_dump()})
@@ -250,6 +268,7 @@ class TestDropPeer(PeerDBClickHouseTest):
         assert peerdb.has_peer(peer.name) is False
 
     def test_non_existant_peer_raises_exception(self, peerdb: PeerDB):
+        """Verify dropping a missing peer raises."""
         peer = pydash.find(peerdb.config.peers, lambda x: x.name == "source")
 
         with pytest.raises(PeerNotFoundException) as exc:
@@ -259,7 +278,10 @@ class TestDropPeer(PeerDBClickHouseTest):
 
 
 class TestListPeers(PeerDBClickHouseTest):
+    """Tests for `PeerDB.list_peers` enumeration."""
+
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        """Verify listing returns the configured source and destination peers."""
         actual = [peer.model_dump() for peer in peerdb.list_peers().items]
         expected = [
             {"name": "source", "type": "POSTGRES"},
@@ -269,7 +291,10 @@ class TestListPeers(PeerDBClickHouseTest):
 
 
 class TestCreateMirror(PeerDBClickHouseTest):
+    """Tests for `PeerDB.create_mirror` creation and idempotency."""
+
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+        """Verify creating a mirror makes it discoverable."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         peerdb.create_mirror(mirror.model_dump())
@@ -281,6 +306,7 @@ class TestCreateMirror(PeerDBClickHouseTest):
     def test_non_existant_source_table_raises_exception(
         self, some_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
+        """Verify creating a mirror with a missing source table raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
 
         with pytest.raises(TableNotFoundException) as exc:
@@ -294,6 +320,7 @@ class TestCreateMirror(PeerDBClickHouseTest):
     def test_existant_mirror_raises_exception_if_exists_fail(
         self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
+        """Verify recreating a mirror with `if_exists=fail` raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
 
         peerdb.create_mirror(mirror.model_dump())
@@ -310,6 +337,7 @@ class TestCreateMirror(PeerDBClickHouseTest):
     def test_existant_mirror_kept_if_exists_keep(
         self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
+        """Verify recreating a mirror with `if_exists=keep` keeps it."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_many")
 
         peerdb.create_mirror(mirror.model_dump())
@@ -323,6 +351,8 @@ class TestCreateMirror(PeerDBClickHouseTest):
 
 
 class TestDropMirror(PeerDBClickHouseTest):
+    """Tests for `PeerDB.drop_mirror` removal and destination handling."""
+
     def test_ok(
         self,
         all_postgres_tables: list[Table],
@@ -331,6 +361,7 @@ class TestDropMirror(PeerDBClickHouseTest):
         destination_adapter: ClickHouseAdapter,
         mirror_with_destination_table: None,
     ):
+        """Verify dropping a mirror removes it and its destination table."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
         kwargs = table_kwargs(
             destination_adapter, mirror.table_mappings[0].destination_table_identifier
@@ -349,6 +380,7 @@ class TestDropMirror(PeerDBClickHouseTest):
         destination_adapter: ClickHouseAdapter,
         mirror_with_destination_table: None,
     ):
+        """Verify dropping a mirror keeps the destination table when requested."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=False)
@@ -369,6 +401,7 @@ class TestDropMirror(PeerDBClickHouseTest):
         peers: None,
         extra_mirror: dict,
     ):
+        """Verify a mirror outside the config can be created."""
         peerdb.create_mirror(extra_mirror)
         assert peerdb.has_mirror("extra_mirror") is True
 
@@ -382,6 +415,7 @@ class TestDropMirror(PeerDBClickHouseTest):
         peers: None,
         extra_mirror: dict,
     ):
+        """Verify a mirror outside the config can be dropped."""
         peerdb.create_mirror(extra_mirror)
         assert peerdb.has_mirror("extra_mirror") is True
 
@@ -390,6 +424,7 @@ class TestDropMirror(PeerDBClickHouseTest):
         assert peerdb.has_mirror("extra_mirror") is False
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        """Verify dropping a missing mirror raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         with pytest.raises(MirrorNotFoundException) as exc:
@@ -399,7 +434,10 @@ class TestDropMirror(PeerDBClickHouseTest):
 
 
 class TestResyncMirror(PeerDBClickHouseTest):
+    """Tests for `PeerDB.resync_mirror` initiation and error handling."""
+
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        """Verify resyncing a mirror initiates the resync."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         response = peerdb.resync_mirror(mirror.flow_job_name)
@@ -407,6 +445,7 @@ class TestResyncMirror(PeerDBClickHouseTest):
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        """Verify resyncing a missing mirror raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         with pytest.raises(MirrorNotFoundException) as exc:
@@ -416,9 +455,12 @@ class TestResyncMirror(PeerDBClickHouseTest):
 
 
 class TestPauseMirror(PeerDBClickHouseTest):
+    """Tests for `PeerDB.pause_mirror` with mocked running status."""
+
     def test_ok(
         self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None, monkeypatch
     ):
+        """Verify pausing a running mirror reports success."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         # Mock the mirror status to STATUS_RUNNING so pause is allowed
@@ -451,6 +493,7 @@ class TestPauseMirror(PeerDBClickHouseTest):
         assert response.message == "Paused mirror 'cdc_one'"
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        """Verify pausing a missing mirror raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         with pytest.raises(MirrorNotFoundException) as exc:
@@ -460,9 +503,12 @@ class TestPauseMirror(PeerDBClickHouseTest):
 
 
 class TestResumeMirror(PeerDBClickHouseTest):
+    """Tests for `PeerDB.resume_mirror` with mocked paused status."""
+
     def test_ok(
         self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None, monkeypatch
     ):
+        """Verify resuming a paused mirror reports success."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         # Mock the mirror status to STATUS_PAUSED so resume is allowed
@@ -495,6 +541,7 @@ class TestResumeMirror(PeerDBClickHouseTest):
         assert response.message == "Resumed mirror 'cdc_one'"
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
+        """Verify resuming a missing mirror raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         with pytest.raises(MirrorNotFoundException) as exc:
@@ -504,7 +551,10 @@ class TestResumeMirror(PeerDBClickHouseTest):
 
 
 class TestListMirrors(PeerDBClickHouseTest):
+    """Tests for `PeerDB.list_mirrors` enumeration."""
+
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
+        """Verify listing returns the configured ClickHouse mirrors."""
         actual = [
             mirror.model_dump(
                 include=[

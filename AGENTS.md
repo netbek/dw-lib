@@ -22,7 +22,9 @@ Follow these steps when the user asks to upgrade PeerDB.
 
 2. Search and replace the current and next version tags in these files:
 
+    - `examples/cli/.env`
     - `examples/cli/peerdb.yaml`
+    - `infra/peerdb/.env`
     - `scripts/install-vendor.sh`
     - `src/dw_lib/peerdb.py`
     - `tests/conftest.py`

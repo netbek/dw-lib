@@ -3,6 +3,7 @@ __pycache__
 .ruff_cache
 .venv
 node_modules
+vendor
 venv
 
 # Generated state

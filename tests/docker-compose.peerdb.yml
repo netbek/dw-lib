@@ -36,43 +36,43 @@ services:
 
   catalog:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: catalog
     stop_grace_period: 0s
 
   temporal-setup-postgres:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: temporal-setup-postgres
     stop_grace_period: 0s
 
   temporal-server:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: temporal-server
     stop_grace_period: 0s
 
   temporal-create-namespace:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: temporal-create-namespace
     stop_grace_period: 0s
 
   temporal-ui:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: temporal-ui
     stop_grace_period: 0s
 
   peerdb-flow-api:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: peerdb-flow-api
     stop_grace_period: 0s
 
   peerdb-flow-snapshot-worker:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: peerdb-flow-snapshot-worker
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -80,25 +80,25 @@ services:
 
   peerdb-flow-worker:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: peerdb-flow-worker
     stop_grace_period: 0s
 
   peerdb-server:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: peerdb-server
     stop_grace_period: 0s
 
   peerdb-ui:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: peerdb-ui
     stop_grace_period: 0s
 
   minio:
     extends:
-      file: ../vendor/peerdb/docker-compose.yml
+      file: ../infra/peerdb/docker-compose.yml
       service: minio
     stop_grace_period: 0s
 

@@ -29,8 +29,8 @@ services:
       - GARAGE_DEFAULT_SECRET_KEY=garagepassword1234
       - GARAGE_DEFAULT_BUCKET=loader
     ports:
-      - 38950:3900
-      - 38951:3903
+      - 28950:3900
+      - 28951:3903
     command: ["/garage", "server", "--single-node", "--default-bucket"]
     healthcheck:
       test: ["CMD", "/garage", "status"]

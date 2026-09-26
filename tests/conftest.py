@@ -393,7 +393,7 @@ class LoaderTest:
             key_id="garageadmin",
             secret="garagepassword1234",
             region="us-east-1",
-            endpoint="localhost:38950",
+            endpoint="localhost:28950",
             use_ssl=False,
             bucket="loader",
         )

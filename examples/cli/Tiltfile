@@ -21,4 +21,4 @@ dc_resource("peerdb-flow-snapshot-worker", labels=["peerdb"], project_name=proje
 dc_resource("peerdb-flow-worker", labels=["peerdb"], project_name=project_name)
 dc_resource("peerdb-server", labels=["peerdb"], project_name=project_name)
 dc_resource("peerdb-ui", labels=["peerdb"], project_name=project_name)
-dc_resource("minio", labels=["peerdb"], project_name=project_name)
+dc_resource("garage", labels=["peerdb"], project_name=project_name)

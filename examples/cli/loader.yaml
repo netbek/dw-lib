@@ -11,10 +11,10 @@ connections:
   destination_1:
     type: s3
     settings:
-      key_id: admin
-      secret: password
+      key_id: garageadmin
+      secret: garagepassword1234
       region: us-east-1
-      endpoint: localhost:28950
+      endpoint: localhost:38950
       use_ssl: false
       bucket: loader
 

@@ -115,12 +115,12 @@ services:
       service: peerdb-ui
     stop_grace_period: 0s
 
-  minio:
+  garage:
     extends:
       file: ../infra/peerdb/docker-compose.yml
-      service: minio
+      service: garage
     stop_grace_period: 0s
 
 volumes:
   catalog-data:
-  minio-data:
+  garage-data:

@@ -4,11 +4,11 @@
 
 name: peerdb-quickstart
 
-x-minio-env: &minio-env
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: admin
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: password
+x-garage-env: &garage-env
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ACCESS_KEY_ID: garageadmin
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_SECRET_ACCESS_KEY: garagepassword1234
   PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_REGION: us-east-1
-  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:9000
+  PEERDB_CLICKHOUSE_AWS_CREDENTIALS_AWS_ENDPOINT_URL_S3: http://host.docker.internal:3900
   PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: peerdb
 
 x-catalog-env: &catalog-env
@@ -132,7 +132,7 @@ services:
       - 8112:8112
       - 8113:8113
     environment:
-      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
+      <<: [*catalog-env, *peerdb-flow-worker-env, *garage-env]
       PEERDB_ALLOWED_TARGETS:
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -144,7 +144,7 @@ services:
     image: ${PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
+      <<: [*catalog-env, *peerdb-flow-worker-env, *garage-env]
     depends_on:
       temporal-create-namespace:
         condition: service_completed_successfully
@@ -153,7 +153,7 @@ services:
     image: ${PEERDB_FLOW_WORKER_IMAGE}
     restart: unless-stopped
     environment:
-      <<: [*catalog-env, *peerdb-flow-worker-env, *minio-env]
+      <<: [*catalog-env, *peerdb-flow-worker-env, *garage-env]
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
@@ -192,28 +192,24 @@ services:
     depends_on:
       - peerdb-flow-api
 
-  minio:
-    image: ${MINIO_IMAGE}
+  garage:
+    image: ${GARAGE_IMAGE}
     restart: unless-stopped
     volumes:
-      - minio-data:/data
+      - garage-data:/var/lib/garage
+      - ./garage.toml:/etc/garage.toml:ro
     ports:
-      - 9000:9000
-      - 9001:9001
+      - 3900:3900
+      - 3903:3903
     environment:
-      <<: *minio-env
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: password
-    entrypoint: |
-      /bin/sh -c "
-      minio server /data --console-address=:9001 & sleep 2;
-      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
-      mc mb --ignore-existing local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME;
-      mc ilm rule add "local/$$PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME" --expire-days 7 --noncurrent-expire-days 7
-      wait
-      "
+      GARAGE_RPC_SECRET: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+      GARAGE_ADMIN_TOKEN: garage-dev-admin-token-0123456789abcdef
+      GARAGE_DEFAULT_ACCESS_KEY: garageadmin
+      GARAGE_DEFAULT_SECRET_KEY: garagepassword1234
+      GARAGE_DEFAULT_BUCKET: peerdb
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
     healthcheck:
-      test: ["CMD-SHELL", "mc ready local"]
+      test: ["CMD", "/garage", "status"]
       interval: 1s
       timeout: 1s
       retries: 10
@@ -221,4 +217,4 @@ services:
 
 volumes:
   catalog-data:
-  minio-data:
+  garage-data:

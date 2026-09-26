@@ -35,6 +35,9 @@ fi
 
 cd "${ROOT_DIR}"
 
+command -v pnpm >/dev/null 2>&1 || die "pnpm not found"
+command -v uv >/dev/null 2>&1 || die "uv not found"
+
 uv version --bump "${BUMP}"
 VERSION="$(uv version --short)"
 make uv-sync

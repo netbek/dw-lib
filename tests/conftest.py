@@ -26,7 +26,7 @@ import urllib.request
 # Environment variables for PeerDB tests
 # Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/docker-compose.yml
 PEERDB_TEST_ENV = {
-    "MINIO_IMAGE": "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+    "GARAGE_IMAGE": "dxflrs/garage:v2.4.1",
     "PEERDB_FLOW_API_IMAGE": "ghcr.io/peerdb-io/flow-api:stable-v0.37.10",
     "PEERDB_FLOW_SNAPSHOT_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-snapshot-worker:stable-v0.37.10",
     "PEERDB_FLOW_WORKER_IMAGE": "ghcr.io/peerdb-io/flow-worker:stable-v0.37.10",
@@ -390,8 +390,8 @@ class LoaderTest:
     @pytest.fixture(scope="module")
     def s3_adapter(self, docker_services) -> Generator[S3Adapter, Any]:
         s3_settings = S3Settings(
-            key_id="admin",
-            secret="password",
+            key_id="garageadmin",
+            secret="garagepassword1234",
             region="us-east-1",
             endpoint="localhost:28950",
             use_ssl=False,

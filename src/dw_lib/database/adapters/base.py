@@ -148,7 +148,11 @@ class BaseAdapter[T: BaseModel](ABC):
     @overload
     @abstractmethod
     def drop_table(
-        self, table: str, database: str | None = None, if_exists: bool | None = False
+        self,
+        table: str,
+        database: str | None = None,
+        if_exists: bool | None = False,
+        sync: bool = False,
     ) -> None: ...
 
     @overload
@@ -244,7 +248,7 @@ class BaseAdapter[T: BaseModel](ABC):
 
     @overload
     @abstractmethod
-    def drop_tables(self, database: str | None = None) -> None: ...
+    def drop_tables(self, database: str | None = None, sync: bool = False) -> None: ...
 
     @overload
     @abstractmethod

@@ -135,7 +135,7 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
 
         if self.has_table(table=table, database=database):
             if if_exists == "replace":
-                self.drop_table(table=table, database=database)
+                self.drop_table(table=table, database=database, sync=True)
             else:
                 raise TableExistsException(f"Table '{table}' exists")
 
@@ -165,7 +165,11 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
         return statement
 
     def drop_table(
-        self, table: str, database: str | None = None, if_exists: bool | None = False
+        self,
+        table: str,
+        database: str | None = None,
+        if_exists: bool | None = False,
+        sync: bool = False,
     ) -> None:
         if database is None:
             database = self.settings.database
@@ -176,7 +180,10 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
             else:
                 raise TableNotFoundException(f"Table '{table}' not found")
 
-        statement = f"drop table {ClickHouseRelation(database=database, table=table)};"
+        sync_keyword = " sync" if sync else ""
+        statement = (
+            f"drop table {ClickHouseRelation(database=database, table=table)}{sync_keyword};"
+        )
 
         with self.create_client() as client:
             client.command(statement)
@@ -253,12 +260,12 @@ class ClickHouseAdapter(BaseAdapter[ClickHouseSettings]):
     ) -> None:
         raise NotImplementedError()
 
-    def drop_tables(self, database: str | None = None) -> None:
+    def drop_tables(self, database: str | None = None, sync: bool = False) -> None:
         if database is None:
             database = self.settings.database
 
         for table in self.list_tables(database=database):
-            self.drop_table(table.name, database=database)
+            self.drop_table(table.name, database=database, sync=sync)
 
     def list_tables(self, database: str | None = None) -> list[Table]:
         if database is None:

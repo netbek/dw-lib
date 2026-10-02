@@ -2149,7 +2149,12 @@ class PeerDB:
         ]
 
         for relation in destination_relations:
-            destination_adapter.drop_table(**relation.model_dump(by_alias=True), if_exists=True)
+            extra_kwargs = (
+                {"sync": True} if destination_peer.adapter.type == Dialects.CLICKHOUSE else {}
+            )
+            destination_adapter.drop_table(
+                **relation.model_dump(by_alias=True), if_exists=True, **extra_kwargs
+            )
 
     def list_mirrors(self, include_replication_slot: bool = False) -> ListMirrorsResponse:
         """

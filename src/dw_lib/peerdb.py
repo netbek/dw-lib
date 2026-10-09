@@ -763,19 +763,82 @@ class ConfigPeerPostgres(BaseModel):
     peerdb: ConfigPeerPeerDBPostgres
 
 
+class ConfigMirrorColumnSetting(BaseModel):
+    """
+    Per-column override within a mirror table mapping.
+
+    Mirrors the `ColumnSetting` message in the PeerDB API. `destination_name`
+    applies to Postgres and ClickHouse destinations. `destination_type`,
+    `ordering`, `partitioning`, and `nullable_enabled` apply to ClickHouse
+    destinations only, where `ordering` becomes the destination `ORDER BY`
+    and `partitioning` the destination `PARTITION BY` (1-based).
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L25
+
+    Attributes:
+        source_name: Source column name.
+        destination_name: Destination column name, when renaming.
+        destination_type: ClickHouse destination type override.
+        ordering: ClickHouse `ORDER BY` position (1-based).
+        partitioning: ClickHouse `PARTITION BY` position (1-based).
+        nullable_enabled: Whether the ClickHouse column allows nulls.
+    """
+
+    source_name: str
+    destination_name: str | None = None
+    destination_type: str | None = None
+    ordering: int | None = None
+    partitioning: int | None = None
+    nullable_enabled: bool | None = None
+
+
 class ConfigMirrorTableMapping(BaseModel):
     """
     Source-to-destination table mapping for a mirror.
 
+    Mirrors the `TableMapping` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L43
+
     Attributes:
         source_table_identifier: Source `schema.table` identifier.
         destination_table_identifier: Destination `schema.table` identifier.
+        partition_key: Initial-snapshot partition (watermark) column. Used by
+            Postgres and ClickHouse destinations.
         exclude: Columns to exclude from replication, if any.
+        columns: Per-column overrides.
+        engine: ClickHouse table engine. Defaults to the backend default,
+            ReplacingMergeTree. `CH_ENGINE_NULL` suppresses the Distributed
+            table wrapper on clustered peers.
+        sharding_key: ClickHouse `Distributed` sharding key expression.
+            Clustered peers only.
+        policy_name: ClickHouse `Distributed` load balancing policy. Requires
+            `sharding_key`. Clustered peers only.
+        partition_by_expr: Raw ClickHouse `PARTITION BY` expression. Overrides
+            the `columns[].partitioning` order.
     """
 
     source_table_identifier: str
     destination_table_identifier: str
+    partition_key: str | None = None
     exclude: list[str] | None = None
+    columns: list[ConfigMirrorColumnSetting] | None = None
+    engine: (
+        Literal[
+            "CH_ENGINE_REPLACING_MERGE_TREE",
+            "CH_ENGINE_MERGE_TREE",
+            "CH_ENGINE_NULL",
+            "CH_ENGINE_REPLICATED_REPLACING_MERGE_TREE",
+            "CH_ENGINE_REPLICATED_MERGE_TREE",
+            "CH_ENGINE_COALESCING_MERGE_TREE",
+        ]
+        | None
+    ) = None
+    sharding_key: str | None = None
+    policy_name: str | None = None
+    partition_by_expr: str | None = None
 
 
 class ConfigMirror(BaseModel):

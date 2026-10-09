@@ -136,7 +136,7 @@ class TestConfigMirrorTableMapping:
         peerdb = make_peerdb(tmp_path, minimal_table_mapping("        engine: CH_ENGINE_UNKNOWN\n"))
 
         with pytest.raises(ValidationError):
-            peerdb.config
+            peerdb.config  # noqa: B018
 
     def test_column_setting_requires_source_name(self, tmp_path: Path):
         """Verify a column setting without source_name is rejected."""
@@ -148,4 +148,4 @@ class TestConfigMirrorTableMapping:
         )
 
         with pytest.raises(ValidationError):
-            peerdb.config
+            peerdb.config  # noqa: B018

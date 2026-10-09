@@ -45,6 +45,11 @@ mirrors:
     table_mappings:
       - source_table_identifier: public.table_1
         destination_table_identifier: table_1
+        partition_key: id
+        engine: CH_ENGINE_REPLACING_MERGE_TREE
+        columns:
+          - source_name: id
+            destination_name: id
     resync: true
 
   cdc_many:

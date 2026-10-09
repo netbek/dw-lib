@@ -66,6 +66,22 @@ mirrors:
     table_mappings:
       - source_table_identifier: public.table_1
         destination_table_identifier: table_1
+        # Optional table mapping options. See:
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L43
+        # `partition_key` partitions the initial snapshot (Postgres and ClickHouse).
+        partition_key: id
+        # The remaining options apply to ClickHouse destinations only.
+        engine: CH_ENGINE_REPLACING_MERGE_TREE
+        sharding_key: rand()
+        policy_name: default
+        partition_by_expr: toYYYYMM(modified_at)
+        columns:
+          - source_name: id
+            destination_name: id
+            destination_type: UInt64
+            ordering: 1
+            partitioning: 1
+            nullable_enabled: false
 
   cdc_many:
     source_name: source

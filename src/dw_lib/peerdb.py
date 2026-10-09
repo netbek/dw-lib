@@ -805,9 +805,9 @@ class ConfigMirrorTableMapping(BaseModel):
     Attributes:
         source_table_identifier: Source `schema.table` identifier.
         destination_table_identifier: Destination `schema.table` identifier.
-        exclude: Columns to exclude from replication, if any.
         partition_key: Initial-snapshot partition (watermark) column. Used by
             Postgres and ClickHouse destinations.
+        exclude: Columns to exclude from replication, if any.
         columns: Per-column overrides.
         engine: ClickHouse table engine. Defaults to the backend default,
             ReplacingMergeTree. `CH_ENGINE_NULL` suppresses the Distributed

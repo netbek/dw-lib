@@ -173,7 +173,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
             ],
         }
 
-        config_file = Path(__file__).parent / "data" / "peerdb.clickhouse.yaml"
+        config_file = Path(__file__).parent / "fixtures" / "peerdb.clickhouse.yaml"
         assert PeerDB(config_file).config.model_dump(by_alias=True) == expected
 
 
@@ -183,7 +183,7 @@ class PeerDBClickHouseTest(PeerDBIntegrationTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         """Provide the ClickHouse PeerDB config path."""
-        return Path(__file__).parent / "data" / "peerdb.clickhouse.yaml"
+        return Path(__file__).parent / "fixtures" / "peerdb.clickhouse.yaml"
 
     @pytest.fixture(scope="module")
     def destination_adapter(self, docker_services) -> Generator[ClickHouseAdapter, Any]:

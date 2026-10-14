@@ -60,7 +60,7 @@ class TestReplicationSlots:
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         """Provide the Postgres PeerDB config path."""
-        return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
+        return Path(__file__).parent / "fixtures" / "peerdb.postgres.yaml"
 
     @pytest.fixture(scope="function")
     def peerdb(self, request, peerdb_config_path: Path, docker_services) -> Generator[PeerDB, Any]:

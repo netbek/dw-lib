@@ -23,6 +23,8 @@ repos:
     skills: [fetching-dbt-docs, using-dbt-for-analytics-engineering]
   - repo: netbek/agent-skills
     skills: [writing-spec-and-design-docs]
+  - repo: pydantic/skills
+    skills: [pydantic]
   - repo: tajd/economist-style-guide-plugin
     skills: [economist-style]
   - repo: vercel-labs/skills

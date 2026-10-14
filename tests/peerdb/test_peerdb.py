@@ -13,7 +13,7 @@ class TestIntegration(PeerDBTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         """Provide the Postgres PeerDB config path."""
-        return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
+        return Path(__file__).parent / "fixtures" / "peerdb.postgres.yaml"
 
     def test_can_connect(self, peerdb: PeerDB):
         """Verify the client connects to a running instance."""
@@ -40,7 +40,7 @@ class TestServicesOffline(PeerDBTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         """Provide the offline PeerDB config path."""
-        return Path(__file__).parent / "data" / "peerdb.offline.yaml"
+        return Path(__file__).parent / "fixtures" / "peerdb.offline.yaml"
 
     def test_can_connect(self, peerdb: PeerDB):
         """Verify the client reports no connection when services are offline."""

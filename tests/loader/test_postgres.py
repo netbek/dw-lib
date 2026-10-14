@@ -49,7 +49,7 @@ table_defs = [
 class TestIntegration(LoaderTest):
     @pytest.fixture(scope="function")
     def loader_config_path(self) -> Path:
-        return Path(__file__).parent / "data" / "loader.postgres.yaml"
+        return Path(__file__).parent / "fixtures" / "loader.postgres.yaml"
 
     @pytest.fixture(scope="function")
     def all_postgres_tables(self, postgres_adapter: PostgresAdapter) -> Generator[list[Table], Any]:

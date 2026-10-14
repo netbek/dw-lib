@@ -160,7 +160,7 @@ class TestLoadConfig(PeerDBIntegrationTest):
             ],
         }
 
-        config_file = Path(__file__).parent / "data" / "peerdb.postgres.yaml"
+        config_file = Path(__file__).parent / "fixtures" / "peerdb.postgres.yaml"
         assert PeerDB(config_file).config.model_dump(by_alias=True) == expected
 
 
@@ -170,7 +170,7 @@ class PeerDBPostgresTest(PeerDBIntegrationTest):
     @pytest.fixture(scope="function")
     def peerdb_config_path(self) -> Path:
         """Provide the Postgres PeerDB config path."""
-        return Path(__file__).parent / "data" / "peerdb.postgres.yaml"
+        return Path(__file__).parent / "fixtures" / "peerdb.postgres.yaml"
 
     @pytest.fixture(scope="module")
     def destination_adapter(self, postgres_adapter: PostgresAdapter) -> PostgresAdapter:

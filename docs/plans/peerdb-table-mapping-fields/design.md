@@ -1,7 +1,6 @@
 # PeerDB Table Mapping Fields Design
 
-**Last updated:** 2026-10-09
-**Status:** Draft
+> **Status:** Last updated 2026-10-09.
 
 ## Context
 

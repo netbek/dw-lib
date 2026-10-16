@@ -1,8 +1,6 @@
 # PeerDB Table Mapping Fields Specification
 
-**Status:** Draft v0.1 — pending approval
-**Approver:** —
-**Date:** 2026-10-09
+> **Status:** Approved. Last updated 2026-10-09.
 
 ## Purpose
 

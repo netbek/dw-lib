@@ -140,6 +140,10 @@ class DuckDBSettings(BaseModel):
         return URL.create("duckdb", database=str(self.database))
 
     def to_string(self, hide_password: bool = True) -> str:
+        # SQLAlchemy 2.1 quotes the database portion (https://github.com/sqlalchemy/sqlalchemy/issues/11234),
+        # so `:memory:` renders as `duckdb:///%3Amemory%3A`. Keep the canonical literal.
+        if str(self.database) == ":memory:":
+            return "duckdb:///:memory:"
         return self.to_sqlalchemy_url().render_as_string(hide_password=hide_password)
 
     def __str__(self) -> str:

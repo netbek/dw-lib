@@ -17,7 +17,11 @@ def create(
     all: bool = typer.Option(False, "--all", help="Create all mirrors."),
     if_exists: Literal["fail", "keep", "replace"] = "keep",
 ) -> None:
-    """Create a mirror, or all mirrors."""
+    """
+    Create a mirror, or all mirrors.
+
+    If keeping existing mirrors, use resync to pick up added or removed columns and changed types.
+    """
     _validate_name_or_all(name, all)
 
     if all:
@@ -104,7 +108,11 @@ def resync(
     all: bool = typer.Option(False, "--all", help="Resync all mirrors."),
     if_exists: bool | None = True,
 ) -> None:
-    """Resync a mirror, or all mirrors."""
+    """
+    Resync a mirror, or all mirrors.
+
+    Picks up added or removed columns and changed types.
+    """
     _validate_name_or_all(name, all)
 
     if all:

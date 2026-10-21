@@ -467,7 +467,9 @@ class TestResyncMirror(PeerDBClickHouseTest):
         """Verify resyncing a mirror initiates the resync."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
-        response = peerdb.resync_mirror(mirror.flow_job_name)
+        response = peerdb.resync_mirror(
+            mirror.flow_job_name, timeout=peerdb.config.operation_timeout
+        )
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
 

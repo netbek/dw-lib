@@ -1,3 +1,4 @@
+from .utils import create_mirror, resync_mirror
 from dw_lib.exceptions import MirrorNotFoundException
 from dw_lib.peerdb import PeerDB
 from rich.console import Console
@@ -16,6 +17,11 @@ def create(
     name: str = typer.Argument(None),
     all: bool = typer.Option(False, "--all", help="Create all mirrors."),
     if_exists: Literal["fail", "keep", "replace"] = "keep",
+    parallel: bool = typer.Option(
+        False,
+        "--parallel",
+        help="Do not wait for each mirror to become ready before creating the next.",
+    ),
 ) -> None:
     """
     Create a mirror, or all mirrors.
@@ -26,16 +32,14 @@ def create(
 
     if all:
         for mirror in peerdb.config.mirrors:
-            response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
-            console.print(response.message, style="green")
+            create_mirror(mirror.model_dump(), if_exists=if_exists, parallel=parallel)
     else:
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
 
         if not mirror:
             raise MirrorNotFoundException(f"Mirror '{name}' not found in {peerdb._config_file}")
 
-        response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
-        console.print(response.message, style="green")
+        create_mirror(mirror.model_dump(), if_exists=if_exists, parallel=parallel)
 
 
 @mirror_app.command()
@@ -107,6 +111,11 @@ def resync(
     name: str = typer.Argument(None),
     all: bool = typer.Option(False, "--all", help="Resync all mirrors."),
     if_exists: bool | None = True,
+    parallel: bool = typer.Option(
+        False,
+        "--parallel",
+        help="Do not wait for each mirror to finish resyncing before starting the next.",
+    ),
 ) -> None:
     """
     Resync a mirror, or all mirrors.
@@ -118,11 +127,9 @@ def resync(
     if all:
         list_response = peerdb.list_mirrors()
         for mirror in list_response.mirrors:
-            response = peerdb.resync_mirror(mirror.name, if_exists=if_exists)
-            console.print(response.message, style="green")
+            resync_mirror(mirror.name, if_exists=if_exists, parallel=parallel)
     else:
-        response = peerdb.resync_mirror(name, if_exists=if_exists)
-        console.print(response.message, style="green")
+        resync_mirror(name, if_exists=if_exists, parallel=parallel)
 
 
 def _validate_name_or_all(name: str | None, all: bool) -> bool:

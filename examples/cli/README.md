@@ -42,6 +42,20 @@ The connection settings of the database servers in this example are:
 
 Append the `--help` option to see the options of each command.
 
+### Serial and parallel mirror processing
+
+By default, `cli peerdb up`, `cli peerdb mirror create`, and `cli peerdb mirror resync` wait for each mirror to become ready before starting the next. This keeps initial snapshots and resyncs from running concurrently.
+
+Pass `--parallel` to start each mirror operation as soon as PeerDB accepts it:
+
+```shell
+cli peerdb up --parallel
+cli peerdb mirror create --all --parallel
+cli peerdb mirror resync --all --parallel
+```
+
+Both modes apply to the whole run, not per source. The readiness wait has no timeout and stops at the first failed, terminated, or terminating mirror. Resyncing a completed or failed mirror recreates it; serial mode waits for the recreated mirror to become ready. Kept mirrors (`if_exists=keep`) are not waited on. Mirror drops are already processed one at a time, waiting up to `operation_timeout`, and have no `--parallel` option.
+
 Check the status of peers and mirrors in the [PeerDB UI](http://localhost:3000) after running `cli peerdb up` and `cli peerdb drop-peers`.
 
 ## dbt

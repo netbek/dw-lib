@@ -1,10 +1,10 @@
 # PeerDB Mirror Processing Specification
 
-> **Status:** Approved. Last updated 2026-10-21.
+> **Status:** Approved. Last updated 2026-10-22.
 
 ## Purpose
 
-Creating multiple PeerDB mirrors back to back starts their initial snapshots concurrently, which can exhaust source database resources. This feature makes serial processing the default so that each mirror's snapshot finishes before the next mirror starts. A `--parallel` option restores concurrent processing. Mirror drops already wait for each flow to disappear and are unchanged.
+Creating multiple PeerDB mirrors back to back starts their initial snapshots concurrently, which can exhaust source database resources. This feature makes serial processing the default so that each mirror's snapshot finishes before the next mirror starts. A `--parallel` option restores concurrent processing. The readiness wait has no timeout; the resync start wait is bounded to 15 minutes, and transient status errors are retried. Mirror drops already wait for each flow to disappear and are unchanged.
 
 ## Requirements
 
@@ -139,11 +139,11 @@ While waiting in serial processing, the CLI SHALL abort the run with an error wh
 - **THEN** the command reports an error
 - **AND** the command does not process the next mirror
 
-### Requirement: No wait timeout
+### Requirement: No readiness timeout
 
 The CLI SHALL wait indefinitely for a mirror to become ready or reach a failure state, without imposing a timeout.
 
-A mirror that is paused, pausing, unknown, or modifying is not a failure state. The CLI SHALL keep waiting while it is in one of these states. A status-query error aborts the run.
+A mirror that is paused, pausing, or modifying is not a failure state. The CLI SHALL keep waiting while it is in one of these states. A mirror that remains in `STATUS_UNKNOWN` beyond a grace period SHALL be treated as failed. Transient status-query errors SHALL be retried with backoff. A sustained status-query failure SHALL abort the run.
 
 #### Scenario: Long-running snapshot
 
@@ -154,6 +154,32 @@ A mirror that is paused, pausing, unknown, or modifying is not a failure state. 
 
 - **WHEN** a mirror is paused while the CLI is waiting for it
 - **THEN** the CLI keeps waiting until the mirror is resumed, reaches a failure state, or the command is interrupted
+
+#### Scenario: Transient status error
+
+- **WHEN** a status query fails transiently while the CLI is waiting
+- **THEN** the CLI retries the query with backoff
+- **AND** the wait continues
+
+### Requirement: Bounded resync start
+
+When a resync is requested, the CLI SHALL wait at most 15 minutes for the resync to start before continuing to wait for readiness. The resync starts when the recreated flow reaches `STATUS_SETUP` or `STATUS_SNAPSHOT`, when the mirror reaches `STATUS_COMPLETED`, or when it reaches `STATUS_RUNNING` after a non-initial status. A mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT` SHALL first be observed in `STATUS_RESYNC`.
+
+#### Scenario: Resync starts
+
+- **WHEN** the user runs `peerdb mirror resync cdc_one` and PeerDB begins the resync
+- **THEN** the command proceeds to wait for the mirror to become ready
+
+#### Scenario: Resync start not observed
+
+- **WHEN** a resync is requested and the mirror remains in its initial status for 15 minutes
+- **THEN** the command reports an error
+- **AND** the command does not wait for readiness
+
+#### Scenario: Drop failure
+
+- **WHEN** a resync's drop phase fails and the mirror remains in `STATUS_RESYNC`
+- **THEN** the command reports an error after the resync-start timeout
 
 ### Requirement: Kept mirrors are not waited on
 

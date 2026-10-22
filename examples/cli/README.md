@@ -54,7 +54,7 @@ cli peerdb mirror create --all --parallel
 cli peerdb mirror resync --all --parallel
 ```
 
-Both modes apply to the whole run, not per source. The readiness wait has no timeout and stops at the first failed, terminated, or terminating mirror. Resyncing a completed or failed mirror recreates it; serial mode waits for the recreated mirror to become ready. Kept mirrors (`if_exists=keep`) are not waited on. Mirror drops are already processed one at a time, waiting up to `operation_timeout`, and have no `--parallel` option.
+Both modes apply to the whole run, not per source. The readiness wait has no timeout and stops at the first failed, terminated, or terminating mirror. A resync start is bounded to 15 minutes; if PeerDB does not begin the resync in that time, the command fails. Transient status-query errors are retried, and serial waits report status changes and periodic heartbeats. Resyncing a completed or failed mirror recreates it; serial mode waits for the recreated mirror to become ready. Kept mirrors (`if_exists=keep`) are not waited on. Mirror drops are already processed one at a time, waiting up to `operation_timeout`, and have no `--parallel` option.
 
 Check the status of peers and mirrors in the [PeerDB UI](http://localhost:3000) after running `cli peerdb up` and `cli peerdb drop-peers`.
 

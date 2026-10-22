@@ -35,6 +35,7 @@ from .exceptions import (
 from .types import HttpUrl
 from .utils.filesystem import find_up
 from .utils.template import render_template
+from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
 from pydantic import BaseModel, Field, model_validator
@@ -56,6 +57,20 @@ REQUEST_TIMEOUT = 5
 
 # Timeout in seconds for waiting on long-running PeerDB operations (e.g. mirror state changes)
 OPERATION_TIMEOUT = 15
+
+# Timeout in seconds for observing the start of a mirror resync. The subsequent
+# readiness wait is unbounded because initial snapshots can take hours.
+RESYNC_START_TIMEOUT = 900
+
+# Polling settings for long-running mirror status waits.
+STATUS_POLL_INTERVAL = 1
+STATUS_POLL_MAX_INTERVAL = 15
+STATUS_ERROR_WINDOW = 600
+STATUS_HEARTBEAT_INTERVAL = 300
+STATUS_UNKNOWN_GRACE = 60
+
+MIRROR_READY_STATUSES = frozenset({"STATUS_RUNNING", "STATUS_COMPLETED"})
+MIRROR_FAILURE_STATUSES = frozenset({"STATUS_FAILED", "STATUS_TERMINATED", "STATUS_TERMINATING"})
 
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
@@ -1714,7 +1729,7 @@ class PeerDB:
             response = requests.post(
                 str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
             )
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except (requests.HTTPError, requests.ConnectionError, requests.Timeout) as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1773,43 +1788,275 @@ class PeerDB:
             f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
         )
 
-    def wait_for_mirror_ready(self, flow_job_name: str) -> str:
+    def _poll_mirror_status(
+        self,
+        flow_job_name: str,
+        *,
+        accept: Callable[[str], bool],
+        deadline: float | None,
+        timeout_message: str,
+        failure_message: str,
+        on_status_change: Callable[[str, float], None] | None = None,
+        poll_interval: int = STATUS_POLL_INTERVAL,
+        max_poll_interval: int = STATUS_POLL_MAX_INTERVAL,
+        unknown_grace: int | None = None,
+    ) -> str:
+        """
+        Poll a mirror status until `accept` returns True.
+
+        Transient status errors are retried with backoff. The poll interval
+        backs off while the status is unchanged. `on_status_change` is called
+        on status changes and at the heartbeat interval.
+
+        Args:
+            flow_job_name: Mirror (flow job) name to poll.
+            accept: Predicate that returns True for the desired status.
+            deadline: Monotonic deadline in seconds, or None to wait forever.
+            timeout_message: Prefix for the timeout error.
+            failure_message: Prefix for the failure-state error.
+            on_status_change: Optional callback with status and elapsed seconds.
+            poll_interval: Initial poll interval in seconds.
+            max_poll_interval: Maximum poll interval in seconds.
+            unknown_grace: Seconds to allow `STATUS_UNKNOWN` before failing, or
+                None to wait until the deadline.
+
+        Returns:
+            str: The accepted status value.
+
+        Raises:
+            MirrorFailedException: If the mirror reaches a failure state, stays
+                unknown beyond the grace period, or disappears.
+            MirrorTimeoutException: If the deadline is reached.
+            GetMirrorStatusException: If status queries fail for longer than
+                `STATUS_ERROR_WINDOW`.
+        """
+        started_at = time.monotonic()
+        current_interval = poll_interval
+        last_status: str | None = None
+        last_reported_status: str | None = None
+        last_reported_at = started_at
+        unknown_since: float | None = None
+        error_started_at: float | None = None
+        error_backoff = poll_interval
+
+        while True:
+            now = time.monotonic()
+
+            if deadline is not None and now >= deadline:
+                raise MirrorTimeoutException(
+                    f"{timeout_message} after {now - started_at:.0f}s "
+                    f"(current status: {last_status or 'UNKNOWN'})"
+                )
+
+            try:
+                current_status = self.get_mirror_status(flow_job_name).current_flow_state
+            except (GetMirrorStatusException, requests.RequestException) as exc:
+                now = time.monotonic()
+
+                if error_started_at is None:
+                    error_started_at = now
+
+                if now - error_started_at >= STATUS_ERROR_WINDOW:
+                    raise
+
+                sleep_for = min(error_backoff, max_poll_interval)
+
+                if deadline is not None:
+                    remaining = deadline - now
+                    if remaining <= 0:
+                        raise MirrorTimeoutException(
+                            f"{timeout_message} after {now - started_at:.0f}s "
+                            f"(current status: {last_status or 'UNKNOWN'})"
+                        ) from exc
+                    sleep_for = min(sleep_for, remaining)
+
+                time.sleep(sleep_for)
+                error_backoff = min(max_poll_interval, error_backoff * 2)
+                continue
+
+            now = time.monotonic()
+            error_started_at = None
+            error_backoff = poll_interval
+
+            if current_status in MIRROR_FAILURE_STATUSES:
+                raise MirrorFailedException(f"{failure_message} (status: {current_status})")
+
+            if current_status == "STATUS_UNKNOWN" and unknown_grace is not None:
+                if unknown_since is None:
+                    unknown_since = now
+                elif now - unknown_since >= unknown_grace:
+                    raise MirrorFailedException(f"{failure_message} (status: {current_status})")
+            else:
+                unknown_since = None
+
+            if on_status_change is not None and (
+                current_status != last_reported_status
+                or now - last_reported_at >= STATUS_HEARTBEAT_INTERVAL
+            ):
+                on_status_change(current_status, now - started_at)
+                last_reported_status = current_status
+                last_reported_at = now
+
+            if accept(current_status):
+                return current_status
+
+            if current_status == last_status:
+                current_interval = min(max_poll_interval, current_interval * 2)
+            else:
+                current_interval = poll_interval
+            last_status = current_status
+
+            sleep_for = current_interval
+            if deadline is not None:
+                remaining = deadline - now
+                if remaining <= 0:
+                    raise MirrorTimeoutException(
+                        f"{timeout_message} after {now - started_at:.0f}s "
+                        f"(current status: {current_status})"
+                    )
+                sleep_for = min(sleep_for, remaining)
+
+            time.sleep(sleep_for)
+
+    def wait_for_mirror_ready(
+        self,
+        flow_job_name: str,
+        on_status_change: Callable[[str, float], None] | None = None,
+    ) -> str:
         """
         Poll mirror status until it is ready or fails.
 
         A mirror is ready when its flow state is `STATUS_RUNNING` or
-        `STATUS_COMPLETED`. Polls every second with no timeout.
+        `STATUS_COMPLETED`. Polls with backoff and no timeout. Transient status
+        errors are retried; sustained errors abort the wait.
 
         Args:
             flow_job_name: Mirror (flow job) name to poll.
+            on_status_change: Optional callback invoked with the current status
+                and elapsed seconds on status changes and periodically while
+                the status is unchanged.
 
         Returns:
             str: The reached ready status value.
 
         Raises:
             MirrorFailedException: If the mirror reaches `STATUS_FAILED`,
-                `STATUS_TERMINATED`, or `STATUS_TERMINATING`, or disappears.
+                `STATUS_TERMINATED`, or `STATUS_TERMINATING`, stays unknown
+                beyond the grace period, or disappears.
+            GetMirrorStatusException: If status queries fail for longer than
+                `STATUS_ERROR_WINDOW`.
         """
-        ready_statuses = {"STATUS_RUNNING", "STATUS_COMPLETED"}
-        failure_statuses = {"STATUS_FAILED", "STATUS_TERMINATED", "STATUS_TERMINATING"}
+        try:
+            return self._poll_mirror_status(
+                flow_job_name,
+                accept=lambda status: status in MIRROR_READY_STATUSES,
+                deadline=None,
+                timeout_message=f"Mirror '{flow_job_name}' did not become ready",
+                failure_message=f"Mirror '{flow_job_name}' failed to become ready",
+                on_status_change=on_status_change,
+                unknown_grace=STATUS_UNKNOWN_GRACE,
+            )
+        except MirrorNotFoundException as exc:
+            raise MirrorFailedException(
+                f"Mirror '{flow_job_name}' disappeared while waiting for it to become ready"
+            ) from exc
 
-        while True:
-            try:
-                current_status = self.get_mirror_status(flow_job_name).current_flow_state
-            except MirrorNotFoundException as exc:
-                raise MirrorFailedException(
-                    f"Mirror '{flow_job_name}' disappeared while waiting for it to become ready"
-                ) from exc
+    def wait_for_mirror_resync_started(
+        self,
+        flow_job_name: str,
+        initial_status: str,
+        timeout: int = RESYNC_START_TIMEOUT,
+        on_status_change: Callable[[str, float], None] | None = None,
+    ) -> str:
+        """
+        Poll mirror status until a resync has demonstrably started.
 
-            if current_status in ready_statuses:
-                return current_status
+        A resync starts when the recreated flow reaches `STATUS_SETUP` or
+        `STATUS_SNAPSHOT`. A mirror that reaches `STATUS_COMPLETED` is also
+        accepted; `STATUS_RUNNING` is accepted after a non-initial status. A
+        mirror initially in `STATUS_SETUP` or `STATUS_SNAPSHOT` must first be
+        observed in `STATUS_RESYNC` so that an in-progress snapshot is not
+        mistaken for a resync. Waiting for `STATUS_RESYNC` alone is
+        insufficient: it marks the drop phase and a failed drop can leave the
+        mirror in that state indefinitely.
 
-            if current_status in failure_statuses:
-                raise MirrorFailedException(
-                    f"Mirror '{flow_job_name}' failed to become ready (status: {current_status})"
-                )
+        The wait is bounded by `timeout`; the subsequent readiness wait is
+        unbounded. `STATUS_COMPLETED` and `STATUS_FAILED` mirrors are skipped
+        because PeerDB recreates them synchronously.
 
-            time.sleep(1)
+        Args:
+            flow_job_name: Mirror (flow job) name to poll.
+            initial_status: Status observed before the resync request.
+            timeout: Maximum seconds to wait for the resync to start.
+            on_status_change: Optional callback invoked with the current status
+                and elapsed seconds on status changes and periodically while
+                the status is unchanged.
+
+        Returns:
+            str: The observed status that indicates the resync started.
+
+        Raises:
+            MirrorFailedException: If the mirror reaches a failure state or
+                disappears while waiting.
+            MirrorTimeoutException: If the resync start is not observed within
+                `timeout` seconds.
+            GetMirrorStatusException: If status queries fail for longer than
+                `STATUS_ERROR_WINDOW`.
+        """
+        if initial_status in {"STATUS_COMPLETED", "STATUS_FAILED"}:
+            return initial_status
+
+        observed_resync = False
+
+        def accept(status: str) -> bool:
+            nonlocal observed_resync
+
+            if status == "STATUS_RESYNC":
+                observed_resync = True
+                return False
+
+            if initial_status in {"STATUS_SETUP", "STATUS_SNAPSHOT"}:
+                return observed_resync and status in {
+                    "STATUS_SETUP",
+                    "STATUS_SNAPSHOT",
+                    "STATUS_RUNNING",
+                    "STATUS_COMPLETED",
+                }
+
+            if initial_status == "STATUS_RESYNC":
+                return status in {
+                    "STATUS_SETUP",
+                    "STATUS_SNAPSHOT",
+                    "STATUS_RUNNING",
+                    "STATUS_COMPLETED",
+                }
+
+            if status in {"STATUS_SETUP", "STATUS_SNAPSHOT", "STATUS_COMPLETED"}:
+                return True
+
+            if status == "STATUS_RUNNING":
+                return observed_resync
+
+            return False
+
+        try:
+            return self._poll_mirror_status(
+                flow_job_name,
+                accept=accept,
+                deadline=time.monotonic() + timeout,
+                timeout_message=f"Resync of mirror '{flow_job_name}' was not observed",
+                failure_message=(
+                    f"Mirror '{flow_job_name}' failed while waiting for resync to start"
+                ),
+                on_status_change=on_status_change,
+                poll_interval=STATUS_POLL_INTERVAL,
+                max_poll_interval=STATUS_POLL_INTERVAL,
+                unknown_grace=None,
+            )
+        except MirrorNotFoundException as exc:
+            raise MirrorFailedException(
+                f"Mirror '{flow_job_name}' disappeared while waiting for resync to start"
+            ) from exc
 
     def create_mirror(
         self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
@@ -2026,9 +2273,10 @@ class PeerDB:
         if_exists: bool | None = False,
         wait: bool = True,
         timeout: int | None = None,
+        on_status_change: Callable[[str, float], None] | None = None,
     ) -> ResyncMirrorResponse:
         """
-        Request a resync of a mirror and optionally wait for resync state.
+        Request a resync of a mirror and optionally wait for it to start.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_RESYNC` and
         `dropMirrorStats=True`.
@@ -2041,11 +2289,13 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to resync.
             if_exists: When True, skip instead of raising if missing.
-            wait: When True, wait for the resync to be observed before
-                returning. When False, return as soon as PeerDB accepts the
-                request.
-            timeout: Wait timeout in seconds for `STATUS_RESYNC`. `None` waits
-                indefinitely. Ignored when `wait` is False.
+            wait: When True, wait for the resync to start before returning.
+                When False, return as soon as PeerDB accepts the request.
+            timeout: Timeout in seconds for observing the resync start.
+                `None` uses `RESYNC_START_TIMEOUT`. Ignored when `wait` is
+                False. The subsequent readiness wait is unbounded.
+            on_status_change: Optional callback invoked with the current status
+                and elapsed seconds while waiting for the resync to start.
 
         Returns:
             ResyncMirrorResponse: Result with initiated/skipped message.
@@ -2054,7 +2304,12 @@ class PeerDB:
             MirrorNotFoundException: If missing and `if_exists` is False.
             ResyncMirrorException: If the state-change request fails or the
                 mirror is already terminated.
-            MirrorTimeoutException: If `STATUS_RESYNC` is not reached in time.
+            MirrorFailedException: If the mirror fails or disappears while
+                waiting for the resync to start.
+            MirrorTimeoutException: If the resync start is not observed in time.
+            GetMirrorStatusException: If the initial status query fails, or
+                status queries fail for longer than `STATUS_ERROR_WINDOW`
+                while waiting for the resync start.
         """
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
 
@@ -2095,12 +2350,18 @@ class PeerDB:
                 f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
             )
 
-        # PeerDB recreates completed/failed mirrors synchronously. The recreated
-        # flow starts at STATUS_SETUP and only reaches STATUS_RESYNC after its
-        # snapshot, so waiting for STATUS_RESYNC here would block until the
-        # snapshot finishes or time out.
+        # PeerDB recreates completed/failed mirrors synchronously, so there is
+        # no asynchronous start to observe; the readiness wait handles them.
         if wait and current_status not in {"STATUS_COMPLETED", "STATUS_FAILED"}:
-            self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
+            if timeout is None:
+                timeout = RESYNC_START_TIMEOUT
+
+            self.wait_for_mirror_resync_started(
+                flow_job_name,
+                current_status,
+                timeout=timeout,
+                on_status_change=on_status_change,
+            )
 
         return ResyncMirrorResponse(
             message=f"Resync of mirror '{flow_job_name}' has been initiated"

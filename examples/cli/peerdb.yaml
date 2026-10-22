@@ -1,5 +1,13 @@
 peerdb_ui_url: http://localhost:3000
 
+# Optional wait settings (defaults shown)
+# resync_start_timeout: 900
+# status_poll_interval: 1
+# status_poll_max_interval: 15
+# status_error_window: 600
+# status_heartbeat_interval: 300
+# status_unknown_grace: 60
+
 # Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/internal/dynamicconf.go
 settings:
   PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: "peerdb"

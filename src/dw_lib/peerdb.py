@@ -909,6 +909,17 @@ class Config(BaseModel):
     Attributes:
         peerdb_ui_url: PeerDB UI base URL; `peerdb_api_url` appends `api`.
         operation_timeout: Timeout in seconds for polling operations.
+        resync_start_timeout: Timeout in seconds for observing a resync start.
+        status_poll_interval: Initial status poll interval in seconds. Also the
+            fixed interval for the resync start wait.
+        status_poll_max_interval: Maximum status poll interval in seconds for
+            the readiness wait backoff.
+        status_error_window: Seconds of consecutive status-query failures
+            before aborting a wait.
+        status_heartbeat_interval: Seconds between progress heartbeats while a
+            status is unchanged.
+        status_unknown_grace: Seconds before `STATUS_UNKNOWN` is treated as a
+            failure in the readiness wait.
         settings: Dynamic settings from config.
         peers: Configured peers.
         mirrors: Configured mirrors.
@@ -916,9 +927,33 @@ class Config(BaseModel):
 
     peerdb_ui_url: HttpUrl
     operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
+    resync_start_timeout: int = Field(default=RESYNC_START_TIMEOUT, ge=1)
+    status_poll_interval: int = Field(default=STATUS_POLL_INTERVAL, ge=1)
+    status_poll_max_interval: int = Field(default=STATUS_POLL_MAX_INTERVAL, ge=1)
+    status_error_window: int = Field(default=STATUS_ERROR_WINDOW, ge=1)
+    status_heartbeat_interval: int = Field(default=STATUS_HEARTBEAT_INTERVAL, ge=1)
+    status_unknown_grace: int = Field(default=STATUS_UNKNOWN_GRACE, ge=1)
     settings: list[ConfigSetting]
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
+
+    @model_validator(mode="after")
+    def validate_status_poll_intervals(self) -> Self:
+        """
+        Validate the status poll interval range.
+
+        Returns:
+            Self: This instance when the intervals are consistent.
+
+        Raises:
+            ValueError: If `status_poll_max_interval` is less than
+                `status_poll_interval`.
+        """
+        if self.status_poll_max_interval < self.status_poll_interval:
+            raise ValueError(
+                "status_poll_max_interval must be greater than or equal to status_poll_interval"
+            )
+        return self
 
     @property
     def peerdb_api_url(self) -> HttpUrl:
@@ -1082,6 +1117,16 @@ class PeerDB:
         return Config(
             peerdb_ui_url=config.get("peerdb_ui_url"),
             operation_timeout=config.get("operation_timeout", OPERATION_TIMEOUT),
+            resync_start_timeout=config.get("resync_start_timeout", RESYNC_START_TIMEOUT),
+            status_poll_interval=config.get("status_poll_interval", STATUS_POLL_INTERVAL),
+            status_poll_max_interval=config.get(
+                "status_poll_max_interval", STATUS_POLL_MAX_INTERVAL
+            ),
+            status_error_window=config.get("status_error_window", STATUS_ERROR_WINDOW),
+            status_heartbeat_interval=config.get(
+                "status_heartbeat_interval", STATUS_HEARTBEAT_INTERVAL
+            ),
+            status_unknown_grace=config.get("status_unknown_grace", STATUS_UNKNOWN_GRACE),
             settings=settings,
             peers=peers,
             mirrors=mirrors,
@@ -1799,6 +1844,8 @@ class PeerDB:
         on_status_change: Callable[[str, float], None] | None = None,
         poll_interval: int = STATUS_POLL_INTERVAL,
         max_poll_interval: int = STATUS_POLL_MAX_INTERVAL,
+        error_window: int = STATUS_ERROR_WINDOW,
+        heartbeat_interval: int = STATUS_HEARTBEAT_INTERVAL,
         unknown_grace: int | None = None,
     ) -> str:
         """
@@ -1817,6 +1864,10 @@ class PeerDB:
             on_status_change: Optional callback with status and elapsed seconds.
             poll_interval: Initial poll interval in seconds.
             max_poll_interval: Maximum poll interval in seconds.
+            error_window: Seconds of consecutive status-query failures before
+                aborting.
+            heartbeat_interval: Seconds between progress heartbeats while the
+                status is unchanged.
             unknown_grace: Seconds to allow `STATUS_UNKNOWN` before failing, or
                 None to wait until the deadline.
 
@@ -1828,7 +1879,7 @@ class PeerDB:
                 unknown beyond the grace period, or disappears.
             MirrorTimeoutException: If the deadline is reached.
             GetMirrorStatusException: If status queries fail for longer than
-                `STATUS_ERROR_WINDOW`.
+                `error_window`.
         """
         started_at = time.monotonic()
         current_interval = poll_interval
@@ -1856,7 +1907,7 @@ class PeerDB:
                 if error_started_at is None:
                     error_started_at = now
 
-                if now - error_started_at >= STATUS_ERROR_WINDOW:
+                if now - error_started_at >= error_window:
                     raise
 
                 sleep_for = min(error_backoff, max_poll_interval)
@@ -1891,7 +1942,7 @@ class PeerDB:
 
             if on_status_change is not None and (
                 current_status != last_reported_status
-                or now - last_reported_at >= STATUS_HEARTBEAT_INTERVAL
+                or now - last_reported_at >= heartbeat_interval
             ):
                 on_status_change(current_status, now - started_at)
                 last_reported_status = current_status
@@ -1944,7 +1995,7 @@ class PeerDB:
                 `STATUS_TERMINATED`, or `STATUS_TERMINATING`, stays unknown
                 beyond the grace period, or disappears.
             GetMirrorStatusException: If status queries fail for longer than
-                `STATUS_ERROR_WINDOW`.
+                `status_error_window`.
         """
         try:
             return self._poll_mirror_status(
@@ -1954,7 +2005,11 @@ class PeerDB:
                 timeout_message=f"Mirror '{flow_job_name}' did not become ready",
                 failure_message=f"Mirror '{flow_job_name}' failed to become ready",
                 on_status_change=on_status_change,
-                unknown_grace=STATUS_UNKNOWN_GRACE,
+                poll_interval=self.config.status_poll_interval,
+                max_poll_interval=self.config.status_poll_max_interval,
+                error_window=self.config.status_error_window,
+                heartbeat_interval=self.config.status_heartbeat_interval,
+                unknown_grace=self.config.status_unknown_grace,
             )
         except MirrorNotFoundException as exc:
             raise MirrorFailedException(
@@ -1965,7 +2020,7 @@ class PeerDB:
         self,
         flow_job_name: str,
         initial_status: str,
-        timeout: int = RESYNC_START_TIMEOUT,
+        timeout: int | None = None,
         on_status_change: Callable[[str, float], None] | None = None,
     ) -> str:
         """
@@ -1987,7 +2042,8 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to poll.
             initial_status: Status observed before the resync request.
-            timeout: Maximum seconds to wait for the resync to start.
+            timeout: Maximum seconds to wait for the resync to start. `None`
+                uses `config.resync_start_timeout`.
             on_status_change: Optional callback invoked with the current status
                 and elapsed seconds on status changes and periodically while
                 the status is unchanged.
@@ -2001,10 +2057,13 @@ class PeerDB:
             MirrorTimeoutException: If the resync start is not observed within
                 `timeout` seconds.
             GetMirrorStatusException: If status queries fail for longer than
-                `STATUS_ERROR_WINDOW`.
+                `status_error_window`.
         """
         if initial_status in {"STATUS_COMPLETED", "STATUS_FAILED"}:
             return initial_status
+
+        if timeout is None:
+            timeout = self.config.resync_start_timeout
 
         observed_resync = False
 
@@ -2049,8 +2108,10 @@ class PeerDB:
                     f"Mirror '{flow_job_name}' failed while waiting for resync to start"
                 ),
                 on_status_change=on_status_change,
-                poll_interval=STATUS_POLL_INTERVAL,
-                max_poll_interval=STATUS_POLL_INTERVAL,
+                poll_interval=self.config.status_poll_interval,
+                max_poll_interval=self.config.status_poll_interval,
+                error_window=self.config.status_error_window,
+                heartbeat_interval=self.config.status_heartbeat_interval,
                 unknown_grace=None,
             )
         except MirrorNotFoundException as exc:
@@ -2292,8 +2353,8 @@ class PeerDB:
             wait: When True, wait for the resync to start before returning.
                 When False, return as soon as PeerDB accepts the request.
             timeout: Timeout in seconds for observing the resync start.
-                `None` uses `RESYNC_START_TIMEOUT`. Ignored when `wait` is
-                False. The subsequent readiness wait is unbounded.
+                `None` uses `config.resync_start_timeout`. Ignored when `wait`
+                is False. The subsequent readiness wait is unbounded.
             on_status_change: Optional callback invoked with the current status
                 and elapsed seconds while waiting for the resync to start.
 
@@ -2308,7 +2369,7 @@ class PeerDB:
                 waiting for the resync to start.
             MirrorTimeoutException: If the resync start is not observed in time.
             GetMirrorStatusException: If the initial status query fails, or
-                status queries fail for longer than `STATUS_ERROR_WINDOW`
+                status queries fail for longer than `status_error_window`
                 while waiting for the resync start.
         """
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
@@ -2354,7 +2415,7 @@ class PeerDB:
         # no asynchronous start to observe; the readiness wait handles them.
         if wait and current_status not in {"STATUS_COMPLETED", "STATUS_FAILED"}:
             if timeout is None:
-                timeout = RESYNC_START_TIMEOUT
+                timeout = self.config.resync_start_timeout
 
             self.wait_for_mirror_resync_started(
                 flow_job_name,

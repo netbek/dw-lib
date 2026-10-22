@@ -54,7 +54,22 @@ cli peerdb mirror create --all --parallel
 cli peerdb mirror resync --all --parallel
 ```
 
-Both modes apply to the whole run, not per source. The readiness wait has no timeout and stops at the first failed, terminated, or terminating mirror. A resync start is bounded to 15 minutes; if PeerDB does not begin the resync in that time, the command fails. Transient status-query errors are retried, and serial waits report status changes and periodic heartbeats. Resyncing a completed or failed mirror recreates it; serial mode waits for the recreated mirror to become ready. Kept mirrors (`if_exists=keep`) are not waited on. Mirror drops are already processed one at a time, waiting up to `operation_timeout`, and have no `--parallel` option.
+Both modes apply to the whole run, not per source. The readiness wait has no timeout and stops at the first failed, terminated, or terminating mirror. A resync start is bounded to 15 minutes by default; if PeerDB does not begin the resync in that time, the command fails. Transient status-query errors are retried, and serial waits report status changes and periodic heartbeats. Resyncing a completed or failed mirror recreates it; serial mode waits for the recreated mirror to become ready. Kept mirrors (`if_exists=keep`) are not waited on. Mirror drops are already processed one at a time, waiting up to `operation_timeout`, and have no `--parallel` option.
+
+### Wait settings
+
+The YAML config can override the default wait behaviour:
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `resync_start_timeout` | `900` | Seconds to wait for a resync to start. |
+| `status_poll_interval` | `1` | Initial status poll interval; fixed interval for the resync-start wait. |
+| `status_poll_max_interval` | `15` | Maximum backoff interval for the readiness wait. |
+| `status_error_window` | `600` | Seconds of consecutive status-query failures before aborting. |
+| `status_heartbeat_interval` | `300` | Seconds between progress heartbeats. |
+| `status_unknown_grace` | `60` | Seconds before `STATUS_UNKNOWN` is treated as failed in the readiness wait. |
+
+`status_poll_max_interval` must be greater than or equal to `status_poll_interval`. The resync-start wait uses `status_poll_interval` as a fixed interval; the default of 1 second is recommended.
 
 Check the status of peers and mirrors in the [PeerDB UI](http://localhost:3000) after running `cli peerdb up` and `cli peerdb drop-peers`.
 

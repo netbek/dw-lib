@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Creating multiple PeerDB mirrors back to back starts their initial snapshots concurrently, which can exhaust source database resources. This feature makes serial processing the default so that each mirror's snapshot finishes before the next mirror starts. A `--parallel` option restores concurrent processing. The readiness wait has no timeout; the resync start wait is bounded to 15 minutes, and transient status errors are retried. Mirror drops already wait for each flow to disappear and are unchanged.
+Creating multiple PeerDB mirrors back to back starts their initial snapshots concurrently, which can exhaust source database resources. This feature makes serial processing the default so that each mirror's snapshot finishes before the next mirror starts. A `--parallel` option restores concurrent processing. The readiness wait has no timeout; the resync start wait is bounded by `resync_start_timeout` (default 15 minutes), and transient status errors are retried. Mirror drops already wait for each flow to disappear and are unchanged.
 
 ## Requirements
 
@@ -143,7 +143,7 @@ While waiting in serial processing, the CLI SHALL abort the run with an error wh
 
 The CLI SHALL wait indefinitely for a mirror to become ready or reach a failure state, without imposing a timeout.
 
-A mirror that is paused, pausing, or modifying is not a failure state. The CLI SHALL keep waiting while it is in one of these states. A mirror that remains in `STATUS_UNKNOWN` beyond a grace period SHALL be treated as failed. Transient status-query errors SHALL be retried with backoff. A sustained status-query failure SHALL abort the run.
+A mirror that is paused, pausing, or modifying is not a failure state. The CLI SHALL keep waiting while it is in one of these states. A mirror that remains in `STATUS_UNKNOWN` beyond `status_unknown_grace` (default 60 seconds) SHALL be treated as failed. Transient status-query errors SHALL be retried with backoff. A sustained status-query failure beyond `status_error_window` (default 10 minutes) SHALL abort the run.
 
 #### Scenario: Long-running snapshot
 
@@ -163,7 +163,7 @@ A mirror that is paused, pausing, or modifying is not a failure state. The CLI S
 
 ### Requirement: Bounded resync start
 
-When a resync is requested, the CLI SHALL wait at most 15 minutes for the resync to start before continuing to wait for readiness. The resync starts when the recreated flow reaches `STATUS_SETUP` or `STATUS_SNAPSHOT`, when the mirror reaches `STATUS_COMPLETED`, or when it reaches `STATUS_RUNNING` after a non-initial status. A mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT` SHALL first be observed in `STATUS_RESYNC`.
+When a resync is requested, the CLI SHALL wait at most `resync_start_timeout` (default 15 minutes) for the resync to start before continuing to wait for readiness. The resync starts when the recreated flow reaches `STATUS_SETUP` or `STATUS_SNAPSHOT`, when the mirror reaches `STATUS_COMPLETED`, or when it reaches `STATUS_RUNNING` after a non-initial status. A mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT` SHALL first be observed in `STATUS_RESYNC`.
 
 #### Scenario: Resync starts
 
@@ -172,7 +172,7 @@ When a resync is requested, the CLI SHALL wait at most 15 minutes for the resync
 
 #### Scenario: Resync start not observed
 
-- **WHEN** a resync is requested and the mirror remains in its initial status for 15 minutes
+- **WHEN** a resync is requested and the mirror remains in its initial status for `resync_start_timeout` (default 15 minutes)
 - **THEN** the command reports an error
 - **AND** the command does not wait for readiness
 
@@ -180,6 +180,15 @@ When a resync is requested, the CLI SHALL wait at most 15 minutes for the resync
 
 - **WHEN** a resync's drop phase fails and the mirror remains in `STATUS_RESYNC`
 - **THEN** the command reports an error after the resync-start timeout
+
+### Requirement: Wait settings are configurable
+
+The CLI SHALL read `resync_start_timeout`, `status_poll_interval`, `status_poll_max_interval`, `status_error_window`, `status_heartbeat_interval`, and `status_unknown_grace` from the PeerDB YAML config. Missing keys SHALL use the module defaults. `status_poll_max_interval` SHALL be greater than or equal to `status_poll_interval`.
+
+#### Scenario: Custom wait settings
+
+- **WHEN** the config sets `status_poll_interval` to 5
+- **THEN** the waits use a 5-second initial poll interval
 
 ### Requirement: Kept mirrors are not waited on
 

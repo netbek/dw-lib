@@ -8,8 +8,19 @@ from dw_lib.exceptions import (
     ResyncMirrorException,
     SetDynamicSettingsException,
 )
-from dw_lib.peerdb import MirrorStatusResponse, PeerDB, RESYNC_START_TIMEOUT
+from dw_lib.peerdb import (
+    Config,
+    MirrorStatusResponse,
+    PeerDB,
+    RESYNC_START_TIMEOUT,
+    STATUS_ERROR_WINDOW,
+    STATUS_HEARTBEAT_INTERVAL,
+    STATUS_POLL_INTERVAL,
+    STATUS_POLL_MAX_INTERVAL,
+    STATUS_UNKNOWN_GRACE,
+)
 from pathlib import Path
+from pydantic import ValidationError
 
 import datetime
 import pydash
@@ -85,6 +96,54 @@ class TestServicesOffline(PeerDBTest):
 
         with pytest.raises(SetDynamicSettingsException):
             peerdb.update_settings({"PEERDB_NULLABLE": "false"})
+
+
+class TestConfig:
+    """Tests for wait settings in `Config`."""
+
+    @staticmethod
+    def _config(**overrides) -> Config:
+        return Config(
+            peerdb_ui_url="http://localhost:3000",
+            settings=[],
+            peers=[],
+            mirrors=[],
+            **overrides,
+        )
+
+    def test_wait_settings_default_to_constants(self) -> None:
+        """Verify wait settings default to the module constants."""
+        config = self._config()
+
+        assert config.resync_start_timeout == RESYNC_START_TIMEOUT
+        assert config.status_poll_interval == STATUS_POLL_INTERVAL
+        assert config.status_poll_max_interval == STATUS_POLL_MAX_INTERVAL
+        assert config.status_error_window == STATUS_ERROR_WINDOW
+        assert config.status_heartbeat_interval == STATUS_HEARTBEAT_INTERVAL
+        assert config.status_unknown_grace == STATUS_UNKNOWN_GRACE
+
+    def test_wait_settings_accept_overrides(self) -> None:
+        """Verify wait settings accept custom values."""
+        config = self._config(
+            resync_start_timeout=120,
+            status_poll_interval=2,
+            status_poll_max_interval=10,
+            status_error_window=30,
+            status_heartbeat_interval=60,
+            status_unknown_grace=5,
+        )
+
+        assert config.resync_start_timeout == 120
+        assert config.status_poll_interval == 2
+        assert config.status_poll_max_interval == 10
+        assert config.status_error_window == 30
+        assert config.status_heartbeat_interval == 60
+        assert config.status_unknown_grace == 5
+
+    def test_max_poll_interval_must_be_at_least_poll_interval(self) -> None:
+        """Verify the poll interval range is validated."""
+        with pytest.raises(ValidationError):
+            self._config(status_poll_interval=10, status_poll_max_interval=5)
 
 
 class TestWaitForMirrorReady:
@@ -174,7 +233,7 @@ class TestWaitForMirrorReady:
         self, peerdb: PeerDB, monkeypatch: pytest.MonkeyPatch, clock: FakeClock
     ) -> None:
         """Verify sustained status errors abort the wait."""
-        monkeypatch.setattr("dw_lib.peerdb.STATUS_ERROR_WINDOW", 5)
+        monkeypatch.setattr(peerdb.config, "status_error_window", 5)
 
         def get_mirror_status(_: str) -> MirrorStatusResponse:
             raise GetMirrorStatusException("temporary")
@@ -199,7 +258,7 @@ class TestWaitForMirrorReady:
         self, peerdb: PeerDB, monkeypatch: pytest.MonkeyPatch, clock: FakeClock
     ) -> None:
         """Verify an unknown status raises after the grace period."""
-        monkeypatch.setattr("dw_lib.peerdb.STATUS_UNKNOWN_GRACE", 5)
+        monkeypatch.setattr(peerdb.config, "status_unknown_grace", 5)
         monkeypatch.setattr(peerdb, "get_mirror_status", lambda _: self._status("STATUS_UNKNOWN"))
 
         with pytest.raises(MirrorFailedException):
@@ -209,7 +268,7 @@ class TestWaitForMirrorReady:
         self, peerdb: PeerDB, monkeypatch: pytest.MonkeyPatch, clock: FakeClock
     ) -> None:
         """Verify the callback reports changes and periodic heartbeats."""
-        monkeypatch.setattr("dw_lib.peerdb.STATUS_HEARTBEAT_INTERVAL", 5)
+        monkeypatch.setattr(peerdb.config, "status_heartbeat_interval", 5)
         states = iter(["STATUS_SNAPSHOT"] * 10 + ["STATUS_RUNNING"])
         monkeypatch.setattr(peerdb, "get_mirror_status", lambda _: self._status(next(states)))
         seen = []
@@ -221,6 +280,32 @@ class TestWaitForMirrorReady:
         assert seen[0] == "STATUS_SNAPSHOT"
         assert seen[-1] == "STATUS_RUNNING"
         assert seen.count("STATUS_SNAPSHOT") >= 2
+
+    def test_uses_configured_wait_settings(
+        self, peerdb: PeerDB, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify the readiness wait uses configured poll and error settings."""
+        calls = []
+
+        def poll(flow_job_name: str, **kwargs) -> str:
+            calls.append((flow_job_name, kwargs))
+            return "STATUS_RUNNING"
+
+        monkeypatch.setattr(peerdb, "_poll_mirror_status", poll)
+        monkeypatch.setattr(peerdb.config, "status_poll_interval", 2)
+        monkeypatch.setattr(peerdb.config, "status_poll_max_interval", 20)
+        monkeypatch.setattr(peerdb.config, "status_error_window", 30)
+        monkeypatch.setattr(peerdb.config, "status_heartbeat_interval", 60)
+        monkeypatch.setattr(peerdb.config, "status_unknown_grace", 5)
+
+        assert peerdb.wait_for_mirror_ready("cdc_one") == "STATUS_RUNNING"
+
+        _, kwargs = calls[0]
+        assert kwargs["poll_interval"] == 2
+        assert kwargs["max_poll_interval"] == 20
+        assert kwargs["error_window"] == 30
+        assert kwargs["heartbeat_interval"] == 60
+        assert kwargs["unknown_grace"] == 5
 
     def test_wait_for_mirror_status_without_timeout(
         self, peerdb: PeerDB, monkeypatch: pytest.MonkeyPatch
@@ -380,6 +465,32 @@ class TestWaitForMirrorResyncStarted:
 
         assert seen == ["STATUS_RESYNC", "STATUS_SETUP"]
 
+    def test_uses_configured_wait_settings(
+        self, peerdb: PeerDB, monkeypatch: pytest.MonkeyPatch, clock: FakeClock
+    ) -> None:
+        """Verify the resync start wait uses configured poll and error settings."""
+        calls = []
+
+        def poll(flow_job_name: str, **kwargs) -> str:
+            calls.append((flow_job_name, kwargs))
+            return "STATUS_SETUP"
+
+        monkeypatch.setattr(peerdb, "_poll_mirror_status", poll)
+        monkeypatch.setattr(peerdb.config, "resync_start_timeout", 42)
+        monkeypatch.setattr(peerdb.config, "status_poll_interval", 3)
+        monkeypatch.setattr(peerdb.config, "status_error_window", 30)
+        monkeypatch.setattr(peerdb.config, "status_heartbeat_interval", 60)
+
+        assert peerdb.wait_for_mirror_resync_started("cdc_one", "STATUS_RUNNING") == "STATUS_SETUP"
+
+        _, kwargs = calls[0]
+        assert kwargs["deadline"] == 42
+        assert kwargs["poll_interval"] == 3
+        assert kwargs["max_poll_interval"] == 3
+        assert kwargs["error_window"] == 30
+        assert kwargs["heartbeat_interval"] == 60
+        assert kwargs["unknown_grace"] is None
+
 
 class TestResyncMirrorWait:
     """Offline tests for resync request wait behaviour."""
@@ -417,6 +528,7 @@ class TestResyncMirrorWait:
         """Verify a running mirror waits for the resync to start."""
         calls = []
         monkeypatch.setattr(peerdb, "get_mirror_status", lambda _: self._status("STATUS_RUNNING"))
+        monkeypatch.setattr(peerdb.config, "resync_start_timeout", 42)
 
         def wait_for_mirror_resync_started(
             flow_job_name: str,
@@ -435,7 +547,7 @@ class TestResyncMirrorWait:
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
         assert len(post_calls) == 1
-        assert calls == [("cdc_one", "STATUS_RUNNING", RESYNC_START_TIMEOUT)]
+        assert calls == [("cdc_one", "STATUS_RUNNING", 42)]
 
     @pytest.mark.parametrize("flow_state", ["STATUS_COMPLETED", "STATUS_FAILED"])
     def test_recreated_mirror_does_not_wait_for_resync(

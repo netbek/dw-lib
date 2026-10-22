@@ -29,6 +29,12 @@ class TestLoadConfig(PeerDBIntegrationTest):
         expected = {
             "peerdb_ui_url": HttpUrl("http://localhost:3000"),
             "operation_timeout": 30,
+            "resync_start_timeout": 900,
+            "status_poll_interval": 1,
+            "status_poll_max_interval": 15,
+            "status_error_window": 600,
+            "status_heartbeat_interval": 300,
+            "status_unknown_grace": 60,
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",

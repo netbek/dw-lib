@@ -12,22 +12,23 @@ The example CLI creates and resyncs mirrors in Python loops:
 
 The loops are sequential, but the underlying operations are not:
 
-- `create_mirror()` returns as soon as PeerDB accepts the flow and returns a workflow ID (`src/dw_lib/peerdb.py:1809-1924`). PeerDB then runs the initial snapshot asynchronously. Creating `cdc_one` and `cdc_many` back to back therefore runs both snapshots concurrently.
-- `resync_mirror()` waits for the resync to start before returning (`src/dw_lib/peerdb.py:2269-2365`). Waiting only for `STATUS_RESYNC` is insufficient because it is transient:
+- `create_mirror()` returns as soon as PeerDB accepts the flow and returns a workflow ID (`src/dw_lib/peerdb.py:2122-2237`). PeerDB then runs the initial snapshot asynchronously. Creating `cdc_one` and `cdc_many` back to back therefore runs both snapshots concurrently.
+- `resync_mirror()` waits for the resync to start before returning (`src/dw_lib/peerdb.py:2331-2429`). Waiting only for `STATUS_RESYNC` is insufficient because it is transient:
   - A running CDC mirror is signaled to resync, enters `STATUS_RESYNC` while the old flow is dropped, then recreates the flow and runs setup/snapshot (`STATUS_SETUP`/`STATUS_SNAPSHOT`) before entering `STATUS_RESYNC` again during the rename swap. If a poll misses the drop-phase `STATUS_RESYNC`, the next `STATUS_RESYNC` only appears after the snapshot.
   - A failed drop can leave the mirror in `STATUS_RESYNC` indefinitely, so an unbounded wait on `STATUS_RESYNC` can hang.
   - A `STATUS_COMPLETED` or `STATUS_FAILED` mirror is recreated synchronously by `resyncByRecreatingFlow` (`vendor/peerdb/flow/cmd/handler.go:506-509,676-733`). Its new flow starts at `STATUS_SETUP` and only reaches `STATUS_RESYNC` after the snapshot.
-  - The start wait therefore looks for the recreated flow's `STATUS_SETUP`/`STATUS_SNAPSHOT`/`STATUS_COMPLETED`, or `STATUS_RUNNING` after a non-initial status, and is bounded to 15 minutes.
-- `drop_mirror()` already sends `STATUS_TERMINATING` and polls until the flow disappears (`src/dw_lib/peerdb.py:1926-2016`). PeerDB's `DropFlowWorkflow` drops the source replication slot and publication before removing the flow row (`vendor/peerdb/flow/workflows/drop_flow.go:19-124,126,231-250`). Drops are already serial and need no change.
+  - The start wait therefore looks for the recreated flow's `STATUS_SETUP`/`STATUS_SNAPSHOT`/`STATUS_COMPLETED`, or `STATUS_RUNNING` after a non-initial status, and is bounded by `resync_start_timeout` (default 15 minutes).
+- `drop_mirror()` already sends `STATUS_TERMINATING` and polls until the flow disappears (`src/dw_lib/peerdb.py:2239-2329`). PeerDB's `DropFlowWorkflow` drops the source replication slot and publication before removing the flow row (`vendor/peerdb/flow/workflows/drop_flow.go:19-124,126,231-250`). Drops are already serial and need no change.
 
 PeerDB reports a CDC flow as `STATUS_RUNNING` after setup and the initial snapshot, or `STATUS_COMPLETED` when `initial_snapshot_only` is set (`vendor/peerdb/flow/workflows/cdc_flow.go:835-840`). `STATUS_SETUP` and `STATUS_SNAPSHOT` mean the initial load is in progress. `STATUS_RESYNC` is transitional: it is set during the drop phase of a running-mirror resync and again during the rename swap after the snapshot. It is never a ready state.
 
 Constraints:
 
 - The library supports one PeerDB version at a time and does not aim for backward compatibility (`AGENTS.md`).
-- The default `operation_timeout` is 15 seconds (`src/dw_lib/peerdb.py:58,903`), which is too short for real initial snapshots.
+- The default `operation_timeout` is 15 seconds, which is too short for real initial snapshots.
+- Wait settings default to module constants and can be overridden by YAML keys: `resync_start_timeout`, `status_poll_interval`, `status_poll_max_interval`, `status_error_window`, `status_heartbeat_interval`, and `status_unknown_grace`.
 - The example CLI is not covered by the repository's test suite; library methods are covered by `tests/peerdb`.
-- Serial processing is the default and global across all mirrors. The readiness wait has no timeout. The resync start wait is bounded to 15 minutes; transient status-query errors are retried with backoff, and waits report status changes and periodic heartbeats. Drop behaviour is unchanged. `--parallel` opts out for a run.
+- Serial processing is the default and global across all mirrors. The readiness wait has no timeout. The resync start wait is bounded by `resync_start_timeout` (default 15 minutes); transient status-query errors are retried with backoff, and waits report status changes and periodic heartbeats. Drop behaviour is unchanged. `--parallel` opts out for a run.
 
 ## Goals
 
@@ -90,7 +91,7 @@ Numbered flow:
 1. The command validates its name/`--all` arguments as it does today.
 2. For each mirror, it calls `create_mirror()` or `resync_mirror()`.
 3. If `--parallel` is set, create returns after PeerDB accepts the request, and resync returns without observing the resync start. The helper prints the response and continues.
-4. Otherwise, create waits for a new workflow, and resync waits up to 15 minutes for the recreated flow (`STATUS_SETUP`/`STATUS_SNAPSHOT`/`STATUS_COMPLETED`, or `STATUS_RUNNING` after a non-initial status). Completed/failed mirrors are recreated synchronously and skip the start wait. The helper prints a waiting message and calls `wait_for_mirror_ready()`.
+4. Otherwise, create waits for a new workflow, and resync waits up to `resync_start_timeout` (default 15 minutes) for the recreated flow (`STATUS_SETUP`/`STATUS_SNAPSHOT`/`STATUS_COMPLETED`, or `STATUS_RUNNING` after a non-initial status). Completed/failed mirrors are recreated synchronously and skip the start wait. The helper prints a waiting message and calls `wait_for_mirror_ready()`.
 5. `wait_for_mirror_ready()` polls `get_mirror_status()` with backoff until the mirror is ready, fails, or disappears. Transient status errors are retried; status changes and periodic heartbeats are reported.
 6. The command prints a ready message and proceeds to the next mirror.
 
@@ -101,7 +102,7 @@ For a kept mirror, the create helper detects that `CreateMirrorResponse.response
 | Module | Responsibility |
 |--------|----------------|
 | `src/dw_lib/exceptions.py` | `MirrorFailedException`. |
-| `src/dw_lib/peerdb.py` | `wait_for_mirror_ready()`, `wait_for_mirror_resync_started()`, and the shared status poller; reuse `get_mirror_status()`. |
+| `src/dw_lib/peerdb.py` | `Config` wait settings; `wait_for_mirror_ready()`, `wait_for_mirror_resync_started()`, and the shared status poller; reuse `get_mirror_status()`. |
 | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/utils.py` | Shared create/resync helpers that apply the default wait and the `--parallel` opt-out, and print waiting, progress, and ready messages. |
 | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py` | Add `--parallel` to `up`; use the create helper. |
 | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py` | Add `--parallel` to `create` and `resync`; use the helpers. |
@@ -136,11 +137,11 @@ For a kept mirror, the create helper detects that `CreateMirrorResponse.response
 
 ### D4: No readiness timeout; bounded resync start
 
-**Decision.** The readiness wait has no timeout and polls until the mirror becomes ready, fails, or disappears. The resync start wait is bounded to 15 minutes and accepts the recreated flow's `STATUS_SETUP`/`STATUS_SNAPSHOT`/`STATUS_COMPLETED`, or `STATUS_RUNNING` after a non-initial status. A mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT` must first be observed in `STATUS_RESYNC`. A completed/failed resync returns from `resync_mirror()` after PeerDB recreates the flow, before the readiness wait starts.
+**Decision.** The readiness wait has no timeout and polls until the mirror becomes ready, fails, or disappears. The resync start wait is bounded by `config.resync_start_timeout` (default 15 minutes) and accepts the recreated flow's `STATUS_SETUP`/`STATUS_SNAPSHOT`/`STATUS_COMPLETED`, or `STATUS_RUNNING` after a non-initial status. A mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT` must first be observed in `STATUS_RESYNC`. A completed/failed resync returns from `resync_mirror()` after PeerDB recreates the flow, before the readiness wait starts.
 
 **Rationale.** Initial snapshots can run for hours; the existing `operation_timeout` defaults to 15 seconds and is unsuitable. A finite timeout would either be too short for large tables or arbitrarily large. A resync start, however, should be observable quickly. Waiting only for `STATUS_RESYNC` is unsafe: it is transient and a failed drop can leave it in place forever. The bounded start phase detects a signal that was never processed or a failed drop without limiting the snapshot wait.
 
-**Consequences.** A stalled snapshot blocks the CLI indefinitely. Ctrl-C is the escape hatch. A stalled resync start fails after 15 minutes with a clear error. A future `--timeout` option can be added without changing the default behaviour.
+**Consequences.** A stalled snapshot blocks the CLI indefinitely. Ctrl-C is the escape hatch. A stalled resync start fails after `resync_start_timeout` with a clear error. The timeout is configurable in YAML; a future CLI flag could expose it.
 
 ### D5: Global behaviour
 
@@ -184,7 +185,7 @@ For a kept mirror, the create helper detects that `CreateMirrorResponse.response
 
 ### D10: Retry transient status errors
 
-**Decision.** The long waits retry `GetMirrorStatusException` and `requests.RequestException` with exponential backoff, capped at the poll interval. The readiness wait backs off to 15s; the resync start wait stays at 1s to catch the transition. Both waits fail after 10 minutes of consecutive status-query failures; the start wait is also bounded by its 15-minute deadline. `ReadTimeout` is wrapped in `GetMirrorStatusException` by `get_mirror_status()`.
+**Decision.** The long waits retry `GetMirrorStatusException` and `requests.RequestException` with exponential backoff, capped at the poll interval. The readiness wait backs off to `status_poll_max_interval` (default 15s); the resync start wait stays at `status_poll_interval` (default 1s) to catch the transition. Both waits fail after `status_error_window` (default 10 minutes) of consecutive status-query failures; the start wait is also bounded by its deadline. `ReadTimeout` is wrapped in `GetMirrorStatusException` by `get_mirror_status()`.
 
 **Rationale.** A single 5-second read timeout or a PeerDB restart should not abort an hours-long run. A sustained outage should fail rather than hang.
 
@@ -192,7 +193,7 @@ For a kept mirror, the create helper detects that `CreateMirrorResponse.response
 
 ### D11: Report progress
 
-**Decision.** `wait_for_mirror_ready()` and `wait_for_mirror_resync_started()` accept an optional callback invoked on status changes and every five minutes while the status is unchanged. The CLI prints status and elapsed time.
+**Decision.** `wait_for_mirror_ready()` and `wait_for_mirror_resync_started()` accept an optional callback invoked on status changes and every `status_heartbeat_interval` (default five minutes) while the status is unchanged. The CLI prints status and elapsed time.
 
 **Rationale.** A multi-hour snapshot otherwise produces no output after the initial waiting message. Operators need to distinguish progress from a stuck mirror.
 
@@ -200,11 +201,19 @@ For a kept mirror, the create helper detects that `CreateMirrorResponse.response
 
 ### D12: Unknown status grace
 
-**Decision.** `wait_for_mirror_ready()` treats `STATUS_UNKNOWN` as a failure after 60 seconds. `wait_for_mirror_resync_started()` lets its deadline handle `STATUS_UNKNOWN`.
+**Decision.** `wait_for_mirror_ready()` treats `STATUS_UNKNOWN` as a failure after `status_unknown_grace` (default 60 seconds). `wait_for_mirror_resync_started()` lets its deadline handle `STATUS_UNKNOWN`.
 
 **Rationale.** Normal flows are inserted as `STATUS_SETUP`; a persistent `STATUS_UNKNOWN` means the catalog row is legacy or broken. `has_mirror()` already treats `STATUS_UNKNOWN` as absent.
 
 **Consequences.** Legacy unknown rows fail with a clear error instead of hanging the readiness wait.
+
+### D13: Wait settings are configurable
+
+**Decision.** `Config` exposes `resync_start_timeout`, `status_poll_interval`, `status_poll_max_interval`, `status_error_window`, `status_heartbeat_interval`, and `status_unknown_grace`. Missing YAML keys use the module constants. `status_poll_max_interval` must be greater than or equal to `status_poll_interval`.
+
+**Rationale.** Operators need to tune waits per environment without code changes. Keeping the module constants as defaults preserves current behaviour and matches `operation_timeout`.
+
+**Consequences.** `status_poll_interval` also sets the fixed resync-start poll interval; increasing it may make the transient `STATUS_RESYNC` window easier to miss, so the default 1s is recommended. `status_unknown_grace` applies to the readiness wait only; the resync start wait keeps its deadline behaviour.
 
 ## Alternatives considered
 
@@ -231,6 +240,7 @@ For a kept mirror, the create helper detects that `CreateMirrorResponse.response
 | Unit | `wait_for_mirror_resync_started()` with a fake clock | `RUNNING` → `SETUP` accepted; `RESYNC` → `SETUP`/`SNAPSHOT` accepted; `RUNNING` unchanged raises after timeout; stuck `RESYNC` raises; failure/disappearance raises; initial `SETUP` requires `RESYNC`; completed/failed skip. |
 | Unit | `resync_mirror()` wait paths with monkeypatched `get_mirror_status()`, `requests.post()`, and `wait_for_mirror_resync_started()` | Running mirror waits for the start; completed/failed mirror does not; `wait=False` returns after the request; terminated mirror is rejected; missing mirror with `if_exists=True` is skipped. |
 | Unit | `get_mirror_status()` error wrapping | `requests.ReadTimeout` raises `GetMirrorStatusException`. |
+| Unit | Config wait settings | Defaults match the module constants; overrides are accepted; `status_poll_max_interval < status_poll_interval` raises; both wait methods pass configured values to the poller. |
 | Integration | Example stack with two configured mirrors | `cli peerdb up` creates `cdc_one`, waits for it to be ready, then creates `cdc_many`; `cli peerdb up --parallel` starts both before either is ready. The PeerDB UI shows the expected order. |
 | Integration | Resync of completed/failed mirror | A snapshot-only or failed mirror is resynced and becomes ready without hitting the resync-start timeout. |
 | Regression | Existing tests | `uv run --frozen pytest tests/peerdb` and `uv run --frozen ruff check --config pyproject.toml`. |

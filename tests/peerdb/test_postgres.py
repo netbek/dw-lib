@@ -462,7 +462,7 @@ class TestPauseMirror(PeerDBPostgresTest):
             peerdb,
             "get_mirror_status",
             lambda flow_job_name: MirrorStatusResponse(
-                createdAt=datetime.datetime.now(),  # noqa: DTZ005
+                createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_RUNNING",
                 flowJobName=flow_job_name,
             ),
@@ -510,7 +510,7 @@ class TestResumeMirror(PeerDBPostgresTest):
             peerdb,
             "get_mirror_status",
             lambda flow_job_name: MirrorStatusResponse(
-                createdAt=datetime.datetime.now(),  # noqa: DTZ005
+                createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_PAUSED",
                 flowJobName=flow_job_name,
             ),

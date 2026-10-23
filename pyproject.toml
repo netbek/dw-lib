@@ -138,7 +138,9 @@ markers = ["docker_compose_file", "docker_skip_wait_until_responsive"]
 norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "dbt_packages", "vendor"]
 
 [tool.uv]
+required-version = ">=0.13.4"
 exclude-newer = "7 days"
+exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
 
 [tool.uv.build-backend]
 module-name = "dw_lib"

@@ -50,123 +50,123 @@ url_api = "https://api.github.com/repos/cli/cli/releases/assets/565857681"
 provenance = "github-attestations"
 
 [[tools.node]]
-version = "24.21.0"
+version = "24.22.0"
 backend = "core:node"
 specifiers = ["24"]
 
 [tools.node."platforms.linux-arm64"]
-checksum = "sha256:724282c3b43aec998aa9527380465b45d229e021b58035f5f4f63095eabfe5d5"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-arm64.tar.gz"
+checksum = "sha256:b7e7991d5407815adfa74a2a9cd4db683552c8ce32ff4a295c22e972849c3f5d"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-arm64.tar.gz"
 
 [tools.node."platforms.linux-arm64-musl"]
-checksum = "sha256:3048b0811e158ca0d8672b59c839861763e144492980d8d29b369dfee45747e4"
-url = "https://unofficial-builds.nodejs.org/download/release/v24.21.0/node-v24.21.0-linux-arm64-musl.tar.gz"
+checksum = "sha256:6812a53e5b37fbc32476d6c3511038d2bc3bbd1b3bb348d6c04dd2c70a1c8f4a"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.22.0-linux-arm64-musl.tar.gz"
 
 [tools.node."platforms.linux-x64"]
-checksum = "sha256:6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.gz"
+checksum = "sha256:28ea0a438de9a13bd7891fd758eee6c7819ee8af5442dfd8d45bd65e56d4228c"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-x64.tar.gz"
 
 [tools.node."platforms.linux-x64-musl"]
-checksum = "sha256:01a713e34da98e7b4d2a3191ee7ca3f93dd0384d1a2ef23c379b2161ee6e133a"
-url = "https://unofficial-builds.nodejs.org/download/release/v24.21.0/node-v24.21.0-linux-x64-musl.tar.gz"
+checksum = "sha256:72cd253fbe0c2539d52208ed098d47b78ff2c32ba76295d8e6b5b0ce067dcba5"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.22.0-linux-x64-musl.tar.gz"
 
 [tools.node."platforms.macos-arm64"]
-checksum = "sha256:bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz"
+checksum = "sha256:6a9724d9b50a5f22b4816cded441b5a8d9ddae546191a5e5b7efa5a5e2ee26d5"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-arm64.tar.gz"
 
 [tools.node."platforms.macos-x64"]
-checksum = "sha256:1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-x64.tar.gz"
+checksum = "sha256:495e3f273c645f3c4677d438304cdfc701729ea5dec5728f5c8e76a2dece4b91"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-x64.tar.gz"
 
 [tools.node."platforms.windows-x64"]
-checksum = "sha256:158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip"
+checksum = "sha256:f9683a19877e12a9b167305c8db71040d812876359de21f0d2e97c3f321f80c3"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-win-x64.zip"
 
 [[tools.pnpm]]
-version = "12.7.0"
+version = "12.14.0"
 backend = "aqua:pnpm/pnpm"
 specifiers = ["latest"]
 
 [tools.pnpm."platforms.linux-arm64"]
-checksum = "sha256:db39a3fc7969dcf3398ebf2f2090c62ba732e5a9887b96147a97134a1a779088"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119310"
+checksum = "sha256:cfc780b9e690549e6633e1045fb1fb6ef84e390711e2099e6ccbae91c32456ea"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957409"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-arm64-musl"]
-checksum = "sha256:49b8d22e14120e716f735b7db9a03270ff8cc284f8d249e5f5bc34e26361b9ca"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-linux-arm64-musl.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119304"
+checksum = "sha256:511a54809bdfd28270d30011d1697f582c8130d555b4fa0e2856b1a7534c98bf"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-arm64-musl.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957416"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-x64"]
-checksum = "sha256:68190c7d289efecd66ff088c93b9c5ec361989e8194239e004bd905403d3d3e5"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119302"
+checksum = "sha256:3910c3852136bed5bc1511b9137a45fd4357ed6b3970d9d08893641e9005867e"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957410"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-x64-musl"]
-checksum = "sha256:182029e912c5994fed1eaa715a38eb3c6ea4b42bcae770c52852a54862a13c1d"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-linux-x64-musl.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119308"
+checksum = "sha256:d7115e2f2791d79bf9e7e448609537595bb7787de1ef5292ce91ff3d1be2629e"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64-musl.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957412"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.macos-arm64"]
-checksum = "sha256:82de6e7037fcfaab6a1ee9b6360e887723ad68389780810fa3e3a3540d6088ab"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119307"
+checksum = "sha256:50f48e0e17508952790a3fbf58fcf14f3b82efa5f594ca04ad904e29aaf854b0"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957413"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.macos-x64"]
-checksum = "sha256:1b00a322af6da3f8820b8a6076bdf8fdfa7068e0d491d6c7425a16553396c432"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-darwin-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119309"
+checksum = "sha256:2c412e07382049b4edb04fa6da78f3d4ef7810b75853c80544dcfb7c0ed79880"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957411"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.windows-x64"]
-checksum = "sha256:40b9a24d55c7e839aa5fc8e814e995a1eb1778fc65f2f19cfa1c6f573a926944"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.7.0/pnpm-win32-x64.zip"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/588119297"
+checksum = "sha256:6f0f38e917c8ce76ef31db528c357e2bfa354a1bcb16464e3cdec39e6530d784"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-win32-x64.zip"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957404"
 provenance = "github-attestations"
 
 [[tools.python]]
-version = "3.13.15"
+version = "3.13.16"
 backend = "core:python"
 specifiers = ["3.13"]
 
 [tools.python."platforms.linux-arm64"]
-checksum = "sha256:3807936bef22d3e347454df4f8774c786f98c7caa5e7328425e7b40766a9cff8"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:83621f7b2b1e5da63cae0b4c67612974547b14262676608e830e246cb832d07d"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-arm64-musl"]
-checksum = "sha256:fa3731cd0895668cb90868b6ca46180ed451d5d5da16d0f99160c3d12d6a369b"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-aarch64-unknown-linux-musl-install_only_stripped.tar.gz"
+checksum = "sha256:b072c3b089a69a313aa56719372fc790e63ba2609ac833a0ec796236f3737ba6"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-aarch64-unknown-linux-musl-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64"]
-checksum = "sha256:c552deaf9ed0e678dee4ccc760d6dcd7cab33f1bd43e8037123b4a4db8508e14"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:f326b7a386bf22def82e55dc3b95d2bef8b7c938b4c98ec32dd65433e7720b50"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64-musl"]
-checksum = "sha256:aa99d72003c65d2e9d4281152fac51afb78c8aba063004713c5d5ecc19f55d9c"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
+checksum = "sha256:4fa1240baa12408f079bdd34303ba62719c091ada3eae0c1f9891bf8af397bf0"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-arm64"]
-checksum = "sha256:d66c67f16148c7454b1509c32747175f7669c8b8e105b97b92a0000d66af6e6e"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-aarch64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:88b362e2e9754787c07f2847b717b127e60f77976e20847a0489f3043c925f2c"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-aarch64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-x64"]
-checksum = "sha256:73b503a2d3f47f0601265d7936744b77dc4ee75d2a3e88a470594a014dcf6822"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:730c2a96c2cdd05c5e00192ea6804c45c28fd6944abb4b55aeaa02b833fc79ec"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.windows-x64"]
-checksum = "sha256:d11d0d4b4fefa5df09e925dbd37600457f5488a9712a82f3f0dd1ff9431c2ccf"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+checksum = "sha256:cab7dfd540382d1687fba3efb70dd176366cf25687b0d52e5b4e72499b514f8c"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261020/cpython-3.13.16+20261020-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [[tools.ripgrep]]
@@ -250,97 +250,97 @@ url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellche
 url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056944"
 
 [[tools.trivy]]
-version = "0.74.0"
+version = "0.76.0"
 backend = "aqua:aquasecurity/trivy"
 specifiers = ["latest"]
 
 [tools.trivy."platforms.linux-arm64"]
-checksum = "sha256:b94ce1976bbf3c15b514b605ee88be7c6d94a29be2302847ff01cb794d47aad5"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-ARM64.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339429"
+checksum = "sha256:aab21e677a7b7071fc79f1711480840754c18a1b9d9cefa7ccd06af63a0e8f4c"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-ARM64.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213448"
 provenance = "cosign"
 
 [tools.trivy."platforms.linux-arm64-musl"]
-checksum = "sha256:b94ce1976bbf3c15b514b605ee88be7c6d94a29be2302847ff01cb794d47aad5"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-ARM64.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339429"
+checksum = "sha256:aab21e677a7b7071fc79f1711480840754c18a1b9d9cefa7ccd06af63a0e8f4c"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-ARM64.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213448"
 provenance = "cosign"
 
 [tools.trivy."platforms.linux-x64"]
-checksum = "sha256:2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339431"
+checksum = "sha256:e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213415"
 provenance = "cosign"
 
 [tools.trivy."platforms.linux-x64-musl"]
-checksum = "sha256:2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339431"
+checksum = "sha256:e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213415"
 provenance = "cosign"
 
 [tools.trivy."platforms.macos-arm64"]
-checksum = "sha256:1caada5e0e2091909357c7525d3aa76f4b660b13821bc143b190c7483e31cc11"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_macOS-ARM64.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339464"
+checksum = "sha256:e7ec0d21fe842553f59af99aba2efbcc822369fbaed27019c575408b6d135fce"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_macOS-ARM64.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213409"
 provenance = "cosign"
 
 [tools.trivy."platforms.macos-x64"]
-checksum = "sha256:472816f6888dda689d075c30254d4210b4d1035acf365aa72332f584c2f60485"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_macOS-64bit.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339388"
+checksum = "sha256:89563d4d495cf4ef06a0d1950f8710b124e9f7bd2615ec6c47b03673f4ad45a2"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_macOS-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213124"
 provenance = "cosign"
 
 [tools.trivy."platforms.windows-x64"]
-checksum = "sha256:94c40e0696e4b907a74b7b2e1438d5d72ebaca83115817407f568a002d520842"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_windows-64bit.zip"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/514339469"
+checksum = "sha256:7b4762a5a5326cb4b83dfd2bb5d9aaf15a1ed867c75cad7dd8b38840a28e7be6"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_windows-64bit.zip"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213125"
 provenance = "cosign"
 
 [[tools.uv]]
-version = "0.12.19"
+version = "0.13.5"
 backend = "aqua:astral-sh/uv"
 specifiers = ["latest"]
 
 [tools.uv."platforms.linux-arm64"]
-checksum = "sha256:0804e9b164c64b6914182d5920c08551958a095986f10a3731056df701126436"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158851"
+checksum = "sha256:4bb69cf95ed13f23713bb7bc09f241896ea0c75b7c557e615a20604b82f9c403"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664335837"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-arm64-musl"]
-checksum = "sha256:ad8d8448a2ff642ba62c2f684d7dd22a03f8eb3fc9918c2c3e8ec975f4ed6710"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158874"
+checksum = "sha256:7906c79adb21c81abd559841ba76bb1d9af9d791acac7a041b2972e03ae16538"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664335857"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64"]
-checksum = "sha256:23bf5552d220e0842b65c862097b2ebaeba0064b74eda5e565e77fd25969d8c8"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587159011"
+checksum = "sha256:f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664336023"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64-musl"]
-checksum = "sha256:db7278c9f57981338fddff1fb250e11964bc0a4fafcb9eed8303fdb117dc067b"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587159021"
+checksum = "sha256:57ef9d9ccb01fb1bd998df995b0dd221b52f7d7841fbea93f2d4463bf61fb7a9"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664336027"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-arm64"]
-checksum = "sha256:a9a8df1eedeb192f2e47e40e2faabfb387db4b850209118786d42f89dde3e0ba"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158826"
+checksum = "sha256:743f85035a1996ecb350659e01cd9faea9709829be09b1b4b03c73eaf3c9cd73"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664335803"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-x64"]
-checksum = "sha256:cb5fa57bafe68fc0fb94b17f06bee0b0b9a7feb94ccbd110445afa0696e39273"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158992"
+checksum = "sha256:b0f52b0e3945b4107d89024ea38e625683011fbfc05a0d98f9fa2d6dcee28c66"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664335993"
 provenance = "github-attestations"
 
 [tools.uv."platforms.windows-x64"]
-checksum = "sha256:6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587159002"
+checksum = "sha256:a38b8d1902b7cfbc76b423ba1bb456f623f42064cdc72628b6075b89afd1019a"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/664336006"
 provenance = "github-attestations"
 
 [[tools.zizmor]]

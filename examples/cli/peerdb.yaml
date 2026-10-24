@@ -1,4 +1,11 @@
-peerdb_ui_url: http://localhost:3000
+client:
+  peerdb_ui_url: http://localhost:3000
+  api_request_timeout_seconds: 35
+  api_creation_timeout_seconds: 120
+  api_state_change_timeout_seconds: 600
+  poll_interval_seconds: 1
+  mirror_state_wait_timeout_seconds: 15
+  peer_drop_timeout_seconds: null
 
 # Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/internal/dynamicconf.go
 settings:

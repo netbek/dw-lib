@@ -131,11 +131,11 @@ A mirror in `STATUS_PAUSED` or `STATUS_PAUSING` SHALL NOT satisfy snapshot compl
 
 ### Requirement: Wait has no timeout
 
-The snapshot-completion wait SHALL NOT fail solely because a configured operation timeout elapses.
+The snapshot-completion wait SHALL NOT fail solely because a configured mirror state wait timeout elapses.
 
 #### Scenario: Long snapshot
 
-- **WHEN** a mirror remains in `STATUS_SNAPSHOT` longer than the configured operation timeout
+- **WHEN** a mirror remains in `STATUS_SNAPSHOT` longer than the configured mirror state wait timeout
 - **THEN** the command continues waiting
 - **AND** the command does not report a timeout
 

@@ -71,7 +71,7 @@ class TestReplicationSlots:
             yaml = YAML(typ="safe", pure=True)
             peerdb_config = yaml.load(peerdb_config_path)
 
-            url = HttpUrl(peerdb_config["peerdb_ui_url"]).join("api/v1/instance/info")
+            url = HttpUrl(peerdb_config["client"]["peerdb_ui_url"]).join("api/v1/instance/info")
 
             def is_responsive():
                 try:

@@ -27,8 +27,15 @@ class TestLoadConfig(PeerDBIntegrationTest):
     def test_valid_config(self, all_postgres_tables: list[Table]):
         """Verify the ClickHouse YAML config parses to expected peers and mirrors."""
         expected = {
-            "peerdb_ui_url": HttpUrl("http://localhost:3000"),
-            "operation_timeout": 30,
+            "client": {
+                "peerdb_ui_url": HttpUrl("http://localhost:3000"),
+                "api_request_timeout_seconds": 35,
+                "api_creation_timeout_seconds": 120,
+                "api_state_change_timeout_seconds": 600,
+                "poll_interval_seconds": 1.0,
+                "mirror_state_wait_timeout_seconds": 30,
+                "peer_drop_timeout_seconds": None,
+            },
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",
@@ -518,7 +525,7 @@ class TestPauseMirror(PeerDBClickHouseTest):
         monkeypatch.setattr(
             peerdb,
             "get_mirror_status",
-            lambda flow_job_name: MirrorStatusResponse(
+            lambda flow_job_name, timeout_seconds=None: MirrorStatusResponse(
                 createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_RUNNING",
                 flowJobName=flow_job_name,
@@ -537,7 +544,7 @@ class TestPauseMirror(PeerDBClickHouseTest):
 
             text = ""
 
-        monkeypatch.setattr("dw_lib.peerdb.requests.post", lambda *a, **k: _Response())
+        monkeypatch.setattr("dw_lib.peerdb.requests.request", lambda *a, **k: _Response())
         monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_PAUSED")
 
         response = peerdb.pause_mirror(mirror.flow_job_name)
@@ -566,7 +573,7 @@ class TestResumeMirror(PeerDBClickHouseTest):
         monkeypatch.setattr(
             peerdb,
             "get_mirror_status",
-            lambda flow_job_name: MirrorStatusResponse(
+            lambda flow_job_name, timeout_seconds=None: MirrorStatusResponse(
                 createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_PAUSED",
                 flowJobName=flow_job_name,
@@ -585,7 +592,7 @@ class TestResumeMirror(PeerDBClickHouseTest):
 
             text = ""
 
-        monkeypatch.setattr("dw_lib.peerdb.requests.post", lambda *a, **k: _Response())
+        monkeypatch.setattr("dw_lib.peerdb.requests.request", lambda *a, **k: _Response())
         monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_RUNNING")
 
         response = peerdb.resume_mirror(mirror.flow_job_name)

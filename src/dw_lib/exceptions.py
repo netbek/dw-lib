@@ -28,6 +28,10 @@ class PeerNotFoundException(Exception):
     pass
 
 
+class PeerDropTimeoutException(Exception):
+    pass
+
+
 class MirrorExistsException(Exception):
     pass
 

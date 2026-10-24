@@ -13,7 +13,7 @@ The PeerDB CLI creates and resyncs mirrors from the example CLI in `examples/cli
 
 `get_mirror_status` reads the catalog status (`vendor/peerdb/flow/internal/workflow.go:19`), so the CLI cannot distinguish the two. The PeerDB e2e test confirms the first meaning: “Wait until DropFlowWorkflow has started (catalog status = RESYNC)” (`vendor/peerdb/flow/e2e/drop_flow_test.go:75-84`). The unambiguous completion states are `STATUS_RUNNING` for normal CDC mirrors and `STATUS_COMPLETED` for initial-snapshot-only mirrors (`vendor/peerdb/flow/workflows/cdc_flow.go:837`, `:840`). PeerDB's own resync tests wait for `STATUS_RUNNING` (`vendor/peerdb/flow/e2e/api_test.go:1743`).
 
-The existing `operation_timeout` defaults to 15 seconds (`src/dw_lib/peerdb.py:57`). That is suitable for short state changes such as drop, pause, and resume, but not for a large snapshot.
+The existing `client.mirror_state_wait_timeout_seconds` defaults to 15 seconds (`src/dw_lib/peerdb.py:68`). That is suitable for short state changes such as drop, pause, and resume, but not for a large snapshot.
 
 ## Goals
 
@@ -44,7 +44,7 @@ The existing `operation_timeout` defaults to 15 seconds (`src/dw_lib/peerdb.py:5
 | Resync initiation | The mirror reaches `STATUS_RESYNC`, which is the existing `mirror resync` wait condition. It does not guarantee that the resync snapshot has finished. |
 | Start transition | After a resync request, the mirror leaves its pre-request state and enters `STATUS_SETUP`, `STATUS_SNAPSHOT`, or `STATUS_RESYNC`. |
 | Fast-resync fallback | If the start transition is not observed within the existing operation timeout and the mirror is `STATUS_RUNNING` or `STATUS_COMPLETED`, the wait treats the resync as complete. |
-| Operation timeout | The existing `operation_timeout` config, used for short state changes and for the fast-resync fallback guard. |
+| Mirror state wait timeout | The `client.mirror_state_wait_timeout_seconds` config, used for short state changes and for the fast-resync fallback guard. |
 
 ## Architecture
 
@@ -67,7 +67,7 @@ mirror resync --wait
        -> get_mirror_status()                  # initial status
        -> POST /v1/mirrors/state_change (RESYNC)
        -> if initial status is RUNNING:
-            wait for SETUP, SNAPSHOT, or RESYNC for operation_timeout
+            wait for SETUP, SNAPSHOT, or RESYNC for `client.mirror_state_wait_timeout_seconds`
             on timeout: fast-resync fallback check
        -> _poll_mirror_status(RUNNING, COMPLETED, timeout=None)
 
@@ -124,19 +124,19 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 
 ### D3: Two-phase status polling with a fast-resync fallback
 
-**Decision.** For resync in wait mode, capture the initial status before sending the request. If it is `STATUS_RUNNING`, wait up to `operation_timeout` for a start transition to `STATUS_SETUP`, `STATUS_SNAPSHOT`, or `STATUS_RESYNC`. If the guard times out and the current status is `STATUS_RUNNING` or `STATUS_COMPLETED`, accept it as the fast-resync fallback. Then poll indefinitely for `STATUS_RUNNING` or `STATUS_COMPLETED`.
+**Decision.** For resync in wait mode, capture the initial status before sending the request. If it is `STATUS_RUNNING`, wait up to `client.mirror_state_wait_timeout_seconds` for a start transition to `STATUS_SETUP`, `STATUS_SNAPSHOT`, or `STATUS_RESYNC`. If the guard times out and the current status is `STATUS_RUNNING` or `STATUS_COMPLETED`, accept it as the fast-resync fallback. Then poll indefinitely for `STATUS_RUNNING` or `STATUS_COMPLETED`.
 
 **Rationale.** The start guard prevents the pre-resync `STATUS_RUNNING` from being treated as completion. The fallback handles resyncs that finish before the transition is observed. The existing operation timeout is sufficient for the start guard because the workflow processes the resync signal quickly.
 
-**Consequences.** A resync that completes faster than the polling interval may be detected only by the fallback. A resync signal delayed beyond `operation_timeout` while the mirror remains `STATUS_RUNNING` could be treated as complete prematurely. Large snapshots are unaffected because the start transition remains visible for a long time.
+**Consequences.** A resync that completes faster than the polling interval may be detected only by the fallback. A resync signal delayed beyond `client.mirror_state_wait_timeout_seconds` while the mirror remains `STATUS_RUNNING` could be treated as complete prematurely. Large snapshots are unaffected because the start transition remains visible for a long time.
 
 ### D4: No new wait timeout
 
-**Decision.** The snapshot-completion wait has no timeout. Within wait mode, the existing `operation_timeout` is used only for the start guard.
+**Decision.** The snapshot-completion wait has no timeout. Within wait mode, the existing `client.mirror_state_wait_timeout_seconds` is used only for the start guard.
 
 **Rationale.** Large snapshots can take hours, so any fixed wait timeout would cause false failures. A new wait timeout and a `--timeout` option are therefore excluded.
 
-**Consequences.** `--wait` can block indefinitely; Ctrl-C is the escape hatch. The start guard still uses `operation_timeout`, but it is not a snapshot wait timeout.
+**Consequences.** `--wait` can block indefinitely; Ctrl-C is the escape hatch. The start guard still uses `client.mirror_state_wait_timeout_seconds`, but it is not a snapshot wait timeout.
 
 ### D5: Failure and paused semantics
 
@@ -148,11 +148,11 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 
 ### D6: Encapsulate wait logic in the library
 
-**Decision.** Add a `wait` parameter to `create_mirror` and `resync_mirror`. Add `wait_for_mirror_snapshot`. Refactor polling into `_poll_mirror_status` with an optional timeout and fail statuses. Add `MirrorFailedException`. `resync_mirror(wait=False)` keeps its existing `timeout` parameter and `STATUS_RESYNC` wait. `resync_mirror(wait=True)` returns the message `Resynced mirror 'x'`; wait mode reports completion, no-wait mode keeps `Resync of mirror 'x' has been initiated`.
+**Decision.** Add a `wait` parameter to `create_mirror` and `resync_mirror`. Add `wait_for_mirror_snapshot`. Refactor polling into `_poll_mirror_status` with an optional timeout and fail statuses. Add `MirrorFailedException`. `resync_mirror(wait=False)` keeps the `STATUS_RESYNC` wait and uses `client.mirror_state_wait_timeout_seconds`. `resync_mirror(wait=True)` returns the message `Resynced mirror 'x'`; wait mode reports completion, no-wait mode keeps `Resync of mirror 'x' has been initiated`.
 
 **Rationale.** The CLI should only translate flags into library calls. Keeping the polling and fallback logic in the library makes it reusable and testable. Defaulting `wait` to `False` preserves existing library behaviour.
 
-**Consequences.** `wait=True` makes the methods long-running. `wait_for_mirror_snapshot` prints a progress line before polling. The `timeout` parameter on `resync_mirror` applies only to wait mode `False`; this is documented in the docstring. No new config field is introduced.
+**Consequences.** `wait=True` makes the methods long-running. `wait_for_mirror_snapshot` prints a progress line before polling. No snapshot wait timeout is added; client timeouts live in `ClientConfig`.
 
 ### D7: Wait scope is independent of `--all`
 
@@ -184,7 +184,7 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 | CLI (manual) | Flag parsing and `--all` ordering | `mirror create --all --wait`, `mirror resync --all --wait`, `--no-wait` defaults. |
 | Static | Lint and formatting | `make lint`. |
 
-Unit tests should monkeypatch `get_mirror_status` and `time.sleep` so they run without PeerDB. The no-timeout test should set a low `operation_timeout` and verify that a long `STATUS_SNAPSHOT` sequence still completes.
+Unit tests should monkeypatch `get_mirror_status` and `time.sleep` so they run without PeerDB. The no-timeout test should set a low `client.mirror_state_wait_timeout_seconds` and verify that a long `STATUS_SNAPSHOT` sequence still completes.
 
 ## References
 

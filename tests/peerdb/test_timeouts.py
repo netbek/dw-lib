@@ -298,7 +298,9 @@ class TestLifecycleTransitions:
 
         assert "STATUS_TERMINATING" in str(exc_info.value)
 
-    def test_drop_peer_delegates_each_mirror_without_peer_budget(self, monkeypatch, tmp_path: Path):
+    def test_drop_peer_delegates_dependent_mirrors_without_peer_budget(
+        self, monkeypatch, tmp_path: Path
+    ):
         """Verify dependent mirrors are dropped without a peer-level timeout."""
         peerdb = make_peerdb(tmp_path, mirror_drop_wait_timeout_seconds=7)
         mirrors = [
@@ -328,17 +330,16 @@ class TestLifecycleTransitions:
         monkeypatch.setattr(peerdb, "has_peer", lambda name: True)
         monkeypatch.setattr(peerdb, "_request", lambda *args, **kwargs: object())
 
-        def drop_mirror(name: str, **kwargs) -> None:
-            calls.append((name, kwargs))
+        def drop_mirrors(names: list[str], **kwargs) -> None:
+            calls.append((names, kwargs))
 
-        monkeypatch.setattr(peerdb, "drop_mirror", drop_mirror)
+        monkeypatch.setattr(peerdb, "drop_mirrors", drop_mirrors)
 
         peerdb.drop_peer("peer")
 
         assert peerdb.config.client.mirror_drop_wait_timeout_seconds == 7
         assert calls == [
-            ("mirror_1", {"drop_destination_tables": False}),
-            ("mirror_2", {"drop_destination_tables": False}),
+            (["mirror_1", "mirror_2"], {"drop_destination_tables": False}),
         ]
 
 

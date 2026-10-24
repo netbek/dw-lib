@@ -128,6 +128,8 @@ LITERAL_FLOW_STATUS_LABELS = {
     if attr.startswith("STATUS_")
 }
 
+SETTLED_FLOW_STATUSES = {"STATUS_RUNNING", "STATUS_PAUSED", "STATUS_COMPLETED"}
+
 
 # https://www.postgresql.org/docs/17/view-pg-replication-slots.html
 class ListReplicationSlotsItem(BaseModel):
@@ -1229,18 +1231,18 @@ class PeerDB:
         flow_job_name: str,
         *,
         target_statuses: set[str],
-        timeout: int,
+        timeout: int | None,
         poll_interval: int | None = None,
         failure_statuses: set[str] | None = None,
         allow_missing: bool = False,
     ) -> str:
         """
-        Poll a mirror status until a target status is reached or the timeout elapses.
+        Poll a mirror status until a target status is reached or the timeout elapses, if supplied.
 
         Args:
             flow_job_name: Mirror (flow job) name to poll.
             target_statuses: Statuses that stop polling.
-            timeout: Wall-clock timeout in seconds.
+            timeout: Wall-clock timeout in seconds, or None to poll without a deadline.
             poll_interval: Interval between polls in seconds.
             failure_statuses: Statuses that stop polling with an error.
             allow_missing: Whether a missing mirror is retried instead of raised.
@@ -1256,8 +1258,8 @@ class PeerDB:
         if not target_statuses:
             raise ValueError("target_statuses must not be empty")
 
-        if timeout < 1:
-            raise ValueError("timeout must be at least 1 second")
+        if timeout is not None and timeout < 1:
+            raise ValueError("timeout must be at least 1 second or None")
 
         if poll_interval is None:
             poll_interval = self.config.client.status_poll_interval_seconds
@@ -1268,7 +1270,7 @@ class PeerDB:
         if failure_statuses is None:
             failure_statuses = {"STATUS_FAILED", "STATUS_TERMINATED"}
 
-        deadline = time.monotonic() + timeout
+        deadline = None if timeout is None else time.monotonic() + timeout
         last_status = "STATUS_UNKNOWN"
         last_error: Exception | None = None
 
@@ -1283,7 +1285,7 @@ class PeerDB:
             )
 
         while True:
-            if deadline - time.monotonic() <= 0:
+            if deadline is not None and deadline - time.monotonic() <= 0:
                 raise timeout_error()
 
             try:
@@ -1304,12 +1306,15 @@ class PeerDB:
                     f"Mirror '{flow_job_name}' reached terminal status '{last_status}'"
                 )
 
-            remaining = deadline - time.monotonic()
+            if deadline is None:
+                time.sleep(poll_interval)
+            else:
+                remaining = deadline - time.monotonic()
 
-            if remaining <= 0:
-                raise timeout_error()
+                if remaining <= 0:
+                    raise timeout_error()
 
-            time.sleep(min(poll_interval, remaining))
+                time.sleep(min(poll_interval, remaining))
 
     def _wait_for_mirror_gone(
         self,
@@ -1867,6 +1872,8 @@ class PeerDB:
         Raises:
             PeerNotFoundException: If the peer is missing and `if_exists` is False.
             DropPeerException: If the drop request fails.
+            MirrorNotFoundException: If a dependent mirror is missing.
+            DropMirrorException: If a dependent mirror drop request fails.
             MirrorTimeoutException: If a dependent mirror drop times out.
         """
         self._console.print(f"Dropping peer '{peer_name}'")
@@ -1915,14 +1922,19 @@ class PeerDB:
                 destination tables.
 
         Raises:
+            MirrorNotFoundException: If a dependent mirror is missing.
+            DropMirrorException: If a state-change request fails.
             MirrorTimeoutException: If a dependent mirror drop times out.
         """
-        for mirror in self.list_mirrors().mirrors:
-            if mirror.source_name == peer_name or mirror.destination_name == peer_name:
-                self.drop_mirror(
-                    mirror.name,
-                    drop_destination_tables=drop_destination_tables,
-                )
+        flow_job_names = [
+            mirror.name
+            for mirror in self.list_mirrors().mirrors
+            if mirror.source_name == peer_name or mirror.destination_name == peer_name
+        ]
+        self.drop_mirrors(
+            flow_job_names,
+            drop_destination_tables=drop_destination_tables,
+        )
 
     def list_peers(self) -> ListPeersResponse:
         """
@@ -2056,6 +2068,189 @@ class PeerDB:
             poll_interval=poll_interval,
             failure_statuses=failure_statuses,
         )
+
+    def wait_for_mirror_settled(self, flow_job_name: str) -> str:
+        """
+        Poll mirror status until the mirror reaches a settled state.
+
+        A settled state is `STATUS_RUNNING`, `STATUS_PAUSED`, or
+        `STATUS_COMPLETED`. There is no completion deadline. Terminal states
+        raise `MirrorTerminalStateException`.
+
+        Args:
+            flow_job_name: Mirror (flow job) name to poll.
+
+        Returns:
+            str: The reached settled status.
+
+        Raises:
+            MirrorNotFoundException: If the mirror is missing.
+            MirrorTerminalStateException: If a failure status is reached.
+        """
+        return self._poll_mirror_status(
+            flow_job_name,
+            target_statuses=SETTLED_FLOW_STATUSES,
+            timeout=None,
+            failure_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
+        )
+
+    def create_mirrors(
+        self, mirrors: list[dict], *, if_exists: Literal["fail", "keep", "replace"] = "fail"
+    ) -> list[CreateMirrorResponse]:
+        """
+        Create mirrors serially.
+
+        Each mirror is created and then polled until it reaches a settled
+        state before the next mirror is created. There is no completion
+        deadline.
+
+        Args:
+            mirrors: Mirror payloads as built from the local config.
+            if_exists: Behavior when a mirror already exists: `fail` raises,
+                `keep` returns without calling the API, `replace` drops the
+                mirror with destination tables first.
+
+        Returns:
+            list[CreateMirrorResponse]: Responses in input order.
+
+        Raises:
+            MirrorExistsException: If a mirror exists and `if_exists` is `fail`.
+            PeerNotFoundException: If a source peer is missing from config.
+            UnsupportedAdapterException: If a source adapter is not Postgres.
+            TableNotFoundException: If a mapped source table is missing.
+            CreateMirrorException: If a request fails or lacks `workflowId`.
+            MirrorTerminalStateException: If a mirror reaches a terminal state.
+            MirrorNotFoundException: If a mirror disappears before it settles.
+        """
+        responses = []
+
+        for mirror in mirrors:
+            response = self.create_mirror(mirror, if_exists=if_exists)
+            responses.append(response)
+            self.wait_for_mirror_settled(mirror["flow_job_name"])
+
+        return responses
+
+    def drop_mirrors(
+        self,
+        flow_job_names: list[str],
+        *,
+        drop_destination_tables: bool | None = False,
+        if_exists: bool | None = False,
+    ) -> list[DropMirrorResponse]:
+        """
+        Drop mirrors serially.
+
+        Each mirror is dropped and awaited before the next mirror is dropped.
+
+        Args:
+            flow_job_names: Mirror (flow job) names to drop.
+            drop_destination_tables: Whether to also drop destination tables.
+            if_exists: When True, skip missing mirrors instead of raising.
+
+        Returns:
+            list[DropMirrorResponse]: Responses in input order.
+
+        Raises:
+            MirrorNotFoundException: If a mirror is missing and `if_exists` is False.
+            DropMirrorException: If a state-change request fails.
+            MirrorTimeoutException: If a mirror does not disappear in time.
+        """
+        responses = []
+
+        for flow_job_name in flow_job_names:
+            response = self.drop_mirror(
+                flow_job_name,
+                drop_destination_tables=drop_destination_tables,
+                if_exists=if_exists,
+            )
+            responses.append(response)
+
+        return responses
+
+    def pause_mirrors(self, flow_job_names: list[str]) -> list[PauseMirrorResponse]:
+        """
+        Pause mirrors serially.
+
+        Args:
+            flow_job_names: Mirror (flow job) names to pause.
+
+        Returns:
+            list[PauseMirrorResponse]: Responses in input order.
+
+        Raises:
+            MirrorNotFoundException: If a mirror is missing.
+            PauseMirrorException: If a state-change request fails.
+            MirrorTerminalStateException: If a mirror reaches a terminal state.
+            MirrorTimeoutException: If `STATUS_PAUSED` is not reached in time.
+        """
+        responses = []
+
+        for flow_job_name in flow_job_names:
+            responses.append(self.pause_mirror(flow_job_name))
+
+        return responses
+
+    def resume_mirrors(self, flow_job_names: list[str]) -> list[ResumeMirrorResponse]:
+        """
+        Resume mirrors serially.
+
+        Args:
+            flow_job_names: Mirror (flow job) names to resume.
+
+        Returns:
+            list[ResumeMirrorResponse]: Responses in input order.
+
+        Raises:
+            MirrorNotFoundException: If a mirror is missing.
+            ResumeMirrorException: If a state-change request fails.
+            MirrorTerminalStateException: If a mirror reaches a terminal state.
+            MirrorTimeoutException: If `STATUS_RUNNING` is not reached in time.
+        """
+        responses = []
+
+        for flow_job_name in flow_job_names:
+            responses.append(self.resume_mirror(flow_job_name))
+
+        return responses
+
+    def resync_mirrors(
+        self, flow_job_names: list[str], *, if_exists: bool | None = False
+    ) -> list[ResyncMirrorResponse]:
+        """
+        Resync mirrors serially.
+
+        Each mirror is resynced and then polled until it reaches a settled
+        state before the next mirror is resynced. There is no completion
+        deadline.
+
+        Args:
+            flow_job_names: Mirror (flow job) names to resync.
+            if_exists: When True, skip missing mirrors instead of raising.
+
+        Returns:
+            list[ResyncMirrorResponse]: Responses in input order.
+
+        Raises:
+            MirrorNotFoundException: If a mirror is missing and `if_exists` is False.
+            ResyncMirrorException: If a state-change request fails or a mirror
+                cannot be resynced in its current state.
+            MirrorTerminalStateException: If a mirror reaches a terminal state.
+            MirrorTimeoutException: If resync progress is not observed in time.
+        """
+        responses = []
+
+        for flow_job_name in flow_job_names:
+            response = self.resync_mirror(flow_job_name, if_exists=if_exists)
+            responses.append(response)
+
+            try:
+                self.wait_for_mirror_settled(flow_job_name)
+            except MirrorNotFoundException:
+                if not if_exists:
+                    raise
+
+        return responses
 
     def create_mirror(
         self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"

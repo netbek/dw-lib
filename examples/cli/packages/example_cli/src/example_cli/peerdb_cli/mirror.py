@@ -1,7 +1,8 @@
+from collections.abc import Callable
 from dw_lib.exceptions import MirrorNotFoundException
 from dw_lib.peerdb import PeerDB
 from rich.console import Console
-from typing import Literal
+from typing import Any, Literal
 
 import pydash
 import typer
@@ -25,9 +26,12 @@ def create(
     _validate_name_or_all(name, all)
 
     if all:
-        for mirror in peerdb.config.mirrors:
-            response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
-            console.print(response.message, style="green")
+        _run_batch(
+            lambda: peerdb.create_mirrors(
+                [mirror.model_dump() for mirror in peerdb.config.mirrors],
+                if_exists=if_exists,
+            )
+        )
     else:
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
 
@@ -49,14 +53,13 @@ def drop(
     _validate_name_or_all(name, all)
 
     if all:
-        list_response = peerdb.list_mirrors()
-        for mirror in list_response.mirrors:
-            response = peerdb.drop_mirror(
-                mirror.name,
+        _run_batch(
+            lambda: peerdb.drop_mirrors(
+                [mirror.name for mirror in peerdb.list_mirrors().mirrors],
                 drop_destination_tables=drop_destination_tables,
                 if_exists=if_exists,
             )
-            console.print(response.message, style="green")
+        )
     else:
         response = peerdb.drop_mirror(
             name,
@@ -75,10 +78,9 @@ def pause(
     _validate_name_or_all(name, all)
 
     if all:
-        list_response = peerdb.list_mirrors()
-        for mirror in list_response.mirrors:
-            response = peerdb.pause_mirror(mirror.name)
-            console.print(response.message, style="green")
+        _run_batch(
+            lambda: peerdb.pause_mirrors([mirror.name for mirror in peerdb.list_mirrors().mirrors])
+        )
     else:
         response = peerdb.pause_mirror(name)
         console.print(response.message, style="green")
@@ -93,10 +95,9 @@ def resume(
     _validate_name_or_all(name, all)
 
     if all:
-        list_response = peerdb.list_mirrors()
-        for mirror in list_response.mirrors:
-            response = peerdb.resume_mirror(mirror.name)
-            console.print(response.message, style="green")
+        _run_batch(
+            lambda: peerdb.resume_mirrors([mirror.name for mirror in peerdb.list_mirrors().mirrors])
+        )
     else:
         response = peerdb.resume_mirror(name)
         console.print(response.message, style="green")
@@ -116,12 +117,25 @@ def resync(
     _validate_name_or_all(name, all)
 
     if all:
-        list_response = peerdb.list_mirrors()
-        for mirror in list_response.mirrors:
-            response = peerdb.resync_mirror(mirror.name, if_exists=if_exists)
-            console.print(response.message, style="green")
+        _run_batch(
+            lambda: peerdb.resync_mirrors(
+                [mirror.name for mirror in peerdb.list_mirrors().mirrors],
+                if_exists=if_exists,
+            )
+        )
     else:
         response = peerdb.resync_mirror(name, if_exists=if_exists)
+        console.print(response.message, style="green")
+
+
+def _run_batch(operation: Callable[[], list[Any]]) -> None:
+    try:
+        responses = operation()
+    except Exception as exc:  # noqa: BLE001
+        console.print(str(exc), style="red")
+        raise typer.Exit(code=1) from exc
+
+    for response in responses:
         console.print(response.message, style="green")
 
 

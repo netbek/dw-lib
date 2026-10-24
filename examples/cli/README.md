@@ -40,6 +40,8 @@ The connection settings of the database servers in this example are:
 | `cli peerdb up`                                   | Add PeerDB publications and replication slots to the source database.                                                       |
 | `cli peerdb drop-peers --drop-destination-tables` | Remove PeerDB publications and replication slots from the source database, and remove tables from the destination database. |
 
+`cli peerdb up` creates mirrors serially and waits for each mirror to settle before creating the next one. On a large source this can take hours.
+
 Append the `--help` option to see the options of each command.
 
 Check the status of peers and mirrors in the [PeerDB UI](http://localhost:3000) after running `cli peerdb up` and `cli peerdb drop-peers`.

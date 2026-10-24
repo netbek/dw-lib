@@ -123,8 +123,8 @@ The underlying single-mirror methods print their progress messages as the batch 
 | `src/dw_lib/peerdb.py` | Serial batch methods, `wait_for_mirror_settled`, no-deadline polling, peer integration. |
 | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py` | Use batch methods for `--all` commands; keep the existing option set. |
 | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py` | Use `create_mirrors` in `peerdb up`. |
-| `tests/peerdb/test_serial_batches.py` | Serial order, settle waits, and failure behaviour. |
-| `tests/peerdb/test_timeouts.py` | No-deadline polling and existing configured waits. |
+| `tests/peerdb/test_serial_batches.py` | Serial order, settle waits including the no-deadline path, and failure behaviour. |
+| `tests/peerdb/test_timeouts.py` | Existing configured waits and peer drop delegation. |
 | `examples/cli/README.md` | Document the `peerdb up` behaviour change. |
 
 ## Design decisions
@@ -241,7 +241,7 @@ The underlying single-mirror methods print their progress messages as the batch 
 | Unit (offline) | Existing configured waits | Drop, pause, and resume still use their configured timeouts and raise `MirrorTimeoutException` when those expire. |
 | Unit (offline) | Missing mirrors | `drop_mirrors(if_exists=True)` and `resync_mirrors(if_exists=True)` skip missing mirrors. |
 | Unit (offline) | Peer operations | `drop_peer` drops dependent mirrors serially and waits before deleting the peer. |
-| CLI (offline) | Command wiring | `--all` commands call the batch methods; single-mirror commands keep their current behaviour. |
+| Manual (CLI) | Command wiring | `--all` commands call the batch methods; single-mirror commands keep their current behaviour. |
 | Integration (Docker) | Real API behaviour | Existing Postgres and ClickHouse mirror tests still pass; a small serial create and drop batch works end to end. |
 | Static | Lint and format | Ruff check and format, plus the repository's pre-commit hooks. |
 
@@ -249,9 +249,9 @@ The underlying single-mirror methods print their progress messages as the batch 
 
 - Client implementation: `src/dw_lib/peerdb.py`
 - Existing configured timeouts: `src/dw_lib/peerdb.py:56-89`
-- Existing mirror waits: `src/dw_lib/peerdb.py:1227-1372`
-- Existing mirror lifecycle methods: `src/dw_lib/peerdb.py:2020-2512`
-- Existing peer mirror drop: `src/dw_lib/peerdb.py:1840-1925`
+- Existing mirror waits: `src/dw_lib/peerdb.py:1229-1377`
+- Existing mirror lifecycle methods: `src/dw_lib/peerdb.py:2032-2708`
+- Existing peer mirror drop: `src/dw_lib/peerdb.py:1845-1934`
 - CLI mirror commands: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py`
 - CLI peer commands: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/peer.py`
 - CLI bootstrap: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py`

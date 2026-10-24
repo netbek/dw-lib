@@ -4,16 +4,16 @@
 
 ## Context
 
-The PeerDB CLI creates and resyncs mirrors from the example CLI in `examples/cli/packages/example_cli/src/example_cli/peerdb_cli`. Today, `mirror create` returns as soon as PeerDB returns a `workflowId` (`src/dw_lib/peerdb.py:1770`; CLI loop at `mirror.py:27`). `mirror create --all` therefore starts every initial snapshot concurrently. On a source database with 100+ GB tables and many mirrors, that can overload the source.
+The PeerDB CLI creates and resyncs mirrors from the example CLI in `examples/cli/packages/example_cli/src/example_cli/peerdb_cli`. Today, `mirror create` returns as soon as PeerDB returns a `workflowId` (`src/dw_lib/peerdb.py:2136`; CLI loop at `mirror.py:27`). `mirror create --all` therefore starts every initial snapshot concurrently. On a source database with 100+ GB tables and many mirrors, that can overload the source.
 
-`mirror resync` is different. It waits for `STATUS_RESYNC` (`src/dw_lib/peerdb.py:1979`), but that status is ambiguous. PeerDB sets it in two places:
+`mirror resync` is different. It waits for `STATUS_RESYNC` (`src/dw_lib/peerdb.py:2358`), but that status is ambiguous. PeerDB sets it in two places:
 
 1. **Before the new snapshot starts.** A resync makes the CDC workflow continue-as-new into `DropFlowWorkflow(Resync=true)`, which sets the catalog status to `STATUS_RESYNC` during cleanup (`vendor/peerdb/flow/workflows/drop_flow.go:137`, `:183`).
 2. **After the snapshot finishes.** The new CDC run sets `STATUS_SNAPSHOT`, runs the snapshot, then sets `STATUS_RESYNC` again immediately before `RenameTables` (`vendor/peerdb/flow/workflows/cdc_flow.go:729`, `:774`).
 
 `get_mirror_status` reads the catalog status (`vendor/peerdb/flow/internal/workflow.go:19`), so the CLI cannot distinguish the two. The PeerDB e2e test confirms the first meaning: “Wait until DropFlowWorkflow has started (catalog status = RESYNC)” (`vendor/peerdb/flow/e2e/drop_flow_test.go:75-84`). The unambiguous completion states are `STATUS_RUNNING` for normal CDC mirrors and `STATUS_COMPLETED` for initial-snapshot-only mirrors (`vendor/peerdb/flow/workflows/cdc_flow.go:837`, `:840`). PeerDB's own resync tests wait for `STATUS_RUNNING` (`vendor/peerdb/flow/e2e/api_test.go:1743`).
 
-The existing `client.mirror_state_wait_timeout_seconds` defaults to 15 seconds (`src/dw_lib/peerdb.py:68`). That is suitable for short state changes such as drop, pause, and resume, but not for a large snapshot.
+The existing `client.mirror_state_wait_timeout_seconds` defaults to 15 seconds (`src/dw_lib/peerdb.py:83`). That is suitable for short state changes such as drop, pause, and resume, but not for a large snapshot.
 
 ## Goals
 
@@ -190,9 +190,9 @@ Unit tests should monkeypatch `get_mirror_status` and `time.sleep` so they run w
 
 - Feature specification: `docs/plans/peerdb-mirror-wait/spec.md`
 - CLI behaviour documentation: `docs/peerdb-cli.md`
-- Current wait implementation: `src/dw_lib/peerdb.py:1734`
-- Current create implementation: `src/dw_lib/peerdb.py:1770`
-- Current resync implementation: `src/dw_lib/peerdb.py:1979`
+- Current wait implementation: `src/dw_lib/peerdb.py:1890`
+- Current create implementation: `src/dw_lib/peerdb.py:2136`
+- Current resync implementation: `src/dw_lib/peerdb.py:2358`
 - CLI mirror commands: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py:15`, `:106`
 - CLI `up` command: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py:27`
 - PeerDB resync cleanup status: `vendor/peerdb/flow/workflows/drop_flow.go:137`, `:183`

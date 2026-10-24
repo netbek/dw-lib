@@ -52,26 +52,43 @@ import pydash
 import requests
 import time
 
-# Default connect/read timeout in seconds for PeerDB API requests
+# PeerDB's GetPeerInfo and GetPeerType handlers use a 30-second deadline
+# (vendor/peerdb/flow/cmd/peer_data.go). 35 seconds leaves a 5-second margin.
+# This value also covers fast requests such as list, status, and settings, so
+# it is a conservative single ceiling rather than a tight per-request bound.
 DEFAULT_API_REQUEST_TIMEOUT_SECONDS = 35
 
-# Default connect/read timeout in seconds for peer and mirror creation requests
+# PeerDB's ValidatePeer uses 15 seconds for Postgres and 60 seconds for
+# ClickHouse (vendor/peerdb/flow/cmd/validate_peer.go). The ClickHouse value
+# comes from PEERDB_SETUP_FLOW_WORKFLOW_TASK_TIMEOUT_SECONDS, default 60.
+# 120 seconds is roughly twice that bound. Mirror validation has no explicit
+# server-side deadline, so this remains a heuristic and may need raising for
+# slow sources or many tables.
 DEFAULT_API_CREATION_TIMEOUT_SECONDS = 120
 
-# Default connect/read timeout in seconds for drop and state-change requests
+# PeerDB's shutdownFlow waits up to 5 minutes for DropFlowWorkflow
+# (vendor/peerdb/flow/cmd/handler.go). 600 seconds is 5 minutes plus a
+# 5-minute margin. This is a ceiling, not a guarantee: dropFlow for a
+# COMPLETED mirror waits for DropFlowWorkflow without an explicit server-side
+# bound.
 DEFAULT_API_STATE_CHANGE_TIMEOUT_SECONDS = 600
 
-# Default sleep in seconds between mirror status polls
+# Inherited from the previous hardcoded one-second sleep between status polls.
+# Exposed so API load and responsiveness can be tuned.
 DEFAULT_POLL_INTERVAL_SECONDS = 1.0
 
-# Default wall-clock timeout in seconds for short mirror state changes
+# Inherited from the old OPERATION_TIMEOUT = 15. The old value counted poll
+# attempts, not seconds; this default now means 15 wall-clock seconds. Kept
+# for continuity, but may need raising on busy servers.
 DEFAULT_MIRROR_STATE_WAIT_TIMEOUT_SECONDS = 15
 
-# Default overall timeout in seconds for dropping a peer and its mirrors.
-# None means no overall limit.
+# No overall peer-drop limit by default. A peer can have many mirrors, so a
+# fixed aggregate deadline would be arbitrary. Per-mirror and per-request
+# timeouts still apply; set a value to bound the whole operation.
 DEFAULT_PEER_DROP_TIMEOUT_SECONDS = None
 
-# Maximum number of retries after a transient mirror status request failure
+# Three retries after the first transient status failure. A small bound
+# tolerates brief API or network hiccups without hiding a persistent outage.
 MAX_POLL_RETRIES = 3
 
 PEERDB_SOURCE_PEER = "source"

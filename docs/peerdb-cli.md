@@ -337,26 +337,26 @@ The CLI uses these PeerDB flow states when it decides whether to act and what to
 | Peer commands | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/peer.py:14` |
 | Mirror commands | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py:14` |
 | Settings command | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/settings.py:11` |
-| Config resolution | `src/dw_lib/peerdb.py:2825` |
-| API request timeout default | `src/dw_lib/peerdb.py:56` |
-| API creation timeout default | `src/dw_lib/peerdb.py:59` |
-| API state-change timeout default | `src/dw_lib/peerdb.py:62` |
-| Poll interval default | `src/dw_lib/peerdb.py:65` |
-| Mirror state wait timeout default | `src/dw_lib/peerdb.py:68` |
-| Peer drop timeout default | `src/dw_lib/peerdb.py:72` |
-| Debug checks | `src/dw_lib/peerdb.py:1215` |
-| Update settings | `src/dw_lib/peerdb.py:1469` |
-| Create peer | `src/dw_lib/peerdb.py:1580` |
-| Drop peer | `src/dw_lib/peerdb.py:1644` |
-| Drop dependent mirrors | `src/dw_lib/peerdb.py:1722` |
-| Poll mirror status | `src/dw_lib/peerdb.py:1881` |
-| Wait for mirror snapshot | `src/dw_lib/peerdb.py:2068` |
-| Create mirror | `src/dw_lib/peerdb.py:2129` |
-| Drop mirror | `src/dw_lib/peerdb.py:2253` |
-| Resync mirror | `src/dw_lib/peerdb.py:2351` |
-| Pause mirror | `src/dw_lib/peerdb.py:2429` |
-| Resume mirror | `src/dw_lib/peerdb.py:2483` |
-| Drop destination tables | `src/dw_lib/peerdb.py:2537` |
+| Config resolution | `src/dw_lib/peerdb.py:2832` |
+| API request timeout default | `src/dw_lib/peerdb.py:59` |
+| API creation timeout default | `src/dw_lib/peerdb.py:67` |
+| API state-change timeout default | `src/dw_lib/peerdb.py:74` |
+| Poll interval default | `src/dw_lib/peerdb.py:78` |
+| Mirror state wait timeout default | `src/dw_lib/peerdb.py:83` |
+| Peer drop timeout default | `src/dw_lib/peerdb.py:88` |
+| Debug checks | `src/dw_lib/peerdb.py:1224` |
+| Update settings | `src/dw_lib/peerdb.py:1478` |
+| Create peer | `src/dw_lib/peerdb.py:1589` |
+| Drop peer | `src/dw_lib/peerdb.py:1653` |
+| Drop dependent mirrors | `src/dw_lib/peerdb.py:1731` |
+| Poll mirror status | `src/dw_lib/peerdb.py:1890` |
+| Wait for mirror snapshot | `src/dw_lib/peerdb.py:2075` |
+| Create mirror | `src/dw_lib/peerdb.py:2136` |
+| Drop mirror | `src/dw_lib/peerdb.py:2260` |
+| Resync mirror | `src/dw_lib/peerdb.py:2358` |
+| Pause mirror | `src/dw_lib/peerdb.py:2436` |
+| Resume mirror | `src/dw_lib/peerdb.py:2490` |
+| Drop destination tables | `src/dw_lib/peerdb.py:2544` |
 | Peer drop timeout exception | `src/dw_lib/exceptions.py:31` |
 | Mirror failed exception | `src/dw_lib/exceptions.py:43` |
 | Mirror wait tests | `tests/peerdb/test_wait.py` |

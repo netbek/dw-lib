@@ -1,6 +1,6 @@
 # PeerDB Client Timeouts Specification
 
-> **Status:** Draft. Last updated 2026-10-24.
+> **Status:** Approved. Last updated 2026-10-24.
 
 ## Purpose
 
@@ -55,21 +55,6 @@ Timeout and interval settings SHALL reject values less than one second.
 
 - **WHEN** a timeout or interval setting is set to a negative number
 - **THEN** parsing fails with a validation error
-
-### Requirement: Timing settings are read only from client
-
-Configuration SHALL read timeout and interval settings only from the `client` group.
-
-#### Scenario: Legacy top-level timeout is not used
-
-- **WHEN** a configuration contains a top-level `operation_timeout` in addition to a `client` group
-- **THEN** the client does not use it as a timeout
-- **AND** the client uses the values under `client` or their defaults
-
-#### Scenario: Legacy-only configuration fails
-
-- **WHEN** a configuration uses the old top-level `peerdb_ui_url` and `operation_timeout` without a `client` group
-- **THEN** parsing fails because the `client` group is missing
 
 ### Requirement: Fast request timeouts
 
@@ -153,15 +138,22 @@ Resync SHALL confirm progress for signal-based resyncs and SHALL NOT wait for th
 - **THEN** the client returns after the synchronous recreate request succeeds
 - **AND** it does not wait for `STATUS_RESYNC`
 
-#### Scenario: Running mirror resync
+#### Scenario: Running or paused mirror resync
 
-- **WHEN** a resync is requested for a mirror in `STATUS_RUNNING`, `STATUS_PAUSED`, `STATUS_SETUP`, or `STATUS_SNAPSHOT`
-- **THEN** the client waits for a resync progress state such as `STATUS_RESYNC`, `STATUS_SETUP`, or `STATUS_SNAPSHOT`
+- **WHEN** a resync is requested for a mirror in `STATUS_RUNNING` or `STATUS_PAUSED`
+- **THEN** the client waits for `STATUS_RESYNC`, `STATUS_SETUP`, or `STATUS_SNAPSHOT`
+- **AND** the wait is bounded by the resync wait timeout
+
+#### Scenario: Mirror already in setup or snapshot
+
+- **WHEN** a resync is requested for a mirror in `STATUS_SETUP` or `STATUS_SNAPSHOT`
+- **THEN** the client waits for `STATUS_RESYNC`
+- **AND** it does not treat the pre-existing status as resync progress
 - **AND** the wait is bounded by the resync wait timeout
 
 ### Requirement: Drop semantics
 
-Mirror drops SHALL wait until the mirror is no longer reported, and peer drops SHALL apply a total wait budget across all dependent mirror drops.
+Mirror drops SHALL wait until the mirror is no longer reported, and peer drops SHALL apply the per-mirror drop wait to each dependent mirror.
 
 #### Scenario: Mirror disappears
 
@@ -169,11 +161,11 @@ Mirror drops SHALL wait until the mirror is no longer reported, and peer drops S
 - **THEN** the client waits until the mirror is no longer reported
 - **AND** the wait is bounded by the mirror drop wait timeout
 
-#### Scenario: Peer drop total budget
+#### Scenario: Peer drop per-mirror wait
 
 - **WHEN** a peer with multiple mirrors is dropped
-- **THEN** the dependent mirror drops share the configured peer drop wait budget
-- **AND** the total wait does not grow by one full timeout per mirror
+- **THEN** each dependent mirror drop uses the per-mirror drop wait
+- **AND** the total wait is not capped by a single peer-level budget
 
 ### Requirement: Mirror existence
 
@@ -202,3 +194,13 @@ Transient status errors during a lifecycle wait SHALL be retried until the wait 
 
 - **WHEN** status calls keep failing until the deadline
 - **THEN** the timeout error includes the last observed error
+
+## Amendments
+
+### 2026-10-24: Resync wait targets
+
+The resync wait accepts `STATUS_SETUP` and `STATUS_SNAPSHOT` only when they cannot be the pre-request status. A mirror already in setup or snapshot waits for `STATUS_RESYNC`. This prevents returning before the resync request is processed and avoids leaving `_resync` tables behind.
+
+### 2026-10-24: Peer drop per-mirror wait
+
+`peer_drop_wait_timeout_seconds` is removed. Each dependent mirror drop uses `mirror_drop_wait_timeout_seconds`, so the total peer drop wait grows with the number of mirrors. The final peer-drop request continues to use `peer_drop_request_timeout_seconds`.

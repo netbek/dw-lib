@@ -40,6 +40,10 @@ class MirrorTimeoutException(Exception):
     pass
 
 
+class MirrorFailedException(Exception):
+    pass
+
+
 class TableNotFoundException(Exception):
     pass
 

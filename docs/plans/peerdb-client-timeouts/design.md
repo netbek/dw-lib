@@ -38,7 +38,7 @@ Server-side budgets that shape the client defaults:
 - Changing PeerDB's server-side validation, workflow, or drop timeouts.
 - Adding connect or statement timeouts to the local Postgres and ClickHouse adapters.
 - Retrying peer or mirror creation requests automatically.
-- Supporting the legacy `operation_timeout` key or a top-level `peerdb_ui_url`.
+- Backward compatibility for the old top-level `operation_timeout` and `peerdb_ui_url` keys.
 - Renaming `ConfigMirror.idle_timeout_seconds`; it is a PeerDB CDC setting, not a client timeout.
 
 ## Terminology
@@ -141,7 +141,7 @@ client:
 |---|---|
 | `src/dw_lib/peerdb.py` | Add the `client` config model and defaults; parse the group; add request and poll helpers; update lifecycle methods. |
 | `src/dw_lib/exceptions.py` | Add a terminal-state exception for fail-fast lifecycle waits. |
-| `tests/peerdb/test_config.py` | Defaults, overrides, validation, and legacy-key rejection. |
+| `tests/peerdb/test_config.py` | Defaults, overrides, validation, and confirmation that old top-level keys are not read. |
 | `tests/peerdb/test_timeouts.py` | Wall-clock polling, terminal states, resync/resume transitions, request-timeout wrapping. |
 | `tests/peerdb/fixtures/*.yaml` | Replace `operation_timeout` with the `client` group. |
 | `tests/peerdb/test_postgres.py`, `tests/peerdb/test_clickhouse.py` | Update expected parsed config. |
@@ -155,7 +155,7 @@ client:
 
 **Rationale.** The group owns the PeerDB client's endpoint and timing behavior. `client` is short, and inside `peerdb.yaml` it clearly refers to the PeerDB client rather than the database adapters. Names such as `api`, `connection`, and `timeouts` either misdescribe the contents or cannot hold the URL. `settings` is already used for PeerDB dynamic settings.
 
-**Consequences.** Existing configurations must move `peerdb_ui_url` under `client`. The parser rejects the legacy top-level key with a migration message. If maximum explicitness against database clients is needed later, `peerdb_client` is the fallback name.
+**Consequences.** Existing configurations must move `peerdb_ui_url` under `client`. The key keeps its existing name as `client.peerdb_ui_url`. Old top-level keys are not read; a configuration without `client` fails validation.
 
 ### D2: Per-operation matrix with flat keys inside `client`
 
@@ -165,13 +165,13 @@ client:
 
 **Consequences.** The configuration has more keys, but each name states its scope. Defaults are documented in the configuration reference.
 
-### D3: Remove the legacy top-level keys
+### D3: No backward compatibility for legacy top-level keys
 
-**Decision.** Reject `operation_timeout` and top-level `peerdb_ui_url` with an error that names the replacements under `client`.
+**Decision.** Read timeout and interval settings only from `client`. Do not provide aliases, fallbacks, or migration shims for the old top-level `operation_timeout` and `peerdb_ui_url` keys.
 
-**Rationale.** Silently ignoring a removed key leaves users with settings that appear to work but have no effect. A migration error is explicit and easy to fix.
+**Rationale.** The user does not need backward compatibility for these keys, and a single authoritative location keeps the parser simple and the configuration unambiguous.
 
-**Consequences.** This is a breaking configuration change. The error message must list the replacement keys, especially the per-operation wait settings that replace `operation_timeout`.
+**Consequences.** This is a breaking configuration change. A configuration that uses only the old top-level keys fails because `client` is missing. Old keys placed alongside a valid `client` group are not read.
 
 ### D4: Wall-clock deadlines
 
@@ -249,7 +249,7 @@ client:
 
 | Alternative | Why rejected |
 |---|---|
-| Keep `operation_timeout` as a deprecated alias | It is ambiguous and does not map cleanly to the per-operation waits. The chosen direction is an explicit removal with a migration error. |
+| Keep `operation_timeout` as a deprecated alias | It is ambiguous and does not map cleanly to the per-operation waits. No backward compatibility is required for the old top-level keys. |
 | Keep the timeout keys at the top level | The user chose a `client` group to separate client endpoint and timing settings from peers, mirrors, and dynamic settings. |
 | Use one generic poll timeout | Pause, resume, resync, and drop have very different server-side durations; one value is either too short or too long for some operations. |
 | Keep iteration-count polling | It cannot enforce a wall-clock deadline and can exceed the configured timeout by the sum of request durations. |
@@ -262,15 +262,11 @@ client:
 
 | Layer | Scope | Examples |
 |---|---|---|
-| Unit (offline) | Config parsing | Defaults; every override; zero and negative values rejected; legacy top-level keys rejected. |
+| Unit (offline) | Config parsing | Defaults; every override; zero and negative values rejected; old top-level keys are not read. |
 | Unit (offline) | Timeout behavior | Wall-clock deadline with a fake clock; slow status calls; terminal-state fail-fast; transient error recovery; persistent error at deadline; `ReadTimeout` wrapping; `can_connect` returns `False` on timeout. |
 | Unit (offline) | Lifecycle transitions | Resume from `PAUSING`; pause from `PAUSING`; resync from `FAILED`/`COMPLETED`; resync progress for running mirrors; drop timeout includes last status; `has_mirror` with `STATUS_UNKNOWN`. |
 | Integration (Docker) | Real API behavior | Existing Postgres and ClickHouse mirror tests pass with the `client` group; pause, resume, resync, and drop still work end to end. |
 | Static | Lint and format | Ruff check and format, plus the repository's pre-commit hooks. |
-
-## Open questions
-
-- Whether to shorten `client.peerdb_ui_url` to `client.ui_url` in a follow-up. This design keeps the existing key name to limit the migration surface.
 
 ## References
 

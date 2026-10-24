@@ -56,19 +56,20 @@ Timeout and interval settings SHALL reject values less than one second.
 - **WHEN** a timeout or interval setting is set to a negative number
 - **THEN** parsing fails with a validation error
 
-### Requirement: Legacy top-level keys rejected
+### Requirement: Timing settings are read only from client
 
-Configuration SHALL reject the legacy top-level `operation_timeout` and `peerdb_ui_url` keys with an error that names their replacements under `client`.
+Configuration SHALL read timeout and interval settings only from the `client` group.
 
-#### Scenario: Legacy timeout rejected
+#### Scenario: Legacy top-level timeout is not used
 
-- **WHEN** a configuration contains `operation_timeout`
-- **THEN** parsing fails with an error that names the replacement timeout settings under `client`
+- **WHEN** a configuration contains a top-level `operation_timeout` in addition to a `client` group
+- **THEN** the client does not use it as a timeout
+- **AND** the client uses the values under `client` or their defaults
 
-#### Scenario: Legacy URL rejected
+#### Scenario: Legacy-only configuration fails
 
-- **WHEN** a configuration contains a top-level `peerdb_ui_url`
-- **THEN** parsing fails with an error that names `client.peerdb_ui_url`
+- **WHEN** a configuration uses the old top-level `peerdb_ui_url` and `operation_timeout` without a `client` group
+- **THEN** parsing fails because the `client` group is missing
 
 ### Requirement: Fast request timeouts
 

@@ -13,14 +13,10 @@ import requests
 import time
 
 
-def make_peerdb(tmp_path: Path, mirror_state_wait_timeout_seconds: int = 2) -> PeerDB:
+def make_peerdb(tmp_path: Path) -> PeerDB:
     """Return a PeerDB client with a minimal config."""
     config_file = tmp_path / "peerdb.yaml"
-    config_file.write_text(
-        "client:\n"
-        "  peerdb_ui_url: http://localhost:3000\n"
-        f"  mirror_state_wait_timeout_seconds: {mirror_state_wait_timeout_seconds}\n"
-    )
+    config_file.write_text("client:\n  peerdb_ui_url: http://localhost:3000\n")
 
     return PeerDB(config_file=config_file)
 
@@ -102,49 +98,21 @@ class TestPollMirrorStatus:
         use_statuses(monkeypatch, peerdb, ["STATUS_UNKNOWN"])
 
         with pytest.raises(MirrorNotFoundException):
-            peerdb.wait_for_mirror_status("cdc_one", {"STATUS_RUNNING"})
+            peerdb.wait_for_mirror_status("cdc_one", {"STATUS_RUNNING"}, timeout_seconds=2)
 
-    def test_retries_transient_errors(self, tmp_path: Path, monkeypatch):
-        """Verify three transient errors are retried."""
-        peerdb = make_peerdb(tmp_path)
-        calls = {"count": 0}
-
-        def get_mirror_status(
-            flow_job_name: str, timeout_seconds: float | None = None
-        ) -> MirrorStatusResponse:
-            calls["count"] += 1
-
-            if calls["count"] <= 3:
-                raise GetMirrorStatusException("transient")
-
-            return MirrorStatusResponse(
-                createdAt=datetime.datetime.now(),
-                currentFlowState="STATUS_RUNNING",
-                flowJobName=flow_job_name,
-            )
-
-        monkeypatch.setattr(peerdb, "get_mirror_status", get_mirror_status)
-        monkeypatch.setattr(time, "sleep", lambda _: None)
-
-        status = peerdb.wait_for_mirror_status("cdc_one", {"STATUS_RUNNING"})
-
-        assert status == "STATUS_RUNNING"
-        assert calls["count"] == 4
-
-    def test_raises_after_four_transient_errors(self, tmp_path: Path, monkeypatch):
-        """Verify a fourth consecutive transient error is raised."""
+    def test_raises_on_status_error(self, tmp_path: Path, monkeypatch):
+        """Verify a status request failure is raised immediately."""
         peerdb = make_peerdb(tmp_path)
 
         def get_mirror_status(
             flow_job_name: str, timeout_seconds: float | None = None
         ) -> MirrorStatusResponse:
-            raise GetMirrorStatusException("transient")
+            raise GetMirrorStatusException("failed")
 
         monkeypatch.setattr(peerdb, "get_mirror_status", get_mirror_status)
-        monkeypatch.setattr(time, "sleep", lambda _: None)
 
         with pytest.raises(GetMirrorStatusException):
-            peerdb.wait_for_mirror_status("cdc_one", {"STATUS_RUNNING"})
+            peerdb.wait_for_mirror_status("cdc_one", {"STATUS_RUNNING"}, timeout_seconds=2)
 
 
 class TestWaitForMirrorSnapshot:
@@ -246,8 +214,8 @@ class TestWaitForMirrorSnapshot:
         assert peerdb.wait_for_mirror_snapshot("cdc_one") == "STATUS_RUNNING"
 
     def test_completion_wait_has_no_timeout(self, tmp_path: Path, monkeypatch):
-        """Verify the completion wait ignores the mirror state wait timeout."""
-        peerdb = make_peerdb(tmp_path, mirror_state_wait_timeout_seconds=1)
+        """Verify the completion wait has no timeout."""
+        peerdb = make_peerdb(tmp_path)
         use_statuses(
             monkeypatch,
             peerdb,
@@ -301,11 +269,12 @@ class TestResyncMirrorWait:
         def wait_for_mirror_status(
             flow_job_name: str,
             target_statuses: set[str],
-            timeout_seconds: float | None = None,
+            timeout_seconds: float,
             fail_statuses: set[str] | None = None,
         ):
             calls["flow_job_name"] = flow_job_name
             calls["target_statuses"] = target_statuses
+            calls["timeout_seconds"] = timeout_seconds
 
             return "STATUS_RESYNC"
 
@@ -314,7 +283,9 @@ class TestResyncMirrorWait:
         response = peerdb.resync_mirror("cdc_one", wait=False)
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
-        assert calls == {
-            "flow_job_name": "cdc_one",
-            "target_statuses": {"STATUS_RESYNC"},
-        }
+        assert calls["flow_job_name"] == "cdc_one"
+        assert calls["target_statuses"] == {"STATUS_RESYNC"}
+        assert (
+            calls["timeout_seconds"]
+            == peerdb.config.client.mirror_resync_start_wait_timeout_seconds
+        )

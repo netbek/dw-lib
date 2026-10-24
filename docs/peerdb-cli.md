@@ -22,11 +22,17 @@ The YAML is rendered as a Jinja template, and `+defaults` blocks are merged into
 | Setting | Meaning | Default |
 |---------|---------|---------|
 | `client.peerdb_ui_url` | PeerDB UI base URL; the client calls `<peerdb_ui_url>/api/v1/...` | Required |
-| `client.api_request_timeout_seconds` | Connect/read timeout for normal API requests | 35 |
-| `client.api_creation_timeout_seconds` | Connect/read timeout for peer and mirror creation | 120 |
-| `client.api_state_change_timeout_seconds` | Connect/read timeout for drop and state-change requests | 600 |
+| `client.api_metadata_timeout_seconds` | Connect/read timeout for metadata requests | 10 |
+| `client.api_peer_info_timeout_seconds` | Connect/read timeout for peer info requests | 45 |
+| `client.api_peer_create_timeout_seconds` | Connect/read timeout for peer creation | 90 |
+| `client.api_peer_drop_timeout_seconds` | Connect/read timeout for the final peer drop | 30 |
+| `client.api_mirror_create_timeout_seconds` | Connect/read timeout for mirror creation | 300 |
+| `client.api_mirror_pause_resume_timeout_seconds` | Connect/read timeout for pause and resume | 30 |
+| `client.api_mirror_resync_drop_timeout_seconds` | Connect/read timeout for resync and drop | 900 |
 | `client.poll_interval_seconds` | Sleep between mirror status polls | 1 |
-| `client.mirror_state_wait_timeout_seconds` | Wall-clock timeout for short mirror state changes and the resync start guard | 15, minimum 1 |
+| `client.mirror_pause_resume_wait_timeout_seconds` | Wall-clock wait for PAUSED or RUNNING | 30 |
+| `client.mirror_resync_start_wait_timeout_seconds` | Wall-clock wait for the resync signal | 30 |
+| `client.mirror_drop_wait_timeout_seconds` | Wall-clock wait for mirror disappearance | 420 |
 | `client.peer_drop_timeout_seconds` | Overall timeout for dropping a peer and its mirrors | No overall limit |
 | `settings` | Dynamic settings applied by `settings update` and `up` | Empty |
 | `peers` | Peer definitions; the YAML key is the peer name | Empty |
@@ -58,7 +64,7 @@ Peers and mirrors are addressed by their YAML keys. A `[NAME]` argument for `pee
 The main blocking categories are:
 
 - **Blocking request.** The command does not return until the HTTP response arrives. `settings update` and `peer create` work this way.
-- **Blocking with polling.** The command does not return until the target state is reached or `client.mirror_state_wait_timeout_seconds` expires. `mirror drop`, `mirror pause`, `mirror resume`, `mirror resync --no-wait`, and each dependent mirror drop in `peer drop` work this way.
+- **Blocking with polling.** The command does not return until the target state is reached or the action's wait timeout expires. `mirror drop`, `mirror pause`, `mirror resume`, `mirror resync --no-wait`, and each dependent mirror drop in `peer drop` work this way.
 - **Blocking until snapshot completion.** `mirror create --wait`, `mirror resync --wait`, and `up --wait` poll indefinitely until the mirror reaches `RUNNING` or `COMPLETED`, fails, or is terminated.
 - **Non-blocking for mirror readiness.** `mirror create --no-wait` and `up --no-wait` return after PeerDB accepts the request.
 
@@ -152,7 +158,7 @@ Defaults: `--if-exists` is on, `--drop-destination-tables` is off. Both accept t
 
 The peer name does not have to appear in the local config. Only `--all` is limited to config peers.
 
-If a dependent mirror cannot be dropped within `client.mirror_state_wait_timeout_seconds`, the command stops before attempting to drop the peer. `client.peer_drop_timeout_seconds`, when set, bounds the whole peer drop, including all dependent mirrors and the final request. PeerDB also refuses to drop a peer that is still referenced by a flow.
+If a dependent mirror cannot be dropped within `client.mirror_drop_wait_timeout_seconds`, the command stops before attempting to drop the peer. `client.peer_drop_timeout_seconds`, when set, bounds the whole peer drop, including all dependent mirrors and the final request. PeerDB also refuses to drop a peer that is still referenced by a flow.
 
 ### `cli peerdb mirror create [NAME] [--all] [--if-exists fail|keep|replace] [--wait/--no-wait]`
 
@@ -195,7 +201,7 @@ For each mirror:
 
 1. Checks whether the mirror exists. If it is missing and `--if-exists` is set, it is skipped with a message; otherwise `MirrorNotFoundException` is raised.
 2. Sends `POST /api/v1/mirrors/state_change` with `requestedFlowState=STATUS_TERMINATING`, `dropMirrorStats=true`, and `skipDestinationDrop=false`.
-3. Polls the status endpoint at `client.poll_interval_seconds` intervals until the mirror is no longer found, or until `client.mirror_state_wait_timeout_seconds` expires. On expiry, raises `MirrorTimeoutException`.
+3. Polls the status endpoint at `client.poll_interval_seconds` intervals until the mirror is no longer found, or until `client.mirror_drop_wait_timeout_seconds` expires. On expiry, raises `MirrorTimeoutException`.
 4. If `--drop-destination-tables` is set, drops the mapped destination tables from the local config. Missing config entries and unsupported adapters are skipped with a message.
 
 Defaults: `--if-exists` is on, `--drop-destination-tables` is off.
@@ -213,9 +219,9 @@ For each mirror:
 1. Checks whether the mirror exists; if not, raises `MirrorNotFoundException`. There is no `--if-exists` option.
 2. Reads the current status. If it is not `STATUS_RUNNING`, the command prints a no-op message and sends no request. This includes mirrors that are already paused, snapshotting, or failed.
 3. Sends `POST /api/v1/mirrors/state_change` with `requestedFlowState=STATUS_PAUSED`.
-4. Polls at `client.poll_interval_seconds` intervals until the status is `STATUS_PAUSED`, or until `client.mirror_state_wait_timeout_seconds` expires.
+4. Polls at `client.poll_interval_seconds` intervals until the status is `STATUS_PAUSED`, or until `client.mirror_pause_resume_wait_timeout_seconds` expires.
 
-The command is blocking until the status is `STATUS_PAUSED` or `client.mirror_state_wait_timeout_seconds` expires.
+The command is blocking until the status is `STATUS_PAUSED` or `client.mirror_pause_resume_wait_timeout_seconds` expires.
 
 Because `--all` lists the server, it visits every mirror and prints a no-op message for each one that is not running.
 
@@ -228,9 +234,9 @@ For each mirror:
 1. Checks whether the mirror exists; if not, raises `MirrorNotFoundException`. There is no `--if-exists` option.
 2. Reads the current status. If it is neither `STATUS_PAUSED` nor `STATUS_PAUSING`, the command prints a no-op message and sends no request.
 3. Sends `POST /api/v1/mirrors/state_change` with `requestedFlowState=STATUS_RUNNING`.
-4. Polls at `client.poll_interval_seconds` intervals until the status is `STATUS_RUNNING`, or until `client.mirror_state_wait_timeout_seconds` expires.
+4. Polls at `client.poll_interval_seconds` intervals until the status is `STATUS_RUNNING`, or until `client.mirror_pause_resume_wait_timeout_seconds` expires.
 
-The command is blocking until the status is `STATUS_RUNNING` or `client.mirror_state_wait_timeout_seconds` expires.
+The command is blocking until the status is `STATUS_RUNNING` or `client.mirror_pause_resume_wait_timeout_seconds` expires.
 
 ### `cli peerdb mirror resync [NAME] [--all] [--if-exists] [--wait/--no-wait]`
 
@@ -241,7 +247,7 @@ For each mirror:
 1. Checks whether the mirror exists. If it is missing and `--if-exists` is set, it is skipped with a message; otherwise `MirrorNotFoundException` is raised.
 2. With `--wait`, records the current status before sending the request.
 3. Sends `POST /api/v1/mirrors/state_change` with `requestedFlowState=STATUS_RESYNC` and `dropMirrorStats=true`.
-4. Without `--wait`, polls at `client.poll_interval_seconds` intervals until the status is `STATUS_RESYNC`, or until `client.mirror_state_wait_timeout_seconds` expires.
+4. Without `--wait`, polls at `client.poll_interval_seconds` intervals until the status is `STATUS_RESYNC`, or until `client.mirror_resync_start_wait_timeout_seconds` expires.
 5. With `--wait`, waits for the mirror to reach `STATUS_RUNNING` or `STATUS_COMPLETED`.
 
 Defaults: `--if-exists` is on, `--no-wait` is the default.
@@ -309,11 +315,14 @@ The CLI uses these PeerDB flow states when it decides whether to act and what to
 
 ## Timeouts, errors, and output
 
-- **Polling.** Each poll sleeps for `client.poll_interval_seconds`. `client.mirror_state_wait_timeout_seconds` is a wall-clock deadline for short state-change waits (`drop`, `pause`, `resume`, and `resync --no-wait`) and the resync start guard. It defaults to 15 and must be at least 1.
-- **Transient errors.** A failed mirror status request is retried up to three times after the first failure. A fourth consecutive failure stops the wait. `STATUS_UNKNOWN` is treated as a missing mirror.
+- **Polling.** Each poll sleeps for `client.poll_interval_seconds`.
+- **No retries.** A failed mirror status request stops the wait immediately. `STATUS_UNKNOWN` is treated as a missing mirror.
 - **Snapshot waits.** `--wait` has no timeout. It polls indefinitely until `RUNNING`/`COMPLETED`, `FAILED`/`TERMINATED`, or Ctrl-C.
-- **Peer drop.** Each dependent mirror drop uses `client.mirror_state_wait_timeout_seconds`. `client.peer_drop_timeout_seconds` optionally bounds the whole peer drop, including all dependent mirrors and the peer-drop request. When unset, there is no overall limit.
-- **HTTP timeouts.** `client.api_request_timeout_seconds` covers normal API requests, `client.api_creation_timeout_seconds` covers peer and mirror creation, and `client.api_state_change_timeout_seconds` covers drop and state-change requests. There are no unbounded API requests.
+- **Pause and resume.** Waits use `client.mirror_pause_resume_wait_timeout_seconds`.
+- **Resync.** The resync start wait and the no-wait `STATUS_RESYNC` wait use `client.mirror_resync_start_wait_timeout_seconds`.
+- **Mirror drop.** The disappearance wait uses `client.mirror_drop_wait_timeout_seconds`.
+- **Peer drop.** Each dependent mirror drop uses `client.mirror_drop_wait_timeout_seconds`. `client.peer_drop_timeout_seconds` optionally bounds the whole peer drop, including all dependent mirrors and the peer-drop request. When unset, there is no overall limit.
+- **HTTP timeouts.** Metadata requests use `client.api_metadata_timeout_seconds`; peer info uses `client.api_peer_info_timeout_seconds`; peer creation uses `client.api_peer_create_timeout_seconds`; the final peer drop uses `client.api_peer_drop_timeout_seconds`; mirror creation uses `client.api_mirror_create_timeout_seconds`; pause and resume use `client.api_mirror_pause_resume_timeout_seconds`; resync and drop use `client.api_mirror_resync_drop_timeout_seconds`. There are no unbounded API requests.
 - **Database operations.** Source-table validation, destination table drops, and `debug` database checks use the database adapters without explicit timeouts.
 - **Errors.** The CLI does not catch exceptions. Errors such as `MirrorFailedException`, `MirrorTimeoutException`, `PeerDropTimeoutException`, `GetMirrorStatusException`, `CreateMirrorException`, or `PeerNotFoundException` propagate as a traceback and exit status 1. Argument errors exit with status 2.
 - **Output.** The library prints progress lines such as `Creating peer 'x'` before requests and `Waiting for mirror 'x' to finish its snapshot` before polling. The CLI then prints a green result message from the response, for example `Created peer 'x'`, `Resynced mirror 'x'`, or `Not pausing mirror 'x' because its status is 'STATUS_PAUSED'`.
@@ -337,26 +346,32 @@ The CLI uses these PeerDB flow states when it decides whether to act and what to
 | Peer commands | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/peer.py:14` |
 | Mirror commands | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py:14` |
 | Settings command | `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/settings.py:11` |
-| Config resolution | `src/dw_lib/peerdb.py:2832` |
-| API request timeout default | `src/dw_lib/peerdb.py:59` |
-| API creation timeout default | `src/dw_lib/peerdb.py:67` |
-| API state-change timeout default | `src/dw_lib/peerdb.py:74` |
-| Poll interval default | `src/dw_lib/peerdb.py:78` |
-| Mirror state wait timeout default | `src/dw_lib/peerdb.py:83` |
-| Peer drop timeout default | `src/dw_lib/peerdb.py:88` |
-| Debug checks | `src/dw_lib/peerdb.py:1224` |
-| Update settings | `src/dw_lib/peerdb.py:1478` |
-| Create peer | `src/dw_lib/peerdb.py:1589` |
-| Drop peer | `src/dw_lib/peerdb.py:1653` |
-| Drop dependent mirrors | `src/dw_lib/peerdb.py:1731` |
-| Poll mirror status | `src/dw_lib/peerdb.py:1890` |
-| Wait for mirror snapshot | `src/dw_lib/peerdb.py:2075` |
-| Create mirror | `src/dw_lib/peerdb.py:2136` |
-| Drop mirror | `src/dw_lib/peerdb.py:2260` |
-| Resync mirror | `src/dw_lib/peerdb.py:2358` |
-| Pause mirror | `src/dw_lib/peerdb.py:2436` |
-| Resume mirror | `src/dw_lib/peerdb.py:2490` |
-| Drop destination tables | `src/dw_lib/peerdb.py:2544` |
+| Config resolution | `src/dw_lib/peerdb.py:2851` |
+| Metadata timeout default | `src/dw_lib/peerdb.py:57` |
+| Peer info timeout default | `src/dw_lib/peerdb.py:61` |
+| Peer create timeout default | `src/dw_lib/peerdb.py:67` |
+| Peer drop timeout default | `src/dw_lib/peerdb.py:71` |
+| Mirror create timeout default | `src/dw_lib/peerdb.py:76` |
+| Mirror pause/resume timeout default | `src/dw_lib/peerdb.py:80` |
+| Mirror resync/drop timeout default | `src/dw_lib/peerdb.py:87` |
+| Poll interval default | `src/dw_lib/peerdb.py:90` |
+| Mirror pause/resume wait timeout default | `src/dw_lib/peerdb.py:94` |
+| Mirror resync start wait timeout default | `src/dw_lib/peerdb.py:98` |
+| Mirror drop wait timeout default | `src/dw_lib/peerdb.py:102` |
+| Peer drop overall timeout default | `src/dw_lib/peerdb.py:107` |
+| Debug checks | `src/dw_lib/peerdb.py:1269` |
+| Update settings | `src/dw_lib/peerdb.py:1523` |
+| Create peer | `src/dw_lib/peerdb.py:1634` |
+| Drop peer | `src/dw_lib/peerdb.py:1698` |
+| Drop dependent mirrors | `src/dw_lib/peerdb.py:1776` |
+| Poll mirror status | `src/dw_lib/peerdb.py:1935` |
+| Wait for mirror snapshot | `src/dw_lib/peerdb.py:2081` |
+| Create mirror | `src/dw_lib/peerdb.py:2143` |
+| Drop mirror | `src/dw_lib/peerdb.py:2267` |
+| Resync mirror | `src/dw_lib/peerdb.py:2365` |
+| Pause mirror | `src/dw_lib/peerdb.py:2447` |
+| Resume mirror | `src/dw_lib/peerdb.py:2505` |
+| Drop destination tables | `src/dw_lib/peerdb.py:2563` |
 | Peer drop timeout exception | `src/dw_lib/exceptions.py:31` |
 | Mirror failed exception | `src/dw_lib/exceptions.py:43` |
 | Mirror wait tests | `tests/peerdb/test_wait.py` |

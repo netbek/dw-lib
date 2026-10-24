@@ -1,10 +1,16 @@
 client:
   peerdb_ui_url: http://localhost:3000
-  api_request_timeout_seconds: 35
-  api_creation_timeout_seconds: 120
-  api_state_change_timeout_seconds: 600
+  api_metadata_timeout_seconds: 10
+  api_peer_info_timeout_seconds: 45
+  api_peer_create_timeout_seconds: 90
+  api_peer_drop_timeout_seconds: 30
+  api_mirror_create_timeout_seconds: 300
+  api_mirror_pause_resume_timeout_seconds: 30
+  api_mirror_resync_drop_timeout_seconds: 900
   poll_interval_seconds: 1
-  mirror_state_wait_timeout_seconds: 15
+  mirror_pause_resume_wait_timeout_seconds: 30
+  mirror_resync_start_wait_timeout_seconds: 30
+  mirror_drop_wait_timeout_seconds: 420
   peer_drop_timeout_seconds: null
 
 # Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/internal/dynamicconf.go

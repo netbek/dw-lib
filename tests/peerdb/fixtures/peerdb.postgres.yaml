@@ -1,6 +1,5 @@
 client:
   peerdb_ui_url: http://localhost:3000
-  mirror_state_wait_timeout_seconds: 30
 
 settings:
   PEERDB_NULLABLE: "true"

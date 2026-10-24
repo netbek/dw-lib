@@ -162,11 +162,17 @@ class TestClientConfig:
         peerdb = PeerDB(config_file=config_file)
         client = peerdb.config.client
 
-        assert client.api_request_timeout_seconds == 35
-        assert client.api_creation_timeout_seconds == 120
-        assert client.api_state_change_timeout_seconds == 600
+        assert client.api_metadata_timeout_seconds == 10
+        assert client.api_peer_info_timeout_seconds == 45
+        assert client.api_peer_create_timeout_seconds == 90
+        assert client.api_peer_drop_timeout_seconds == 30
+        assert client.api_mirror_create_timeout_seconds == 300
+        assert client.api_mirror_pause_resume_timeout_seconds == 30
+        assert client.api_mirror_resync_drop_timeout_seconds == 900
         assert client.poll_interval_seconds == 1.0
-        assert client.mirror_state_wait_timeout_seconds == 15
+        assert client.mirror_pause_resume_wait_timeout_seconds == 30
+        assert client.mirror_resync_start_wait_timeout_seconds == 30
+        assert client.mirror_drop_wait_timeout_seconds == 420
         assert client.peer_drop_timeout_seconds is None
 
     def test_overrides(self, tmp_path: Path):
@@ -175,22 +181,34 @@ class TestClientConfig:
         config_file.write_text(
             "client:\n"
             "  peerdb_ui_url: http://localhost:3000\n"
-            "  api_request_timeout_seconds: 1\n"
-            "  api_creation_timeout_seconds: 2\n"
-            "  api_state_change_timeout_seconds: 3\n"
+            "  api_metadata_timeout_seconds: 1\n"
+            "  api_peer_info_timeout_seconds: 2\n"
+            "  api_peer_create_timeout_seconds: 3\n"
+            "  api_peer_drop_timeout_seconds: 4\n"
+            "  api_mirror_create_timeout_seconds: 5\n"
+            "  api_mirror_pause_resume_timeout_seconds: 6\n"
+            "  api_mirror_resync_drop_timeout_seconds: 7\n"
             "  poll_interval_seconds: 0.5\n"
-            "  mirror_state_wait_timeout_seconds: 4\n"
-            "  peer_drop_timeout_seconds: 5\n"
+            "  mirror_pause_resume_wait_timeout_seconds: 8\n"
+            "  mirror_resync_start_wait_timeout_seconds: 9\n"
+            "  mirror_drop_wait_timeout_seconds: 10\n"
+            "  peer_drop_timeout_seconds: 11\n"
         )
         peerdb = PeerDB(config_file=config_file)
         client = peerdb.config.client
 
-        assert client.api_request_timeout_seconds == 1
-        assert client.api_creation_timeout_seconds == 2
-        assert client.api_state_change_timeout_seconds == 3
+        assert client.api_metadata_timeout_seconds == 1
+        assert client.api_peer_info_timeout_seconds == 2
+        assert client.api_peer_create_timeout_seconds == 3
+        assert client.api_peer_drop_timeout_seconds == 4
+        assert client.api_mirror_create_timeout_seconds == 5
+        assert client.api_mirror_pause_resume_timeout_seconds == 6
+        assert client.api_mirror_resync_drop_timeout_seconds == 7
         assert client.poll_interval_seconds == 0.5
-        assert client.mirror_state_wait_timeout_seconds == 4
-        assert client.peer_drop_timeout_seconds == 5
+        assert client.mirror_pause_resume_wait_timeout_seconds == 8
+        assert client.mirror_resync_start_wait_timeout_seconds == 9
+        assert client.mirror_drop_wait_timeout_seconds == 10
+        assert client.peer_drop_timeout_seconds == 11
 
     def test_old_top_level_keys_rejected(self, tmp_path: Path):
         """Verify old top-level keys are rejected."""

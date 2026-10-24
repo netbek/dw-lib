@@ -4,16 +4,16 @@
 
 ## Context
 
-The PeerDB CLI creates and resyncs mirrors from the example CLI in `examples/cli/packages/example_cli/src/example_cli/peerdb_cli`. Today, `mirror create` returns as soon as PeerDB returns a `workflowId` (`src/dw_lib/peerdb.py:2136`; CLI loop at `mirror.py:27`). `mirror create --all` therefore starts every initial snapshot concurrently. On a source database with 100+ GB tables and many mirrors, that can overload the source.
+The PeerDB CLI creates and resyncs mirrors from the example CLI in `examples/cli/packages/example_cli/src/example_cli/peerdb_cli`. Today, `mirror create` returns as soon as PeerDB returns a `workflowId` (`src/dw_lib/peerdb.py:2143`; CLI loop at `mirror.py:27`). `mirror create --all` therefore starts every initial snapshot concurrently. On a source database with 100+ GB tables and many mirrors, that can overload the source.
 
-`mirror resync` is different. It waits for `STATUS_RESYNC` (`src/dw_lib/peerdb.py:2358`), but that status is ambiguous. PeerDB sets it in two places:
+`mirror resync` is different. It waits for `STATUS_RESYNC` (`src/dw_lib/peerdb.py:2365`), but that status is ambiguous. PeerDB sets it in two places:
 
 1. **Before the new snapshot starts.** A resync makes the CDC workflow continue-as-new into `DropFlowWorkflow(Resync=true)`, which sets the catalog status to `STATUS_RESYNC` during cleanup (`vendor/peerdb/flow/workflows/drop_flow.go:137`, `:183`).
 2. **After the snapshot finishes.** The new CDC run sets `STATUS_SNAPSHOT`, runs the snapshot, then sets `STATUS_RESYNC` again immediately before `RenameTables` (`vendor/peerdb/flow/workflows/cdc_flow.go:729`, `:774`).
 
 `get_mirror_status` reads the catalog status (`vendor/peerdb/flow/internal/workflow.go:19`), so the CLI cannot distinguish the two. The PeerDB e2e test confirms the first meaning: “Wait until DropFlowWorkflow has started (catalog status = RESYNC)” (`vendor/peerdb/flow/e2e/drop_flow_test.go:75-84`). The unambiguous completion states are `STATUS_RUNNING` for normal CDC mirrors and `STATUS_COMPLETED` for initial-snapshot-only mirrors (`vendor/peerdb/flow/workflows/cdc_flow.go:837`, `:840`). PeerDB's own resync tests wait for `STATUS_RUNNING` (`vendor/peerdb/flow/e2e/api_test.go:1743`).
 
-The existing `client.mirror_state_wait_timeout_seconds` defaults to 15 seconds (`src/dw_lib/peerdb.py:83`). That is suitable for short state changes such as drop, pause, and resume, but not for a large snapshot.
+The `client.mirror_resync_start_wait_timeout_seconds` default is 30 seconds (`src/dw_lib/peerdb.py:98`). It bounds only the resync start guard, not the snapshot completion wait.
 
 ## Goals
 
@@ -44,7 +44,7 @@ The existing `client.mirror_state_wait_timeout_seconds` defaults to 15 seconds (
 | Resync initiation | The mirror reaches `STATUS_RESYNC`, which is the existing `mirror resync` wait condition. It does not guarantee that the resync snapshot has finished. |
 | Start transition | After a resync request, the mirror leaves its pre-request state and enters `STATUS_SETUP`, `STATUS_SNAPSHOT`, or `STATUS_RESYNC`. |
 | Fast-resync fallback | If the start transition is not observed within the existing operation timeout and the mirror is `STATUS_RUNNING` or `STATUS_COMPLETED`, the wait treats the resync as complete. |
-| Mirror state wait timeout | The `client.mirror_state_wait_timeout_seconds` config, used for short state changes and for the fast-resync fallback guard. |
+| Mirror resync start wait timeout | The `client.mirror_resync_start_wait_timeout_seconds` config, used for the resync start guard and fast-resync fallback. |
 
 ## Architecture
 
@@ -67,7 +67,7 @@ mirror resync --wait
        -> get_mirror_status()                  # initial status
        -> POST /v1/mirrors/state_change (RESYNC)
        -> if initial status is RUNNING:
-            wait for SETUP, SNAPSHOT, or RESYNC for `client.mirror_state_wait_timeout_seconds`
+            wait for SETUP, SNAPSHOT, or RESYNC for `client.mirror_resync_start_wait_timeout_seconds`
             on timeout: fast-resync fallback check
        -> _poll_mirror_status(RUNNING, COMPLETED, timeout=None)
 
@@ -124,19 +124,19 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 
 ### D3: Two-phase status polling with a fast-resync fallback
 
-**Decision.** For resync in wait mode, capture the initial status before sending the request. If it is `STATUS_RUNNING`, wait up to `client.mirror_state_wait_timeout_seconds` for a start transition to `STATUS_SETUP`, `STATUS_SNAPSHOT`, or `STATUS_RESYNC`. If the guard times out and the current status is `STATUS_RUNNING` or `STATUS_COMPLETED`, accept it as the fast-resync fallback. Then poll indefinitely for `STATUS_RUNNING` or `STATUS_COMPLETED`.
+**Decision.** For resync in wait mode, capture the initial status before sending the request. If it is `STATUS_RUNNING`, wait up to `client.mirror_resync_start_wait_timeout_seconds` for a start transition to `STATUS_SETUP`, `STATUS_SNAPSHOT`, or `STATUS_RESYNC`. If the guard times out and the current status is `STATUS_RUNNING` or `STATUS_COMPLETED`, accept it as the fast-resync fallback. Then poll indefinitely for `STATUS_RUNNING` or `STATUS_COMPLETED`.
 
 **Rationale.** The start guard prevents the pre-resync `STATUS_RUNNING` from being treated as completion. The fallback handles resyncs that finish before the transition is observed. The existing operation timeout is sufficient for the start guard because the workflow processes the resync signal quickly.
 
-**Consequences.** A resync that completes faster than the polling interval may be detected only by the fallback. A resync signal delayed beyond `client.mirror_state_wait_timeout_seconds` while the mirror remains `STATUS_RUNNING` could be treated as complete prematurely. Large snapshots are unaffected because the start transition remains visible for a long time.
+**Consequences.** A resync that completes faster than the polling interval may be detected only by the fallback. A resync signal delayed beyond `client.mirror_resync_start_wait_timeout_seconds` while the mirror remains `STATUS_RUNNING` could be treated as complete prematurely. Large snapshots are unaffected because the start transition remains visible for a long time.
 
 ### D4: No new wait timeout
 
-**Decision.** The snapshot-completion wait has no timeout. Within wait mode, the existing `client.mirror_state_wait_timeout_seconds` is used only for the start guard.
+**Decision.** The snapshot-completion wait has no timeout. Within wait mode, the existing `client.mirror_resync_start_wait_timeout_seconds` is used only for the start guard.
 
 **Rationale.** Large snapshots can take hours, so any fixed wait timeout would cause false failures. A new wait timeout and a `--timeout` option are therefore excluded.
 
-**Consequences.** `--wait` can block indefinitely; Ctrl-C is the escape hatch. The start guard still uses `client.mirror_state_wait_timeout_seconds`, but it is not a snapshot wait timeout.
+**Consequences.** `--wait` can block indefinitely; Ctrl-C is the escape hatch. The start guard still uses `client.mirror_resync_start_wait_timeout_seconds`, but it is not a snapshot wait timeout.
 
 ### D5: Failure and paused semantics
 
@@ -148,7 +148,7 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 
 ### D6: Encapsulate wait logic in the library
 
-**Decision.** Add a `wait` parameter to `create_mirror` and `resync_mirror`. Add `wait_for_mirror_snapshot`. Refactor polling into `_poll_mirror_status` with an optional timeout and fail statuses. Add `MirrorFailedException`. `resync_mirror(wait=False)` keeps the `STATUS_RESYNC` wait and uses `client.mirror_state_wait_timeout_seconds`. `resync_mirror(wait=True)` returns the message `Resynced mirror 'x'`; wait mode reports completion, no-wait mode keeps `Resync of mirror 'x' has been initiated`.
+**Decision.** Add a `wait` parameter to `create_mirror` and `resync_mirror`. Add `wait_for_mirror_snapshot`. Refactor polling into `_poll_mirror_status` with an optional timeout and fail statuses. Add `MirrorFailedException`. `resync_mirror(wait=False)` keeps the `STATUS_RESYNC` wait and uses `client.mirror_resync_start_wait_timeout_seconds`. `resync_mirror(wait=True)` returns the message `Resynced mirror 'x'`; wait mode reports completion, no-wait mode keeps `Resync of mirror 'x' has been initiated`.
 
 **Rationale.** The CLI should only translate flags into library calls. Keeping the polling and fallback logic in the library makes it reusable and testable. Defaulting `wait` to `False` preserves existing library behaviour.
 
@@ -184,15 +184,15 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 | CLI (manual) | Flag parsing and `--all` ordering | `mirror create --all --wait`, `mirror resync --all --wait`, `--no-wait` defaults. |
 | Static | Lint and formatting | `make lint`. |
 
-Unit tests should monkeypatch `get_mirror_status` and `time.sleep` so they run without PeerDB. The no-timeout test should set a low `client.mirror_state_wait_timeout_seconds` and verify that a long `STATUS_SNAPSHOT` sequence still completes.
+Unit tests should monkeypatch `get_mirror_status` and `time.sleep` so they run without PeerDB. The completion wait has no timeout; verify that a long `STATUS_SNAPSHOT` sequence still completes.
 
 ## References
 
 - Feature specification: `docs/plans/peerdb-mirror-wait/spec.md`
 - CLI behaviour documentation: `docs/peerdb-cli.md`
-- Current wait implementation: `src/dw_lib/peerdb.py:1890`
-- Current create implementation: `src/dw_lib/peerdb.py:2136`
-- Current resync implementation: `src/dw_lib/peerdb.py:2358`
+- Current wait implementation: `src/dw_lib/peerdb.py:1935`
+- Current create implementation: `src/dw_lib/peerdb.py:2143`
+- Current resync implementation: `src/dw_lib/peerdb.py:2365`
 - CLI mirror commands: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py:15`, `:106`
 - CLI `up` command: `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py:27`
 - PeerDB resync cleanup status: `vendor/peerdb/flow/workflows/drop_flow.go:137`, `:183`

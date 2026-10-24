@@ -29,26 +29,30 @@ The YAML is rendered as a Jinja template, and `+defaults` blocks are merged into
 
 Peers and mirrors are addressed by their YAML keys. A `[NAME]` argument for `peer create` or `mirror create` must match a config key. For the other commands, the name is looked up on the PeerDB server.
 
-## Wait behaviour at a glance
+## Blocking behaviour at a glance
 
-| Command | Sends | Returns when | Does not wait for |
-|---------|-------|--------------|-------------------|
-| `settings update` | One POST per setting | Every setting request has succeeded | A read-back; no polling |
-| `peer create` | POST create | The API returns status `CREATED` | Nothing else; creation is synchronous |
-| `peer drop` | Drop each dependent mirror, then POST peer drop | Every dependent mirror has disappeared and the peer-drop request returns | A post-drop poll of the peer; the API deletes synchronously |
-| `mirror create` | POST CDC create | The API returns a `workflowId` | Setup, initial snapshot, or `RUNNING` |
-| `mirror drop` | POST terminate | The status endpoint reports the mirror is gone | Nothing else |
-| `mirror pause` | POST pause, only when running | The status is `PAUSED` | Nothing else |
-| `mirror resume` | POST resume, only when paused or pausing | The status is `RUNNING` | Nothing else |
-| `mirror resync` | POST resync | The status is `RESYNC` | Completion of the resync (return to `RUNNING`) |
+**Blocking** means the command does not return until the stated condition is met. **Non-blocking** means it returns once the server accepts the request; the server continues the work.
 
-Three kinds of waiting appear in the table:
+| Command | Sends | Blocking? | Returns when | Does not block for |
+|---------|-------|-----------|--------------|--------------------|
+| `settings update` | One POST per setting | Blocking | Every setting request has succeeded | A read-back; no polling |
+| `peer create` | POST create | Blocking | The API returns status `CREATED` | Nothing else; the API creates the peer before responding |
+| `peer drop` | Drop each dependent mirror, then POST peer drop | Blocking | Every dependent mirror has disappeared and the peer-drop request returns | A post-drop poll of the peer; the API deletes it before responding |
+| `mirror create` | POST CDC create | Non-blocking | The API returns a `workflowId` | Setup, initial snapshot, or `RUNNING` |
+| `mirror drop` | POST terminate | Blocking | The status endpoint reports the mirror is gone | Nothing else |
+| `mirror pause` | POST pause, only when running | Blocking | The status is `PAUSED` | Nothing else |
+| `mirror resume` | POST resume, only when paused or pausing | Blocking | The status is `RUNNING` | Nothing else |
+| `mirror resync` | POST resync | Blocking until `RESYNC` | The status is `RESYNC` | Completion of the resync (return to `RUNNING`) |
 
-- **Synchronous request.** The client blocks until the HTTP response arrives. `settings update` and `peer create` fall into this category.
-- **Polling.** The client calls the mirror status endpoint once per second until the target condition is met or `operation_timeout` expires. `mirror drop`, `mirror pause`, `mirror resume`, and `mirror resync` poll. `peer drop` polls each dependent mirror in the same way.
-- **No wait for mirror readiness.** No command waits for a newly created or resynced mirror to reach `RUNNING`. Use `cli peerdb debug` or the PeerDB UI to follow progress.
+Three blocking categories appear in the table:
 
-`mirror resync` deserves a note. `STATUS_RESYNC` is set after the resync snapshot finishes and immediately before PeerDB renames the destination tables. The command therefore waits for the expensive part of the resync, but it returns before the mirror is running again. It does far more than wait for the request to be acknowledged.
+- **Blocking request.** The command does not return until the HTTP response arrives. `settings update` and `peer create` work this way.
+- **Blocking with polling.** The command does not return until the target state is reached or `operation_timeout` expires. `mirror drop`, `mirror pause`, `mirror resume`, `mirror resync`, and each dependent mirror drop in `peer drop` work this way.
+- **Non-blocking.** The command returns when the server accepts the request; the server continues the work. `mirror create` works this way, and `up` is non-blocking for mirror readiness.
+
+No command blocks until a newly created or resynced mirror reaches `RUNNING`. Use `cli peerdb debug` or the PeerDB UI to follow progress.
+
+`mirror resync` is blocking until `STATUS_RESYNC` but non-blocking for the rest of the resync. `STATUS_RESYNC` is set after the resync snapshot finishes and immediately before PeerDB renames the destination tables. The command therefore blocks for the expensive part of the resync, but it returns before the mirror is running again. It is not merely an acknowledgment.
 
 `up` chains `settings update`, `peer create --all`, and `mirror create --all` in that order. `debug` is read-only. Both are described below.
 
@@ -93,7 +97,7 @@ Applies every setting under `settings:` in the config.
 2. Sends one `POST /api/v1/dynamic_settings` per setting, in YAML order.
 3. Stops at the first failure with `SetDynamicSettingsException`.
 
-The command waits for each POST to return. It does not read the settings back and does not poll. Applying a setting is immediate on the server, though some settings take effect only for new mirrors or after a resume, according to PeerDB's `apply_mode`.
+The command is blocking: it returns after each POST returns. It does not read the settings back and does not poll. Applying a setting is immediate on the server, though some settings take effect only for new mirrors or after a resume, according to PeerDB's `apply_mode`.
 
 Options: none.
 
@@ -111,7 +115,7 @@ For each peer:
 3. Sends `POST /api/v1/peers/create`.
 4. Requires the response status `CREATED`; any other status raises `CreatePeerException`.
 
-The command waits for the API to finish creating the peer. The PeerDB API validates the peer and writes it to its metadata store before responding, so no polling is needed.
+The command is blocking until the API has created the peer. The PeerDB API validates the peer and writes it to its metadata store before responding, so no polling is needed.
 
 If `[NAME]` is not in the config, the command raises `PeerNotFoundException`. `--all` uses the config list, not the server list.
 
@@ -123,9 +127,9 @@ Drops one peer, or all configured peers, and their mirrors.
 
 For each peer:
 
-1. Lists the server mirrors and drops every mirror whose source or destination is the peer. Each mirror drop waits until the mirror disappears from the server.
+1. Lists the server mirrors and drops every mirror whose source or destination is the peer. Each mirror drop blocks until the mirror disappears from the server.
 2. Checks whether the peer still exists. If it is missing and `--if-exists` is set, the peer is skipped with a message; otherwise `PeerNotFoundException` is raised.
-3. Sends `POST /api/v1/peers/drop` and waits for the response. The API deletes the peer synchronously, so the client does not poll afterwards.
+3. Sends `POST /api/v1/peers/drop` and blocks until the response arrives. The API deletes the peer before responding, so the client does not poll afterwards.
 
 Defaults: `--if-exists` is on, `--drop-destination-tables` is off. Both accept the negative form (`--no-if-exists`, `--no-drop-destination-tables`).
 
@@ -154,7 +158,7 @@ For each mirror:
 5. Sends `POST /api/v1/flows/cdc/create` with `{"connection_configs": <mirror>}`.
 6. Requires a `workflowId` in the response; otherwise `CreateMirrorException`.
 
-The command returns when PeerDB has accepted the request and started the workflow. It does not wait for setup, the initial snapshot, or `STATUS_RUNNING`.
+The command is non-blocking with respect to mirror creation: it returns when PeerDB has accepted the request and started the workflow. It does not block for setup, the initial snapshot, or `STATUS_RUNNING`.
 
 Two behaviours need emphasis:
 
@@ -174,7 +178,7 @@ For each mirror:
 
 Defaults: `--if-exists` is on, `--drop-destination-tables` is off.
 
-The command waits for PeerDB to finish terminating and removing the mirror. `skipDestinationDrop=false` lets PeerDB clean up its internal destination objects, such as the raw table. User destination tables are dropped only with `--drop-destination-tables`.
+The command is blocking until PeerDB has terminated and removed the mirror. `skipDestinationDrop=false` lets PeerDB clean up its internal destination objects, such as the raw table. User destination tables are dropped only with `--drop-destination-tables`.
 
 `--all` lists the server, so it also drops mirrors that are not in the local config. A named mirror that is absent from the config can still be dropped. In both cases, destination tables are not dropped unless the mirror is defined in the config.
 
@@ -189,6 +193,8 @@ For each mirror:
 3. Sends `POST /api/v1/mirrors/state_change` with `requestedFlowState=STATUS_PAUSED`.
 4. Polls once per second until the status is `STATUS_PAUSED`, or until `operation_timeout` expires.
 
+The command is blocking until the status is `STATUS_PAUSED` or `operation_timeout` expires.
+
 Because `--all` lists the server, it visits every mirror and prints a no-op message for each one that is not running.
 
 ### `cli peerdb mirror resume [NAME] [--all]`
@@ -202,6 +208,8 @@ For each mirror:
 3. Sends `POST /api/v1/mirrors/state_change` with `requestedFlowState=STATUS_RUNNING`.
 4. Polls once per second until the status is `STATUS_RUNNING`, or until `operation_timeout` expires.
 
+The command is blocking until the status is `STATUS_RUNNING` or `operation_timeout` expires.
+
 ### `cli peerdb mirror resync [NAME] [--all] [--if-exists]`
 
 Resyncs one mirror, or all mirrors on the server. A resync picks up added or removed columns and changed column types.
@@ -214,21 +222,21 @@ For each mirror:
 
 Default: `--if-exists` is on.
 
-The wait is longer than it looks. PeerDB sets `STATUS_RESYNC` after the resync snapshot completes and immediately before it renames the destination tables. The command returns at that point, before the rename and the return to `STATUS_RUNNING`. A large table can keep the command polling for a long time; set `operation_timeout` accordingly.
+The command is blocking until `STATUS_RESYNC` but non-blocking for the rest of the resync. PeerDB sets `STATUS_RESYNC` after the resync snapshot completes and immediately before it renames the destination tables. The command returns at that point, before the rename and the return to `STATUS_RUNNING`. A large table can keep the command polling for a long time; set `operation_timeout` accordingly.
 
-For a mirror in `STATUS_COMPLETED` or `STATUS_FAILED`, PeerDB recreates the flow to resync it. The client still waits for `STATUS_RESYNC`.
+For a mirror in `STATUS_COMPLETED` or `STATUS_FAILED`, PeerDB recreates the flow to resync it. The client still blocks until `STATUS_RESYNC`.
 
 ### `cli peerdb up [--if-exists fail|keep|replace]`
 
 Brings the configured peers and mirrors up in one pass:
 
-1. Applies all settings synchronously, like `settings update`.
+1. Applies all settings with blocking requests, like `settings update`.
 2. Creates all config peers in config order, like `peer create --all`.
 3. Creates all config mirrors in config order, like `mirror create --all`.
 
 `--if-exists` defaults to `keep` and applies to both peers and mirrors. With `replace`, each peer is dropped with its mirrors and destination tables before being recreated; mirrors are then recreated from config.
 
-The command does not wait for mirrors to finish setup or snapshot. PeerDB provisions publications and replication slots as part of mirror setup. The command stops at the first error.
+The command is non-blocking for mirror readiness: it does not block for mirrors to finish setup or snapshot. PeerDB provisions publications and replication slots as part of mirror setup. The command stops at the first error.
 
 ### `cli peerdb debug`
 

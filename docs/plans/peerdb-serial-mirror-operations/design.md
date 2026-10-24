@@ -8,21 +8,24 @@ The CLI currently processes multiple mirrors with simple loops. `create_mirror` 
 
 This matters for large sources. At 500GB–1TB, partition discovery and the initial copy can take hours to tens of hours. Resync repeats the full snapshot, and Postgres destinations can add a soft-delete anti-join during the rename. The existing timeout design records this in `docs/plans/peerdb-client-timeouts/design.md` under “Long-running operations (500GB–1TB)”.
 
-`drop_mirror`, `pause_mirror`, and `resume_mirror` already wait for their target states. `drop_mirrors_of_peer` already loops over dependent mirrors serially.
+`drop_mirror`, `pause_mirror`, and `resume_mirror` already wait for their target states and use the existing configured timeouts. `drop_mirrors_of_peer` already loops over dependent mirrors serially.
+
+This change adds no new timeout parameters, CLI flags, or configuration settings.
 
 ## Goals
 
 1. Make every multi-mirror operation process mirrors one at a time.
 2. Make serial create and resync wait for each mirror to settle before starting the next.
-3. Add an optional per-mirror timeout to the library and the CLI.
+3. Preserve the existing configured timeouts for drop, pause, and resume.
 4. Preserve single-mirror behaviour.
 5. Fail fast without rolling back completed work.
 
 ## Non-goals
 
 - Adding a parallel execution mode.
+- Adding new timeout parameters, CLI flags, or configuration settings.
 - Changing PeerDB server-side validation, workflow, or timeout behaviour.
-- Cancelling server-side workflows when a client timeout expires.
+- Cancelling server-side workflows when a client wait times out.
 - Adding waits to single-mirror create or resync calls.
 - Changing peer creation when the peer is not being replaced.
 - Reworking shared publications, replication slots, or destination tables.
@@ -34,8 +37,7 @@ This matters for large sources. At 500GB–1TB, partition discovery and the init
 | Serial batch | A multi-mirror operation that processes one mirror at a time. |
 | Settled state | `STATUS_RUNNING`, `STATUS_PAUSED`, or `STATUS_COMPLETED`. |
 | Terminal failure state | `STATUS_FAILED` or `STATUS_TERMINATED`. |
-| Settle timeout | Per-mirror deadline for create or resync completion. |
-| Operation timeout | Per-mirror deadline for drop, pause, or resume. |
+| Configured wait timeout | The existing `mirror_*_wait_timeout_seconds` client settings. |
 | Multi-mirror operation | Create, drop, pause, resume, or resync over several mirrors; peer drop; peer replace; `peerdb up`. |
 
 ## Architecture
@@ -45,11 +47,11 @@ This matters for large sources. At 500GB–1TB, partition discovery and the init
 Add these methods to `PeerDB`:
 
 ```python
-create_mirrors(mirrors, *, if_exists="fail", timeout=None) -> list[CreateMirrorResponse]
-drop_mirrors(names, *, drop_destination_tables=False, if_exists=False, timeout=None) -> list[DropMirrorResponse]
-pause_mirrors(names, *, timeout=None) -> list[PauseMirrorResponse]
-resume_mirrors(names, *, timeout=None) -> list[ResumeMirrorResponse]
-resync_mirrors(names, *, if_exists=False, timeout=None) -> list[ResyncMirrorResponse]
+create_mirrors(mirrors, *, if_exists="fail") -> list[CreateMirrorResponse]
+drop_mirrors(names, *, drop_destination_tables=False, if_exists=False) -> list[DropMirrorResponse]
+pause_mirrors(names) -> list[PauseMirrorResponse]
+resume_mirrors(names) -> list[ResumeMirrorResponse]
+resync_mirrors(names, *, if_exists=False) -> list[ResyncMirrorResponse]
 ```
 
 Each method loops over its input in order and returns responses in the same order.
@@ -62,56 +64,46 @@ Each method loops over its input in order and returns responses in the same orde
 
 ### Settle wait
 
-Add `wait_for_mirror_settled(flow_job_name, timeout=None)`.
+Add `wait_for_mirror_settled(flow_job_name)`.
 
-It polls `get_mirror_status` until the mirror reaches a settled state. It raises `MirrorTerminalStateException` on a terminal failure state and `MirrorTimeoutException` when a supplied timeout expires. `timeout=None` means no deadline.
+It polls `get_mirror_status` until the mirror reaches a settled state. It raises `MirrorTerminalStateException` on a terminal failure state. It has no completion deadline.
 
 ### No-deadline polling
 
-Extend `_poll_mirror_status` so `timeout: int | None` accepts `None` as “no deadline”. The public `wait_for_mirror_status` keeps its current contract: `None` means use `config.client.mirror_status_wait_timeout_seconds`.
+Extend the internal `_poll_mirror_status` helper so its timeout argument accepts `None` as “no deadline”. The public `wait_for_mirror_status` keeps its current contract: `None` means use `config.client.mirror_status_wait_timeout_seconds`.
 
 The poll loop keeps the existing terminal-state fail-fast and transient-error retry behaviour. Without a deadline, a persistent status error retries indefinitely; the caller can interrupt the process.
 
-### Timeout mapping
+### Existing configured timeouts
 
-| Operation | `timeout` supplied | `timeout` omitted |
-|---|---|---|
-| `create_mirrors` | Bounds each mirror's settle wait | No completion deadline |
-| `resync_mirrors` | Bounds the initiation wait and the settle wait separately | Initiation uses the configured default; no completion deadline |
-| `drop_mirrors` | Overrides the drop wait | Uses the configured drop wait |
-| `pause_mirrors` | Overrides the pause wait | Uses the configured pause wait |
-| `resume_mirrors` | Overrides the resume wait | Uses the configured resume wait |
+| Operation | Wait behaviour |
+|---|---|
+| Create or resync completion | No deadline |
+| Resync initiation | Uses `mirror_resync_wait_timeout_seconds` |
+| Drop | Uses `mirror_drop_wait_timeout_seconds` |
+| Pause | Uses `mirror_pause_wait_timeout_seconds` |
+| Resume | Uses `mirror_resume_wait_timeout_seconds` |
+| Create with `if_exists="replace"` | Uses `mirror_drop_wait_timeout_seconds` for the old mirror |
+| Public status wait | Uses `mirror_status_wait_timeout_seconds`, unchanged |
 
-A timeout stops the client wait. It does not cancel the PeerDB workflow.
-
-`create_mirrors` with `if_exists="replace"` first drops the existing mirror using the configured drop timeout. The supplied timeout applies to the settle wait after the new mirror starts.
+No new timeout option is exposed by the batch methods or CLI.
 
 ### Peer operations
 
-- Add `timeout=None` to `drop_mirrors_of_peer` and `drop_peer`.
 - `drop_mirrors_of_peer` selects dependent mirrors and passes them to `drop_mirrors`.
-- `drop_peer` passes its timeout to `drop_mirrors_of_peer`.
+- `drop_peer` keeps its existing signature and inherits the configured drop timeout.
 - `create_peer(if_exists="replace")` keeps using `drop_peer`; it inherits serial behaviour and the configured drop timeout.
 
 ### CLI
 
-Add `--timeout` to the multi-mirror paths:
+Add no new options.
 
-| Command | Timeout meaning |
-|---|---|
-| `mirror create --all` | Per-mirror settle wait |
-| `mirror drop --all` | Per-mirror drop wait |
-| `mirror pause --all` | Per-mirror pause wait |
-| `mirror resume --all` | Per-mirror resume wait |
-| `mirror resync --all` | Per-mirror initiation and settle wait |
-| `peer drop --all` | Per-mirror drop wait for dependent mirrors |
-| `peerdb up` | Per-mirror settle wait for mirror creation |
+- `mirror create --all`, `drop --all`, `pause --all`, `resume --all`, and `resync --all` call the batch methods.
+- `peer drop --all` continues to call `drop_peer`, which drops dependent mirrors serially.
+- `peerdb up` calls `create_mirrors` after creating peers.
+- Single-mirror commands keep their current behaviour.
 
-`--timeout` requires `--all` on `mirror` and `peer` commands. Single-mirror commands do not accept it. `peerdb up` does not use `--all`.
-
-The CLI passes the timeout to the corresponding batch method. When omitted, the batch method applies the defaults in the table above.
-
-The underlying single-mirror methods print their progress messages as the batch runs. The CLI prints the returned response messages after the batch returns. On failure, it prints the error and exits with a non-zero status.
+The underlying single-mirror methods print their progress messages as the batch runs. The CLI prints the returned response messages after the batch returns. On failure, it prints the error and exits with a non-zero status. A long create or resync batch can be interrupted with Ctrl-C.
 
 ### Ordering
 
@@ -129,12 +121,11 @@ The underlying single-mirror methods print their progress messages as the batch 
 | Module | Responsibility |
 |---|---|
 | `src/dw_lib/peerdb.py` | Serial batch methods, `wait_for_mirror_settled`, no-deadline polling, peer integration. |
-| `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py` | Use batch methods and add `--timeout` to `--all` commands. |
-| `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/peer.py` | Add `--timeout` to `peer drop --all`. |
-| `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py` | Use `create_mirrors` and add `--timeout` to `peerdb up`. |
-| `tests/peerdb/test_serial_batches.py` | Serial order, settle waits, timeouts, and failure behaviour. |
-| `tests/peerdb/test_timeouts.py` | No-deadline polling. |
-| `examples/cli/README.md` | Document the new option and the bootstrap behaviour change. |
+| `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/mirror.py` | Use batch methods for `--all` commands; keep the existing option set. |
+| `examples/cli/packages/example_cli/src/example_cli/peerdb_cli/__init__.py` | Use `create_mirrors` in `peerdb up`. |
+| `tests/peerdb/test_serial_batches.py` | Serial order, settle waits, and failure behaviour. |
+| `tests/peerdb/test_timeouts.py` | No-deadline polling and existing configured waits. |
+| `examples/cli/README.md` | Document the `peerdb up` behaviour change. |
 
 ## Design decisions
 
@@ -154,23 +145,31 @@ The underlying single-mirror methods print their progress messages as the batch 
 
 **Consequences.** Serial create and resync become long-running commands. That is the intended trade-off for large sources.
 
-### D3: No completion deadline by default
+### D3: No completion deadline for create and resync
 
-**Decision.** When `timeout` is omitted, create and resync completion waits have no deadline.
+**Decision.** Create and resync completion waits have no deadline.
 
 **Rationale.** A 500GB–1TB snapshot can take hours to tens of hours. Any fixed default is either too short for large sources or too long for failures. Terminal states still stop the wait immediately.
 
-**Consequences.** A stuck mirror can block a batch indefinitely. Callers can pass a timeout or interrupt the process.
+**Consequences.** A stuck mirror can block a batch indefinitely. Callers can interrupt the process. A later requirement can add a configurable deadline if needed.
 
-### D4: Keep control-plane timeouts for drop, pause, and resume
+### D4: Keep the existing configured timeouts for drop, pause, and resume
 
-**Decision.** When `timeout` is omitted, drop, pause, and resume use their existing configured wait timeouts. A supplied timeout overrides them.
+**Decision.** Drop, pause, and resume continue to use `mirror_drop_wait_timeout_seconds`, `mirror_pause_wait_timeout_seconds`, and `mirror_resume_wait_timeout_seconds`.
 
-**Rationale.** These operations normally finish quickly, and the existing defaults already bound them. Keeping the defaults avoids new hangs for control-plane work.
+**Rationale.** These operations normally finish quickly, and the existing settings already bound them. Reusing them avoids new configuration surface.
 
 **Consequences.** A drop that blocks on replication-slot cleanup can still time out. The timeout does not cancel server-side cleanup; a later retry may find the mirror gone.
 
-### D5: Fail fast
+### D5: No new timeout options
+
+**Decision.** Do not add timeout parameters to the batch methods, do not add a CLI `--timeout` flag, and do not add a new configuration setting.
+
+**Rationale.** Snapshot duration is unpredictable, and the existing configuration already covers the control-plane waits. A per-call timeout would add API and CLI surface with subtle semantics: it would be per mirror, per wait, and would not cancel server-side work.
+
+**Consequences.** Create and resync batches can wait indefinitely. Users interrupt the process or apply an external process timeout. If a bound becomes necessary, add one configuration setting rather than duplicating it across the library and CLI.
+
+### D6: Fail fast
 
 **Decision.** A serial batch stops at the first error and propagates that error. It does not collect errors or continue with later mirrors.
 
@@ -178,7 +177,7 @@ The underlying single-mirror methods print their progress messages as the batch 
 
 **Consequences.** Earlier mirrors remain in their completed state. Rerunning is safe for create with `if_exists="keep"`, drop with `if_exists=True`, and resync.
 
-### D6: Library batch methods, CLI as a thin wrapper
+### D7: Library batch methods, CLI as a thin wrapper
 
 **Decision.** Put serial execution in `PeerDB` batch methods and have the CLI call them.
 
@@ -186,25 +185,17 @@ The underlying single-mirror methods print their progress messages as the batch 
 
 **Consequences.** The library gains five batch methods and one public settle-wait method.
 
-### D7: Timeout is per mirror and per wait
+### D8: The CLI keeps its existing option set
 
-**Decision.** The timeout applies to each wait performed for a mirror, not to the whole batch. For resync, the initiation wait and the settle wait are each bounded by the same value.
+**Decision.** Do not add CLI options. The `--all` commands call the batch methods, and single-mirror commands keep their current behaviour.
 
-**Rationale.** Batch duration grows with the number of mirrors, so a total deadline would be arbitrary. Per-wait bounds are predictable and match the existing single-mirror timeout parameters.
+**Rationale.** The feature changes execution order, not the inputs. Keeping the option set unchanged avoids new flags with unclear timeout semantics.
 
-**Consequences.** A batch of N mirrors can take up to N times the timeout, plus request time. The CLI help and docs must say the timeout is per mirror.
-
-### D8: CLI timeout is limited to multi-mirror paths
-
-**Decision.** Add `--timeout` only to `mirror ... --all`, `peer drop --all`, and `peerdb up`. Single-mirror commands are unchanged.
-
-**Rationale.** The feature concerns multi-mirror operations. Single-mirror create and resync do not wait for completion, so a timeout there would have no clear meaning without changing existing behaviour.
-
-**Consequences.** Users who need a timeout on a single mirror can call the batch method with one mirror or use the configuration settings.
+**Consequences.** A long create or resync batch can be interrupted with Ctrl-C. Users who need a hard bound can use an external process timeout.
 
 ### D9: `peerdb up` waits by default
 
-**Decision.** `peerdb up` creates mirrors serially and waits for each to settle. `--timeout` bounds each mirror's settle wait.
+**Decision.** `peerdb up` creates mirrors serially and waits for each to settle.
 
 **Rationale.** `peerdb up` is a multi-mirror create operation and must follow the same serial rule.
 
@@ -232,6 +223,7 @@ The underlying single-mirror methods print their progress messages as the batch 
 |---|---|
 | Add parallel mode | Excluded by the user. It would multiply source load, WAL accumulation, and destination merge work. |
 | Serialise calls without waiting for completion | Does not prevent overlapping snapshots because create and resync return after workflow start. |
+| Add per-mirror timeout parameters and CLI flags | Not necessary for the feature. Snapshot duration is unpredictable, and the timeout would not cancel server-side work. |
 | Use a fixed default completion timeout | Snapshot duration depends on data volume, throughput, table count, and destination load. No fixed value fits 500GB–1TB. |
 | Put the loops only in the CLI | Duplicates logic and gives programmatic callers no serial guarantee. |
 | Collect errors and continue | Starts more long-running work after a failure and complicates partial-progress reporting. |
@@ -244,17 +236,19 @@ The underlying single-mirror methods print their progress messages as the batch 
 |---|---|---|
 | Unit (offline) | Serial order | Create, drop, pause, resume, and resync call one mirror at a time. |
 | Unit (offline) | Settle waits | Create waits through `SETUP` and `SNAPSHOT`; snapshot-only waits for `COMPLETED`; paused mirror settles at `PAUSED`. |
+| Unit (offline) | No completion deadline | A mirror that stays in `SNAPSHOT` beyond the configured status wait timeout is still polled until settled. |
 | Unit (offline) | Terminal states | `FAILED` and `TERMINATED` stop the batch; later mirrors are not called. |
-| Unit (offline) | Timeouts | Omitted timeout waits without a deadline; supplied timeout raises `MirrorTimeoutException`; drop, pause, and resume use configured defaults when omitted. |
+| Unit (offline) | Existing configured waits | Drop, pause, and resume still use their configured timeouts and raise `MirrorTimeoutException` when those expire. |
 | Unit (offline) | Missing mirrors | `drop_mirrors(if_exists=True)` and `resync_mirrors(if_exists=True)` skip missing mirrors. |
 | Unit (offline) | Peer operations | `drop_peer` drops dependent mirrors serially and waits before deleting the peer. |
-| CLI (offline) | Option parsing | `--timeout` is accepted with `--all`, rejected without `--all`, rejected on single-mirror commands, and rejects zero or negative values. |
+| CLI (offline) | Command wiring | `--all` commands call the batch methods; single-mirror commands keep their current behaviour. |
 | Integration (Docker) | Real API behaviour | Existing Postgres and ClickHouse mirror tests still pass; a small serial create and drop batch works end to end. |
 | Static | Lint and format | Ruff check and format, plus the repository's pre-commit hooks. |
 
 ## References
 
 - Client implementation: `src/dw_lib/peerdb.py`
+- Existing configured timeouts: `src/dw_lib/peerdb.py:56-89`
 - Existing mirror waits: `src/dw_lib/peerdb.py:1227-1372`
 - Existing mirror lifecycle methods: `src/dw_lib/peerdb.py:2020-2512`
 - Existing peer mirror drop: `src/dw_lib/peerdb.py:1840-1925`

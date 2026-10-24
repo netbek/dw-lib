@@ -4,7 +4,7 @@
 
 ## Purpose
 
-PeerDB operations that act on several mirrors currently start each mirror without waiting for the previous one to settle. Initial snapshots and resyncs can therefore run concurrently even when the caller processes mirrors one at a time. This change makes every multi-mirror operation serial and adds an optional per-mirror timeout to the CLI. Parallel execution is out of scope.
+PeerDB operations that act on several mirrors currently start each mirror without waiting for the previous one to settle. Initial snapshots and resyncs can therefore run concurrently even when the caller processes mirrors one at a time. This change makes every multi-mirror operation serial and adds no new timeout options: create and resync wait until settled, while drop, pause, and resume keep their configured timeouts. Parallel execution is out of scope.
 
 ## Requirements
 
@@ -55,9 +55,25 @@ A settled state is `STATUS_RUNNING`, `STATUS_PAUSED`, or `STATUS_COMPLETED`.
 - **THEN** the next mirror is not resynced while the current mirror is in `STATUS_RESYNC` or `STATUS_SNAPSHOT`
 - **AND** the next mirror is resynced only after the current mirror reaches `STATUS_RUNNING` or `STATUS_COMPLETED`
 
-### Requirement: Terminal states stop the batch
+### Requirement: No completion deadline for create and resync
 
-A serial batch SHALL stop when the current mirror reaches `STATUS_FAILED` or `STATUS_TERMINATED`.
+Serial create and resync operations SHALL wait for a settled state without a completion deadline.
+
+#### Scenario: Initial snapshot runs longer than a status wait
+
+- **WHEN** a mirror remains in `STATUS_SNAPSHOT` for longer than the configured status wait timeout would allow
+- **THEN** the batch keeps waiting
+- **AND** the next mirror is not started
+
+#### Scenario: Resync runs longer than a status wait
+
+- **WHEN** a mirror remains in `STATUS_RESYNC` or `STATUS_SNAPSHOT` for longer than the configured status wait timeout would allow
+- **THEN** the batch keeps waiting
+- **AND** the next mirror is not started
+
+### Requirement: Terminal states stop create and resync batches
+
+A serial create or resync batch SHALL stop when the current mirror reaches `STATUS_FAILED` or `STATUS_TERMINATED`.
 
 #### Scenario: Mirror fails during a create batch
 
@@ -84,7 +100,7 @@ A failed serial batch SHALL leave mirrors that completed before the failure in p
 
 ### Requirement: Existing waits for drop, pause, and resume
 
-Serial drop, pause, and resume operations SHALL wait for each mirror's target state before starting the next mirror.
+Serial drop, pause, and resume operations SHALL wait for each mirror's target state, using the configured wait timeout, before starting the next mirror.
 
 #### Scenario: Drop waits for the mirror to disappear
 
@@ -101,94 +117,11 @@ Serial drop, pause, and resume operations SHALL wait for each mirror's target st
 - **WHEN** a serial resume processes a mirror
 - **THEN** the next mirror is not resumed until the current mirror reaches `STATUS_RUNNING`
 
-### Requirement: Per-mirror timeout
+#### Scenario: Configured timeout expires
 
-Every serial mirror batch operation SHALL accept an optional per-mirror timeout.
-
-The timeout applies to each wait performed for that mirror. It does not cancel server-side work when it expires.
-
-#### Scenario: Create without a timeout
-
-- **WHEN** a serial create is called without a timeout
-- **THEN** each mirror may wait through `STATUS_SETUP` and `STATUS_SNAPSHOT` for as long as needed
-- **AND** no completion deadline is imposed
-
-#### Scenario: Create with a timeout
-
-- **WHEN** a serial create is called with a timeout
-- **THEN** each mirror's settle wait is bounded by that timeout
-- **AND** a timeout error reports the last observed status
-
-#### Scenario: Resync without a timeout
-
-- **WHEN** a serial resync is called without a timeout
-- **THEN** no completion deadline is imposed
-- **AND** the resync initiation wait keeps its configured default
-
-#### Scenario: Resync with a timeout
-
-- **WHEN** a serial resync is called with a timeout
-- **THEN** the resync initiation wait and the completion wait are each bounded by that timeout
-
-#### Scenario: Drop, pause, or resume without a timeout
-
-- **WHEN** a serial drop, pause, or resume is called without a timeout
-- **THEN** the existing configured wait timeout is used for each mirror
-
-#### Scenario: Drop, pause, or resume with a timeout
-
-- **WHEN** a serial drop, pause, or resume is called with a timeout
-- **THEN** that timeout overrides the configured wait timeout for each mirror
-
-#### Scenario: Timeout expires
-
-- **WHEN** a per-mirror timeout expires
+- **WHEN** a drop, pause, or resume wait exceeds the configured timeout
 - **THEN** the batch stops with a timeout error
-- **AND** the mirror may continue running on the server
-
-### Requirement: CLI timeout option
-
-The CLI SHALL expose a per-mirror `--timeout` option for multi-mirror commands.
-
-#### Scenario: Timeout on mirror commands
-
-- **WHEN** `--timeout` is supplied to `mirror create --all`, `mirror drop --all`, `mirror pause --all`, `mirror resume --all`, or `mirror resync --all`
-- **THEN** the value is used as the per-mirror timeout for that batch
-
-#### Scenario: Timeout on peer drop
-
-- **WHEN** `--timeout` is supplied to `peer drop --all`
-- **THEN** the value is used as the per-mirror drop timeout for every dependent mirror
-
-#### Scenario: Timeout on bootstrap
-
-- **WHEN** `--timeout` is supplied to `peerdb up`
-- **THEN** the value is used as the per-mirror settle timeout for mirror creation
-
-#### Scenario: Omitted timeout
-
-- **WHEN** `--timeout` is omitted
-- **THEN** create and resync completion waits have no deadline
-- **AND** drop, pause, and resume use their configured wait timeouts
-
-#### Scenario: Timeout without all
-
-- **WHEN** `--timeout` is supplied to a mirror or peer command without `--all`
-- **THEN** the command fails with a usage error
-
-#### Scenario: Invalid timeout
-
-- **WHEN** `--timeout` is zero or negative
-- **THEN** the command fails with a usage error
-
-### Requirement: Single-mirror commands are unchanged
-
-The CLI SHALL reject `--timeout` on single-mirror commands.
-
-#### Scenario: Timeout on a single mirror
-
-- **WHEN** `--timeout` is supplied to `mirror resync NAME`
-- **THEN** the command fails with a usage error
+- **AND** the mirror may continue changing state on the server
 
 ### Requirement: Peer operations are serial
 
@@ -215,7 +148,8 @@ The `peerdb up` command SHALL process mirrors serially by waiting for each mirro
 - **WHEN** `peerdb up` creates several mirrors
 - **THEN** each mirror is created only after the previous mirror has settled
 
-#### Scenario: Bootstrap with a timeout
+#### Scenario: Bootstrap waits through a long snapshot
 
-- **WHEN** `peerdb up` is called with `--timeout`
-- **THEN** each mirror's settle wait is bounded by that timeout
+- **WHEN** a mirror created by `peerdb up` remains in `STATUS_SNAPSHOT` for an extended period
+- **THEN** `peerdb up` keeps waiting
+- **AND** the next mirror is not created

@@ -1,6 +1,6 @@
 # PeerDB Mirror Wait Specification
 
-> **Status:** Draft. Last updated 2026-10-24.
+> **Status:** Approved. Last updated 2026-10-24.
 
 ## Purpose
 

@@ -152,7 +152,7 @@ The wait uses `STATUS_RUNNING` and `STATUS_COMPLETED`, not `STATUS_RESYNC`. For 
 
 **Rationale.** The CLI should only translate flags into library calls. Keeping the polling and fallback logic in the library makes it reusable and testable. Defaulting `wait` to `False` preserves existing library behaviour.
 
-**Consequences.** `wait=True` makes the methods long-running. The `timeout` parameter on `resync_mirror` applies only to wait mode `False`; this is documented in the docstring. No new config field is introduced.
+**Consequences.** `wait=True` makes the methods long-running. `wait_for_mirror_snapshot` prints a progress line before polling. The `timeout` parameter on `resync_mirror` applies only to wait mode `False`; this is documented in the docstring. No new config field is introduced.
 
 ### D7: Wait scope is independent of `--all`
 

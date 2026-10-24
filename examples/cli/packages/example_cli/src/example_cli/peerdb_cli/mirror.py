@@ -16,6 +16,14 @@ def create(
     name: str = typer.Argument(None),
     all: bool = typer.Option(False, "--all", help="Create all mirrors."),
     if_exists: Literal["fail", "keep", "replace"] = "keep",
+    wait: bool = typer.Option(
+        False,
+        "--wait/--no-wait",
+        help=(
+            "Wait for the initial snapshot to finish. Without --wait, return after PeerDB "
+            "accepts the request."
+        ),
+    ),
 ) -> None:
     """
     Create a mirror, or all mirrors.
@@ -26,7 +34,7 @@ def create(
 
     if all:
         for mirror in peerdb.config.mirrors:
-            response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
+            response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists, wait=wait)
             console.print(response.message, style="green")
     else:
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == name)
@@ -34,7 +42,7 @@ def create(
         if not mirror:
             raise MirrorNotFoundException(f"Mirror '{name}' not found in {peerdb._config_file}")
 
-        response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists)
+        response = peerdb.create_mirror(mirror.model_dump(), if_exists=if_exists, wait=wait)
         console.print(response.message, style="green")
 
 
@@ -107,6 +115,11 @@ def resync(
     name: str = typer.Argument(None),
     all: bool = typer.Option(False, "--all", help="Resync all mirrors."),
     if_exists: bool | None = True,
+    wait: bool = typer.Option(
+        False,
+        "--wait/--no-wait",
+        help=("Wait for the resync snapshot to finish. Without --wait, wait for STATUS_RESYNC."),
+    ),
 ) -> None:
     """
     Resync a mirror, or all mirrors.
@@ -118,10 +131,10 @@ def resync(
     if all:
         list_response = peerdb.list_mirrors()
         for mirror in list_response.mirrors:
-            response = peerdb.resync_mirror(mirror.name, if_exists=if_exists)
+            response = peerdb.resync_mirror(mirror.name, if_exists=if_exists, wait=wait)
             console.print(response.message, style="green")
     else:
-        response = peerdb.resync_mirror(name, if_exists=if_exists)
+        response = peerdb.resync_mirror(name, if_exists=if_exists, wait=wait)
         console.print(response.message, style="green")
 
 

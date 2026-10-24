@@ -20,6 +20,7 @@ from .exceptions import (
     ListMirrorsException,
     ListPeersException,
     MirrorExistsException,
+    MirrorFailedException,
     MirrorNotFoundException,
     MirrorTimeoutException,
     PauseMirrorException,
@@ -1731,8 +1732,58 @@ class PeerDB:
                 f"Failed to get status of mirror '{flow_job_name}' (HTTP {response.status_code})"
             )
 
+    def _poll_mirror_status(
+        self,
+        flow_job_name: str,
+        target_statuses: set[str],
+        timeout: int | None,
+        fail_statuses: set[str] | None = None,
+    ) -> str:
+        """
+        Poll mirror status until a target or fail status is reached.
+
+        Args:
+            flow_job_name: Mirror (flow job) name to poll.
+            target_statuses: Statuses that stop polling successfully.
+            timeout: Polling timeout in seconds. When None, poll indefinitely.
+            fail_statuses: Statuses that stop polling with an error.
+
+        Returns:
+            str: The reached target status.
+
+        Raises:
+            MirrorFailedException: If a fail status is reached.
+            MirrorTimeoutException: If no target status is reached in time.
+        """
+        current_status = "UNKNOWN"
+        attempts = 0
+
+        while timeout is None or attempts < timeout:
+            current_status = self.get_mirror_status(flow_job_name).current_flow_state
+
+            if current_status in target_statuses:
+                return current_status
+
+            if fail_statuses and current_status in fail_statuses:
+                raise MirrorFailedException(
+                    f"Mirror '{flow_job_name}' reached status {current_status}"
+                )
+
+            attempts += 1
+
+            if timeout is None or attempts < timeout:
+                time.sleep(1)
+
+        raise MirrorTimeoutException(
+            f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
+        )
+
     def wait_for_mirror_status(
-        self, flow_job_name: str, target_statuses: set[str], timeout: int | None = None
+        self,
+        flow_job_name: str,
+        target_statuses: set[str],
+        timeout: int | None = None,
+        fail_statuses: set[str] | None = None,
     ) -> str:
         """
         Poll mirror status until a target status is reached.
@@ -1743,32 +1794,89 @@ class PeerDB:
                 `{"STATUS_RUNNING"}`).
             timeout: Polling timeout in seconds. Defaults to
                 `config.operation_timeout`.
+            fail_statuses: Statuses that stop polling with
+                `MirrorFailedException`.
 
         Returns:
             str: The reached status value.
 
         Raises:
+            MirrorFailedException: If a fail status is reached.
             MirrorTimeoutException: If no target status is reached in time.
         """
         if timeout is None:
             timeout = self.config.operation_timeout
 
-        current_status = "UNKNOWN"
+        return self._poll_mirror_status(
+            flow_job_name,
+            target_statuses,
+            timeout=timeout,
+            fail_statuses=fail_statuses,
+        )
 
-        for _ in range(timeout):
-            current_status = self.get_mirror_status(flow_job_name).current_flow_state
+    def wait_for_mirror_snapshot(
+        self, flow_job_name: str, initial_status: str | None = None
+    ) -> str:
+        """
+        Wait for a mirror's initial or resync snapshot to finish.
 
-            if current_status in target_statuses:
-                return current_status
+        Polls until the mirror reaches `STATUS_RUNNING` for a normal CDC
+        mirror or `STATUS_COMPLETED` for an initial-snapshot-only mirror.
+        Fails on `STATUS_FAILED` and `STATUS_TERMINATED`.
 
-            time.sleep(1)
+        When `initial_status` is `STATUS_RUNNING`, first waits for the
+        resync to start (`STATUS_SETUP`, `STATUS_SNAPSHOT`, or
+        `STATUS_RESYNC`). If the start transition is not observed within
+        `config.operation_timeout`, a mirror that is already
+        `STATUS_RUNNING` or `STATUS_COMPLETED` is treated as complete. This
+        handles resyncs that finish before the transition is observed.
 
-        raise MirrorTimeoutException(
-            f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
+        The completion wait has no timeout.
+
+        Args:
+            flow_job_name: Mirror (flow job) name to poll.
+            initial_status: Status observed before a resync request. Pass
+                `None` for a newly created mirror.
+
+        Returns:
+            str: The reached status (`STATUS_RUNNING` or `STATUS_COMPLETED`).
+
+        Raises:
+            MirrorFailedException: If the mirror reaches `STATUS_FAILED` or
+                `STATUS_TERMINATED`.
+        """
+        self._console.print(f"Waiting for mirror '{flow_job_name}' to finish its snapshot")
+
+        if initial_status == "STATUS_RUNNING":
+            try:
+                self.wait_for_mirror_status(
+                    flow_job_name,
+                    {"STATUS_SETUP", "STATUS_SNAPSHOT", "STATUS_RESYNC"},
+                    fail_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
+                )
+            except MirrorTimeoutException:
+                current_status = self.get_mirror_status(flow_job_name).current_flow_state
+
+                if current_status in {"STATUS_RUNNING", "STATUS_COMPLETED"}:
+                    return current_status
+
+                if current_status in {"STATUS_FAILED", "STATUS_TERMINATED"}:
+                    raise MirrorFailedException(
+                        f"Mirror '{flow_job_name}' reached status {current_status}"
+                    )
+
+        return self._poll_mirror_status(
+            flow_job_name,
+            {"STATUS_RUNNING", "STATUS_COMPLETED"},
+            timeout=None,
+            fail_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
         )
 
     def create_mirror(
-        self, mirror: dict, if_exists: Literal["fail", "keep", "replace"] = "fail"
+        self,
+        mirror: dict,
+        if_exists: Literal["fail", "keep", "replace"] = "fail",
+        wait: bool = False,
     ) -> CreateMirrorResponse:
         """
         Create a CDC mirror on the server.
@@ -1786,6 +1894,7 @@ class PeerDB:
             if_exists: Behavior when the mirror already exists: `fail` raises,
                 `keep` returns without calling the API, `replace` drops the
                 mirror with destination tables first.
+            wait: When True, wait for the initial snapshot to finish.
 
         Returns:
             CreateMirrorResponse: Result with created/kept/replaced message.
@@ -1796,6 +1905,8 @@ class PeerDB:
             UnsupportedAdapterException: If the source adapter is not Postgres.
             TableNotFoundException: If a mapped source table is missing.
             CreateMirrorException: If the request fails or lacks `workflowId`.
+            MirrorFailedException: If `wait` is True and the mirror fails or is
+                terminated.
         """
         self._console.print(f"Creating mirror '{mirror['flow_job_name']}'")
 
@@ -1803,6 +1914,9 @@ class PeerDB:
 
         if has_mirror:
             if if_exists == "keep":
+                if wait:
+                    self.wait_for_mirror_snapshot(mirror["flow_job_name"])
+
                 return CreateMirrorResponse(message=f"Kept mirror '{mirror['flow_job_name']}'")
             elif if_exists == "replace":
                 self.drop_mirror(mirror["flow_job_name"], drop_destination_tables=True)
@@ -1881,6 +1995,9 @@ class PeerDB:
             message = f"Replaced mirror '{mirror['flow_job_name']}'"
         else:
             message = f"Created mirror '{mirror['flow_job_name']}'"
+
+        if wait:
+            self.wait_for_mirror_snapshot(mirror["flow_job_name"])
 
         return CreateMirrorResponse(message=message, response=deserialized)
 
@@ -1977,10 +2094,14 @@ class PeerDB:
         return DropMirrorResponse(message=f"Dropped mirror '{flow_job_name}'")
 
     def resync_mirror(
-        self, flow_job_name: str, if_exists: bool | None = False, timeout: int | None = None
+        self,
+        flow_job_name: str,
+        if_exists: bool | None = False,
+        wait: bool = False,
+        timeout: int | None = None,
     ) -> ResyncMirrorResponse:
         """
-        Request a resync of a mirror and wait for resync state.
+        Request a resync of a mirror and wait for resync state or completion.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_RESYNC` and
         `dropMirrorStats=True`.
@@ -1993,16 +2114,23 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to resync.
             if_exists: When True, skip instead of raising if missing.
-            timeout: Wait timeout in seconds. Defaults to
-                `config.operation_timeout`.
+            wait: When True, wait for the resync snapshot to finish
+                (`STATUS_RUNNING` or `STATUS_COMPLETED`). When False, wait
+                for `STATUS_RESYNC`.
+            timeout: Wait timeout in seconds when `wait` is False. Defaults
+                to `config.operation_timeout`. Ignored when `wait` is True.
 
         Returns:
-            ResyncMirrorResponse: Result with initiated/skipped message.
+            ResyncMirrorResponse: Result with resynced/initiated/skipped
+                message.
 
         Raises:
             MirrorNotFoundException: If missing and `if_exists` is False.
             ResyncMirrorException: If the state-change request fails.
-            MirrorTimeoutException: If `STATUS_RESYNC` is not reached in time.
+            MirrorFailedException: If `wait` is True and the mirror fails or
+                is terminated.
+            MirrorTimeoutException: If `wait` is False and `STATUS_RESYNC`
+                is not reached in time.
         """
         if timeout is None:
             timeout = self.config.operation_timeout
@@ -2016,6 +2144,11 @@ class PeerDB:
                 )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
+        initial_status: str | None = None
+
+        if wait:
+            initial_status = self.get_mirror_status(flow_job_name).current_flow_state
 
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
@@ -2035,6 +2168,11 @@ class PeerDB:
             raise ResyncMirrorException(
                 f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
             )
+
+        if wait:
+            self.wait_for_mirror_snapshot(flow_job_name, initial_status=initial_status)
+
+            return ResyncMirrorResponse(message=f"Resynced mirror '{flow_job_name}'")
 
         self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
 

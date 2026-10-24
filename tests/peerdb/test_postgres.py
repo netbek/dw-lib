@@ -297,6 +297,18 @@ class TestCreateMirror(PeerDBPostgresTest):
         # Tear down
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
 
+    def test_wait_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+        """Verify creating a mirror with wait reaches running."""
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        peerdb.create_mirror(mirror.model_dump(), wait=True)
+
+        status = peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state
+        assert status == "STATUS_RUNNING"
+
+        # Tear down
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
     def test_non_existant_source_table_raises_exception(
         self, some_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
@@ -437,6 +449,18 @@ class TestResyncMirror(PeerDBPostgresTest):
         response = peerdb.resync_mirror(mirror.flow_job_name)
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
+
+    def test_wait_ok(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
+    ):
+        """Verify resyncing a mirror with wait reaches running."""
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        response = peerdb.resync_mirror(mirror.flow_job_name, wait=True)
+
+        assert response.message == "Resynced mirror 'cdc_one'"
+        status = peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state
+        assert status == "STATUS_RUNNING"
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         """Verify resyncing a missing mirror raises."""

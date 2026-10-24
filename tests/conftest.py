@@ -205,7 +205,7 @@ class PeerDBTest:
             yaml = YAML(typ="safe", pure=True)
             peerdb_config = yaml.load(peerdb_config_path)
 
-            url = HttpUrl(peerdb_config["peerdb_ui_url"]).join("api/v1/instance/info")
+            url = HttpUrl(peerdb_config["client"]["peerdb_ui_url"]).join("api/v1/instance/info")
 
             def is_responsive():
                 try:
@@ -297,7 +297,7 @@ class PeerDBIntegrationTest(PeerDBTest):
 
         with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
-                cur.execute(f"drop schema if exists {schema};")
+                cur.execute(f"drop schema if exists {schema} cascade;")
 
     @pytest.fixture(scope="function")
     def all_postgres_tables(
@@ -326,7 +326,7 @@ class PeerDBIntegrationTest(PeerDBTest):
 
         with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
-                cur.execute(f"drop schema if exists {schema};")
+                cur.execute(f"drop schema if exists {schema} cascade;")
 
     @pytest.fixture(scope="function")
     def peers(self, peerdb: PeerDB) -> Generator[None, Any]:

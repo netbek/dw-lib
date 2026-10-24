@@ -1,5 +1,10 @@
-peerdb_ui_url: http://localhost:3000
-operation_timeout: 30
+client:
+  peerdb_ui_url: http://localhost:3000
+  mirror_status_wait_timeout_seconds: 30
+  mirror_pause_wait_timeout_seconds: 30
+  mirror_resume_wait_timeout_seconds: 30
+  mirror_resync_wait_timeout_seconds: 30
+  mirror_drop_wait_timeout_seconds: 30
 
 settings:
   PEERDB_NULLABLE: "true"

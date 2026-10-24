@@ -28,11 +28,11 @@ class TestLoadConfig(PeerDBIntegrationTest):
             "client": {
                 "peerdb_ui_url": HttpUrl("http://localhost:3000"),
                 "api_connect_timeout_seconds": 5,
-                "api_read_timeout_seconds": 30,
+                "api_read_timeout_seconds": 45,
                 "peer_create_request_timeout_seconds": 90,
                 "peer_drop_request_timeout_seconds": 30,
                 "mirror_create_request_timeout_seconds": 300,
-                "mirror_state_change_request_timeout_seconds": 420,
+                "mirror_state_change_request_timeout_seconds": 600,
                 "mirror_status_wait_timeout_seconds": 30,
                 "mirror_pause_wait_timeout_seconds": 30,
                 "mirror_resume_wait_timeout_seconds": 30,

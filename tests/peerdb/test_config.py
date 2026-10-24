@@ -52,16 +52,16 @@ class TestClientConfig:
 
         assert client.peerdb_ui_url == HttpUrl("http://localhost:3000")
         assert client.api_connect_timeout_seconds == 5
-        assert client.api_read_timeout_seconds == 30
+        assert client.api_read_timeout_seconds == 45
         assert client.peer_create_request_timeout_seconds == 90
         assert client.peer_drop_request_timeout_seconds == 30
         assert client.mirror_create_request_timeout_seconds == 300
-        assert client.mirror_state_change_request_timeout_seconds == 420
+        assert client.mirror_state_change_request_timeout_seconds == 600
         assert client.mirror_status_wait_timeout_seconds == 600
         assert client.mirror_pause_wait_timeout_seconds == 120
         assert client.mirror_resume_wait_timeout_seconds == 120
         assert client.mirror_resync_wait_timeout_seconds == 300
-        assert client.mirror_drop_wait_timeout_seconds == 300
+        assert client.mirror_drop_wait_timeout_seconds == 600
         assert client.status_poll_interval_seconds == 1
 
     def test_overrides(self, tmp_path: Path):

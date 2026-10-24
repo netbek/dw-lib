@@ -56,7 +56,7 @@ import time
 DEFAULT_API_CONNECT_TIMEOUT_SECONDS = 5
 
 # Default timeout in seconds for the read phase of a fast HTTP request to the PeerDB API
-DEFAULT_API_READ_TIMEOUT_SECONDS = 30
+DEFAULT_API_READ_TIMEOUT_SECONDS = 45
 
 # Default timeout in seconds for a peer creation request (covers PeerDB peer validation)
 DEFAULT_PEER_CREATE_REQUEST_TIMEOUT_SECONDS = 90
@@ -68,7 +68,7 @@ DEFAULT_PEER_DROP_REQUEST_TIMEOUT_SECONDS = 30
 DEFAULT_MIRROR_CREATE_REQUEST_TIMEOUT_SECONDS = 300
 
 # Default timeout in seconds for a mirror state-change request
-DEFAULT_MIRROR_STATE_CHANGE_REQUEST_TIMEOUT_SECONDS = 420
+DEFAULT_MIRROR_STATE_CHANGE_REQUEST_TIMEOUT_SECONDS = 600
 
 # Default timeout in seconds for waiting on a mirror status
 DEFAULT_MIRROR_STATUS_WAIT_TIMEOUT_SECONDS = 600
@@ -83,7 +83,7 @@ DEFAULT_MIRROR_RESUME_WAIT_TIMEOUT_SECONDS = 120
 DEFAULT_MIRROR_RESYNC_WAIT_TIMEOUT_SECONDS = 300
 
 # Default timeout in seconds for waiting on a mirror to disappear
-DEFAULT_MIRROR_DROP_WAIT_TIMEOUT_SECONDS = 300
+DEFAULT_MIRROR_DROP_WAIT_TIMEOUT_SECONDS = 600
 
 # Default interval in seconds between mirror status polls
 DEFAULT_STATUS_POLL_INTERVAL_SECONDS = 1

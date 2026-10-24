@@ -20,10 +20,27 @@ Server-side budgets that shape the client defaults:
 |---|---:|---|
 | Peer validation | 15s Postgres; 60s ClickHouse | `vendor/peerdb/flow/cmd/validate_peer.go:31-37` |
 | Peer info/type request | 30s | `vendor/peerdb/flow/cmd/peer_data.go:50,91` |
-| Synchronous drop/shutdown wait | 5 minutes | `vendor/peerdb/flow/cmd/handler.go:406` |
-| Drop activity | 5 minutes per activity, up to 50 retries | `vendor/peerdb/flow/workflows/drop_flow.go:20-22,50-95` |
+| Synchronous drop/shutdown wait | 5 minutes for `DropFlow`, plus up to two 1-minute cancellation waits | `vendor/peerdb/flow/cmd/handler.go:406,577-599` |
+| Drop activity | 5 minutes per activity, up to 50 retries with quadratic backoff; can run for hours if blocked | `vendor/peerdb/flow/workflows/drop_flow.go:20-22,50-95` |
 | CDC idle timeout | 60s client default; 10s backend default when zero | `vendor/peerdb/flow/activities/flowable.go:61-66` |
 | HTTP gateway read-header timeout | 5 minutes | `vendor/peerdb/flow/cmd/api.go:161` |
+
+Initial snapshot and resync are data-plane work. Their duration depends on data volume and is covered below.
+
+### Long-running operations (500GB–1TB)
+
+The client defaults are sized for control-plane calls. At 500GB–1TB, an initial snapshot or resync can run for hours to tens of hours, and the client methods that start the work return before it finishes.
+
+| Operation | What takes hours | Evidence |
+|---|---|---|
+| Initial snapshot (`do_initial_snapshot` or `initial_snapshot_only`) | Partition discovery counts or estimates rows, then runs an NTILE query over the source tables; QRep then copies every row. PeerDB warns that partition queries on tables over 100GiB may take minutes to hours. Status stays `STATUS_SNAPSHOT` until the snapshot child finishes. | `vendor/peerdb/flow/activities/flowable.go:657-665`; `vendor/peerdb/flow/workflows/qrep_flow.go:203,228`; `vendor/peerdb/flow/workflows/cdc_flow.go:729,757-770,840` |
+| Resync | Forces a full re-snapshot. When soft-delete is enabled, Postgres destinations also run a soft-delete anti-join over the old and new tables during rename. ClickHouse exchanges tables instead. | `vendor/peerdb/flow/cmd/handler.go:526-527`; `vendor/peerdb/flow/connectors/postgres/postgres_destination.go:626-723`; `vendor/peerdb/flow/workflows/cdc_flow.go:799-806`; `vendor/peerdb/flow/connectors/clickhouse/cdc.go:331-423` |
+| Drop and cleanup | Normally fast. If a long source transaction holds the slot's xmin, `pg_drop_replication_slot` can block. An active snapshot can also delay cleanup until its slot connection closes. PeerDB retries drop activities up to 50 times with quadratic backoff. | `vendor/peerdb/flow/connectors/postgres/postgres_source.go:841-870`; `vendor/peerdb/flow/workflows/drop_flow.go:19-23,50-95` |
+
+- `create_mirror` and `resync_mirror` return after validation and workflow start, not after snapshot or resync completion (`vendor/peerdb/flow/cmd/handler.go:158-250`; `src/dw_lib/peerdb.py:2060-2172,2270-2359`).
+- `snapshot_num_tables_in_parallel` defaults to 1, so multiple large tables are snapshotted one after another (`src/dw_lib/peerdb.py:914-916`).
+- A status wait for `STATUS_RUNNING` or `STATUS_COMPLETED` needs a timeout sized to the dataset. The 600s default is for short transitions, not snapshot completion.
+- A client wait timeout does not cancel server-side work. This matters most for drops blocked on slot cleanup.
 
 ## Goals
 
@@ -91,16 +108,16 @@ peerdb.yaml
 client:
   peerdb_ui_url: http://localhost:3000
   api_connect_timeout_seconds: 5
-  api_read_timeout_seconds: 30
+  api_read_timeout_seconds: 45
   peer_create_request_timeout_seconds: 90
   peer_drop_request_timeout_seconds: 30
   mirror_create_request_timeout_seconds: 300
-  mirror_state_change_request_timeout_seconds: 420
+  mirror_state_change_request_timeout_seconds: 600
   mirror_status_wait_timeout_seconds: 600
   mirror_pause_wait_timeout_seconds: 120
   mirror_resume_wait_timeout_seconds: 120
   mirror_resync_wait_timeout_seconds: 300
-  mirror_drop_wait_timeout_seconds: 300
+  mirror_drop_wait_timeout_seconds: 600
   status_poll_interval_seconds: 1
 ```
 
@@ -108,16 +125,16 @@ client:
 |---|---|---:|---|
 | `peerdb_ui_url` | URL | required | PeerDB UI base URL; the API URL is derived by appending `api`. |
 | `api_connect_timeout_seconds` | integer ≥ 1 | 5 | TCP/TLS connect for every API request. |
-| `api_read_timeout_seconds` | integer ≥ 1 | 30 | Read budget for fast API requests. |
+| `api_read_timeout_seconds` | integer ≥ 1 | 45 | Read budget for fast API requests; leaves headroom over PeerDB's 30-second peer-info and peer-type deadlines. |
 | `peer_create_request_timeout_seconds` | integer ≥ 1 | 90 | `create_peer`; covers 60s ClickHouse validation. |
 | `peer_drop_request_timeout_seconds` | integer ≥ 1 | 30 | Final peer-drop request. |
-| `mirror_create_request_timeout_seconds` | integer ≥ 1 | 300 | `create_mirror`; covers synchronous source/destination validation. |
-| `mirror_state_change_request_timeout_seconds` | integer ≥ 1 | 420 | Pause, resume, resync, and drop state-change requests; covers PeerDB's 5-minute synchronous shutdown path. |
-| `mirror_status_wait_timeout_seconds` | integer ≥ 1 | 600 | Default wait for the public mirror-status wait operation. |
-| `mirror_pause_wait_timeout_seconds` | integer ≥ 1 | 120 | Poll until `STATUS_PAUSED`. |
+| `mirror_create_request_timeout_seconds` | integer ≥ 1 | 300 | `create_mirror`; covers synchronous source/destination validation. The snapshot starts after the request returns. |
+| `mirror_state_change_request_timeout_seconds` | integer ≥ 1 | 600 | Pause, resume, resync, and drop state-change requests; covers PeerDB's 7-minute sync/stop path (cancellation waits plus the 5-minute `DropFlow` wait). |
+| `mirror_status_wait_timeout_seconds` | integer ≥ 1 | 600 | Default wait for the public mirror-status wait operation. Covers short transitions only; pass a dataset-sized override (for example 86400) when waiting for a 500GB–1TB snapshot or resync to finish. |
+| `mirror_pause_wait_timeout_seconds` | integer ≥ 1 | 120 | Poll until `STATUS_PAUSED`. The pause waits for the current CDC batch; allow more time for large batches. |
 | `mirror_resume_wait_timeout_seconds` | integer ≥ 1 | 120 | Poll until `STATUS_RUNNING` after resume. |
-| `mirror_resync_wait_timeout_seconds` | integer ≥ 1 | 300 | Poll for resync progress. |
-| `mirror_drop_wait_timeout_seconds` | integer ≥ 1 | 300 | Poll until the mirror disappears. |
+| `mirror_resync_wait_timeout_seconds` | integer ≥ 1 | 300 | Poll for resync progress. Confirms initiation, not completion; a full re-snapshot can take hours. |
+| `mirror_drop_wait_timeout_seconds` | integer ≥ 1 | 600 | Poll until the mirror disappears; covers source/destination cleanup plus catalog removal. A blocked replication-slot drop can exceed this; the timeout does not cancel server-side cleanup. |
 | `status_poll_interval_seconds` | integer ≥ 1 | 1 | Sleep between status polls. |
 
 ## Lifecycle reference
@@ -125,11 +142,11 @@ client:
 | Operation | PeerDB behavior | Client wait |
 |---|---|---|
 | Create peer | Validate peer, then insert. Validation is 15s for Postgres and 60s for ClickHouse. | None; use `peer_create_request_timeout_seconds`. |
-| Create mirror | Validate source/destination synchronously, then start the workflow. Setup and snapshot run asynchronously. | None; use `mirror_create_request_timeout_seconds`. Optional status wait uses `mirror_status_wait_timeout_seconds`. |
+| Create mirror | Validate source/destination synchronously, then start the workflow. Setup and snapshot run asynchronously; a 500GB–1TB snapshot can take hours. | None; use `mirror_create_request_timeout_seconds`. A status wait for `STATUS_RUNNING` or `STATUS_COMPLETED` must pass a dataset-sized override; the 600s default is for short transitions. |
 | Pause | Signal; `RUNNING → PAUSING → PAUSED`. | Wait for `PAUSED` with `mirror_pause_wait_timeout_seconds`. |
 | Resume | Signal only from `PAUSED`; `PAUSED → RUNNING`. | If `PAUSING`, wait for `PAUSED`, then resume and wait for `RUNNING` with `mirror_resume_wait_timeout_seconds`. |
-| Resync | Signal for `RUNNING`, `PAUSED`, `SETUP`, and `SNAPSHOT`; synchronous recreate for `FAILED` and `COMPLETED`. | Failed/completed: return after the synchronous request. Others: wait for a progress status with `mirror_resync_wait_timeout_seconds`. |
-| Drop mirror | Signal for active states; synchronous drop or shutdown for `FAILED` and `COMPLETED`; cleanup removes the catalog entry. | Wait until the mirror is no longer reported with `mirror_drop_wait_timeout_seconds`. |
+| Resync | Signal for `RUNNING`, `PAUSED`, `SETUP`, and `SNAPSHOT`; synchronous recreate for `FAILED` and `COMPLETED`. Resync always re-snapshots, so completion can take hours. | Failed/completed: return after the synchronous request. Others: wait for a progress status with `mirror_resync_wait_timeout_seconds`. This confirms initiation, not completion; wait for `STATUS_RUNNING` separately with a dataset-sized override. |
+| Drop mirror | Signal for active states; synchronous drop or shutdown for `FAILED` and `COMPLETED`; cleanup removes the catalog entry. Normally quick, but slot cleanup can block for hours. | Wait until the mirror is no longer reported with `mirror_drop_wait_timeout_seconds`. A timeout does not cancel the server-side drop; check `has_mirror` before retrying. |
 | Drop peer | Drop dependent mirrors, then delete the peer. | Drop mirrors one at a time; each uses `mirror_drop_wait_timeout_seconds`. Final request uses `peer_drop_request_timeout_seconds`. |
 
 ## Code layout
@@ -200,7 +217,7 @@ client:
 
 **Rationale.** `STATUS_RESYNC` is the status that reliably proves the resync request was processed. Accepting a pre-existing `STATUS_SETUP` or `STATUS_SNAPSHOT` returns before the request is handled and can leave `_resync` tables behind. `STATUS_SETUP` and `STATUS_SNAPSHOT` remain useful fallbacks when they cannot be the pre-request status. `STATUS_RUNNING` is ambiguous because it can come from an unrelated resume or the completion of the initial setup.
 
-**Consequences.** For a mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT`, the wait can last until the current setup or snapshot reaches the resync stage; `mirror_resync_wait_timeout_seconds` bounds it. Resync confirms initiation, not completion. Callers that need completion must wait for `STATUS_RUNNING` separately with `mirror_status_wait_timeout_seconds` or a larger override.
+**Consequences.** For a mirror already in `STATUS_SETUP` or `STATUS_SNAPSHOT`, the wait can last until the current setup or snapshot reaches the resync stage; `mirror_resync_wait_timeout_seconds` bounds it. Resync confirms initiation, not completion. Callers that need completion must wait for `STATUS_RUNNING` separately with `mirror_status_wait_timeout_seconds` or a larger override; at 500GB–1TB, the full re-snapshot can take hours and the 600s default is not enough.
 
 ### D8: Mirror existence means a successful status response
 
@@ -224,7 +241,7 @@ client:
 
 **Rationale.** Peers can have different numbers of mirrors, so a single per-peer total is arbitrary and couples unrelated mirrors. A per-mirror limit is predictable and matches the unit whose cleanup can fail.
 
-**Consequences.** The `drop_peer` timeout argument is removed; callers use the configured per-mirror wait. The worst-case wait for a peer drop grows with the number of dependent mirrors: N × `mirror_drop_wait_timeout_seconds`. Callers that need a total bound must wrap the call or drop mirrors individually. The final peer-drop request still uses `peer_drop_request_timeout_seconds`.
+**Consequences.** The `drop_peer` timeout argument is removed; callers use the configured per-mirror wait. The worst-case wait for a peer drop grows with the number of dependent mirrors: N × `mirror_drop_wait_timeout_seconds`. Callers that need a total bound must wrap the call or drop mirrors individually. The final peer-drop request still uses `peer_drop_request_timeout_seconds`. If cleanup blocks on replication-slot release, PeerDB can keep retrying for hours after the client wait expires; the timeout does not cancel the server-side drop.
 
 ### D11: Retry transient status errors until the deadline
 
@@ -242,12 +259,21 @@ client:
 
 **Consequences.** Documentation must distinguish the PeerDB-side idle timeout from the client-side wait timeouts.
 
+### D13: Size waits for control-plane transitions, not data-plane completion
+
+**Decision.** Keep the default lifecycle waits short. Do not raise them to cover snapshot or resync data movement. Callers that wait for `STATUS_RUNNING` or `STATUS_COMPLETED` pass a timeout sized to the dataset.
+
+**Rationale.** Snapshot duration depends on data volume, throughput, table count, partitioning, and destination load. No single default covers that range without making a stuck short wait hang for hours. Explicit overrides keep the defaults useful for pause, resume, resync initiation, and drop.
+
+**Consequences.** The public status wait stays generic. Callers need to know the dataset size. At 500GB–1TB, a 24h override is a reasonable starting point; slower links or multiple large tables need more.
+
 ## Alternatives considered
 
 | Alternative | Why rejected |
 |---|---|
 | Keep the timeout keys at the top level | The user chose a `client` group to separate client endpoint and timing settings from peers, mirrors, and dynamic settings. |
 | Use one generic poll timeout | Pause, resume, resync, and drop have very different server-side durations; one value is either too short or too long for some operations. |
+| Raise the status wait default to cover snapshot completion | Snapshot duration varies with data volume and throughput; a single long default would make short waits hang for hours on failure. Callers pass an explicit override instead. |
 | Keep iteration-count polling | It cannot enforce a wall-clock deadline and can exceed the configured timeout by the sum of request durations. |
 | Wait for the exact `STATUS_RESYNC` state | It is transient for running mirrors and appears only after the snapshot for recreated failed/completed mirrors. |
 | Treat `STATUS_UNKNOWN` as missing | It conflates status with existence and can cause duplicate creates or skipped drops. |
@@ -272,9 +298,16 @@ Integration teardown drops destination schemas with `CASCADE` so transient `_res
 - Client exceptions: `src/dw_lib/exceptions.py`
 - Peer validation: `vendor/peerdb/flow/cmd/validate_peer.go:31-37`
 - Flow state changes: `vendor/peerdb/flow/cmd/handler.go:430-573`
+- CDC create and resync: `vendor/peerdb/flow/cmd/handler.go:158-250,506-541`
 - Peer info/type timeouts: `vendor/peerdb/flow/cmd/peer_data.go:50,91`
 - CDC pause/resume/resync: `vendor/peerdb/flow/workflows/cdc_flow.go:554-612`
 - Workflow state defaults: `vendor/peerdb/flow/workflows/cdc_state/state.go:75-80`
+- Snapshot workflow: `vendor/peerdb/flow/workflows/snapshot_flow.go:334-435`
+- Snapshot partition and replication timeouts: `vendor/peerdb/flow/workflows/qrep_flow.go:203,228`
+- Large-table partition warning: `vendor/peerdb/flow/activities/flowable.go:657-665`
+- Postgres resync rename: `vendor/peerdb/flow/connectors/postgres/postgres_destination.go:626-723`
+- ClickHouse resync exchange: `vendor/peerdb/flow/connectors/clickhouse/cdc.go:331-423`
+- Postgres slot cleanup: `vendor/peerdb/flow/connectors/postgres/postgres_source.go:841-870`
 - Drop workflow: `vendor/peerdb/flow/workflows/drop_flow.go:20-22,50-95,181-183`
 - CDC idle timeout: `vendor/peerdb/flow/activities/flowable.go:61-66`
 - Existing plan style: `docs/plans/peerdb-table-mapping-fields/spec.md`, `docs/plans/peerdb-table-mapping-fields/design.md`

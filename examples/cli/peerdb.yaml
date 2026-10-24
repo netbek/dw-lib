@@ -3,16 +3,16 @@ client:
 
   # Optional. Timeouts and intervals are in seconds.
   api_connect_timeout_seconds: 5
-  api_read_timeout_seconds: 30
+  api_read_timeout_seconds: 45
   peer_create_request_timeout_seconds: 90
   peer_drop_request_timeout_seconds: 30
   mirror_create_request_timeout_seconds: 300
-  mirror_state_change_request_timeout_seconds: 420
+  mirror_state_change_request_timeout_seconds: 600
   mirror_status_wait_timeout_seconds: 600
   mirror_pause_wait_timeout_seconds: 120
   mirror_resume_wait_timeout_seconds: 120
   mirror_resync_wait_timeout_seconds: 300
-  mirror_drop_wait_timeout_seconds: 300
+  mirror_drop_wait_timeout_seconds: 600
   status_poll_interval_seconds: 1
 
 # Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/internal/dynamicconf.go

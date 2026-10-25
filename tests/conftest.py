@@ -297,7 +297,7 @@ class PeerDBIntegrationTest(PeerDBTest):
 
         with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
-                cur.execute(f"drop schema if exists {schema};")
+                cur.execute(f"drop schema if exists {schema} cascade;")
 
     @pytest.fixture(scope="function")
     def all_postgres_tables(
@@ -326,7 +326,7 @@ class PeerDBIntegrationTest(PeerDBTest):
 
         with postgres_adapter.create_client(autocommit=True) as (_, cur):
             for schema in postgres_schemas:
-                cur.execute(f"drop schema if exists {schema};")
+                cur.execute(f"drop schema if exists {schema} cascade;")
 
     @pytest.fixture(scope="function")
     def peers(self, peerdb: PeerDB) -> Generator[None, Any]:

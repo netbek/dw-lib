@@ -466,12 +466,15 @@ class TestResyncMirror(PeerDBClickHouseTest):
     """Tests for `PeerDB.resync_mirror` initiation and error handling."""
 
     def test_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None):
-        """Verify resyncing a mirror initiates the resync."""
+        """Verify resyncing a mirror initiates and completes the resync."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
         response = peerdb.resync_mirror(mirror.flow_job_name)
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
+
+        # Wait for the resync to finish so teardown can drop the destination tables.
+        peerdb.wait_for_mirror_status(mirror.flow_job_name, {"STATUS_RUNNING"})
 
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         """Verify resyncing a missing mirror raises."""

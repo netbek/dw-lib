@@ -886,20 +886,31 @@ class ConfigMirror(BaseModel):
     synced_at_col_name: str | None = "_peerdb_synced_at"
 
 
+class ConfigClient(BaseModel):
+    """
+    PeerDB client settings from the local YAML config.
+
+    Attributes:
+        peerdb_ui_url: PeerDB UI base URL; the API URL appends `api`.
+        operation_timeout: Timeout in seconds for polling operations.
+    """
+
+    peerdb_ui_url: HttpUrl
+    operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
+
+
 class Config(BaseModel):
     """
     Parsed PeerDB YAML config.
 
     Attributes:
-        peerdb_ui_url: PeerDB UI base URL; `peerdb_api_url` appends `api`.
-        operation_timeout: Timeout in seconds for polling operations.
+        client: PeerDB client settings.
         settings: Dynamic settings from config.
         peers: Configured peers.
         mirrors: Configured mirrors.
     """
 
-    peerdb_ui_url: HttpUrl
-    operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
+    client: ConfigClient
     settings: list[ConfigSetting]
     peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
     mirrors: list[ConfigMirror]
@@ -910,9 +921,9 @@ class Config(BaseModel):
         Return the PeerDB API base URL.
 
         Returns:
-            HttpUrl: `peerdb_ui_url` joined with `api`.
+            HttpUrl: `client.peerdb_ui_url` joined with `api`.
         """
-        return self.peerdb_ui_url.join("api")
+        return self.client.peerdb_ui_url.join("api")
 
 
 class PeerDB:
@@ -958,7 +969,7 @@ class PeerDB:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
 
         Returns:
-            Config: Parsed peers, mirrors, settings, and URLs.
+            Config: Parsed client settings, peers, mirrors, and settings.
 
         Raises:
             EmptyConfigException: If the rendered YAML file is empty.
@@ -1063,9 +1074,13 @@ class PeerDB:
 
             mirrors = list(config["mirrors"].values())
 
+        client_config = config.get("client") or {}
+
         return Config(
-            peerdb_ui_url=config.get("peerdb_ui_url"),
-            operation_timeout=config.get("operation_timeout", OPERATION_TIMEOUT),
+            client={
+                "peerdb_ui_url": client_config.get("peerdb_ui_url"),
+                "operation_timeout": client_config.get("operation_timeout", OPERATION_TIMEOUT),
+            },
             settings=settings,
             peers=peers,
             mirrors=mirrors,
@@ -1567,7 +1582,7 @@ class PeerDB:
                 destination tables.
             if_exists: When True, skip instead of raising if missing.
             timeout: Timeout for dependent mirror drops. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
 
         Returns:
             DropPeerResponse: Result with dropped/skipped message.
@@ -1577,7 +1592,7 @@ class PeerDB:
             DropPeerException: If the drop request fails.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         self._console.print(f"Dropping peer '{peer_name}'")
 
@@ -1625,10 +1640,10 @@ class PeerDB:
             drop_destination_tables: Whether mirror drops also drop
                 destination tables.
             timeout: Timeout per mirror drop. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         for mirror in self.list_mirrors().mirrors:
             if mirror.source_name == peer_name or mirror.destination_name == peer_name:
@@ -1742,7 +1757,7 @@ class PeerDB:
             target_statuses: Statuses that stop polling (e.g.
                 `{"STATUS_RUNNING"}`).
             timeout: Polling timeout in seconds. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
 
         Returns:
             str: The reached status value.
@@ -1751,7 +1766,7 @@ class PeerDB:
             MirrorTimeoutException: If no target status is reached in time.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         current_status = "UNKNOWN"
 
@@ -1908,7 +1923,7 @@ class PeerDB:
                 via `drop_destination_tables_of_mirror()`.
             if_exists: When True, skip instead of raising if missing.
             timeout: Polling timeout in seconds. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
 
         Returns:
             DropMirrorResponse: Result with dropped/skipped message.
@@ -1919,7 +1934,7 @@ class PeerDB:
             MirrorTimeoutException: If the mirror still exists after timeout.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
@@ -1994,7 +2009,7 @@ class PeerDB:
             flow_job_name: Mirror (flow job) name to resync.
             if_exists: When True, skip instead of raising if missing.
             timeout: Wait timeout in seconds. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
 
         Returns:
             ResyncMirrorResponse: Result with initiated/skipped message.
@@ -2005,7 +2020,7 @@ class PeerDB:
             MirrorTimeoutException: If `STATUS_RESYNC` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
 
@@ -2058,7 +2073,7 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to pause.
             timeout: Wait timeout in seconds. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
 
         Returns:
             PauseMirrorResponse: Result with paused or not-pausing message.
@@ -2069,7 +2084,7 @@ class PeerDB:
             MirrorTimeoutException: If `STATUS_PAUSED` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
@@ -2120,7 +2135,7 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to resume.
             timeout: Wait timeout in seconds. Defaults to
-                `config.operation_timeout`.
+                `config.client.operation_timeout`.
 
         Returns:
             ResumeMirrorResponse: Result with resumed or not-resuming message.
@@ -2131,7 +2146,7 @@ class PeerDB:
             MirrorTimeoutException: If `STATUS_RUNNING` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.operation_timeout
+            timeout = self.config.client.operation_timeout
 
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 

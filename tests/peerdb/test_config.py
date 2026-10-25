@@ -18,7 +18,8 @@ def make_peerdb(tmp_path: Path, table_mapping: str) -> PeerDB:
     """Write a PeerDB config with one mirror and return the client."""
     config_file = tmp_path / "peerdb.yaml"
     config_file.write_text(
-        "peerdb_ui_url: http://localhost:3000\n"
+        "client:\n"
+        "  peerdb_ui_url: http://localhost:3000\n"
         "mirrors:\n"
         "  cdc_one:\n"
         "    source_name: source\n"

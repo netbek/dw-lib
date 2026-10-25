@@ -27,8 +27,10 @@ class TestLoadConfig(PeerDBIntegrationTest):
     def test_valid_config(self, all_postgres_tables: list[Table]):
         """Verify the ClickHouse YAML config parses to expected peers and mirrors."""
         expected = {
-            "peerdb_ui_url": HttpUrl("http://localhost:3000"),
-            "operation_timeout": 30,
+            "client": {
+                "peerdb_ui_url": HttpUrl("http://localhost:3000"),
+                "operation_timeout": 30,
+            },
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",

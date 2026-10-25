@@ -1,5 +1,4 @@
 from dw_lib.peerdb import PeerDB
-from dw_lib.types import HttpUrl
 from pathlib import Path
 from pydantic import ValidationError
 
@@ -40,84 +39,6 @@ def minimal_table_mapping(extra: str = "") -> str:
     )
 
     return mapping + extra
-
-
-class TestClientConfig:
-    """Offline tests for client connection and timeout config parsing."""
-
-    def test_defaults(self, tmp_path: Path):
-        """Verify omitted timeout settings use their defaults."""
-        peerdb = make_peerdb(tmp_path, minimal_table_mapping())
-        client = peerdb.config.client
-
-        assert client.peerdb_ui_url == HttpUrl("http://localhost:3000")
-        assert client.api_connect_timeout_seconds == 5
-        assert client.api_read_timeout_seconds == 30
-        assert client.peer_create_request_timeout_seconds == 90
-        assert client.peer_drop_request_timeout_seconds == 30
-        assert client.mirror_create_request_timeout_seconds == 300
-        assert client.mirror_state_change_request_timeout_seconds == 420
-        assert client.mirror_status_wait_timeout_seconds == 600
-        assert client.mirror_pause_wait_timeout_seconds == 120
-        assert client.mirror_resume_wait_timeout_seconds == 120
-        assert client.mirror_resync_wait_timeout_seconds == 300
-        assert client.mirror_drop_wait_timeout_seconds == 300
-        assert client.status_poll_interval_seconds == 1
-
-    def test_overrides(self, tmp_path: Path):
-        """Verify timeout settings can be overridden under client."""
-        config_file = tmp_path / "peerdb.yaml"
-        config_file.write_text(
-            "client:\n"
-            "  peerdb_ui_url: http://localhost:3000\n"
-            "  api_connect_timeout_seconds: 1\n"
-            "  api_read_timeout_seconds: 2\n"
-            "  peer_create_request_timeout_seconds: 3\n"
-            "  peer_drop_request_timeout_seconds: 4\n"
-            "  mirror_create_request_timeout_seconds: 6\n"
-            "  mirror_state_change_request_timeout_seconds: 7\n"
-            "  mirror_status_wait_timeout_seconds: 8\n"
-            "  mirror_pause_wait_timeout_seconds: 9\n"
-            "  mirror_resume_wait_timeout_seconds: 10\n"
-            "  mirror_resync_wait_timeout_seconds: 11\n"
-            "  mirror_drop_wait_timeout_seconds: 12\n"
-            "  status_poll_interval_seconds: 13\n"
-        )
-        client = PeerDB(config_file=config_file).config.client
-
-        assert client.api_connect_timeout_seconds == 1
-        assert client.api_read_timeout_seconds == 2
-        assert client.peer_create_request_timeout_seconds == 3
-        assert client.peer_drop_request_timeout_seconds == 4
-        assert client.mirror_create_request_timeout_seconds == 6
-        assert client.mirror_state_change_request_timeout_seconds == 7
-        assert client.mirror_status_wait_timeout_seconds == 8
-        assert client.mirror_pause_wait_timeout_seconds == 9
-        assert client.mirror_resume_wait_timeout_seconds == 10
-        assert client.mirror_resync_wait_timeout_seconds == 11
-        assert client.mirror_drop_wait_timeout_seconds == 12
-        assert client.status_poll_interval_seconds == 13
-
-    @pytest.mark.parametrize("value", [0, -1])
-    def test_non_positive_values_rejected(self, tmp_path: Path, value: int):
-        """Verify timeout settings below one second are rejected."""
-        config_file = tmp_path / "peerdb.yaml"
-        config_file.write_text(
-            "client:\n"
-            "  peerdb_ui_url: http://localhost:3000\n"
-            f"  api_read_timeout_seconds: {value}\n"
-        )
-
-        with pytest.raises(ValidationError):
-            PeerDB(config_file=config_file).config  # noqa: B018
-
-    def test_missing_client_group_rejected(self, tmp_path: Path):
-        """Verify a config without the client group is rejected."""
-        config_file = tmp_path / "peerdb.yaml"
-        config_file.write_text("mirrors: {}\n")
-
-        with pytest.raises(ValidationError):
-            PeerDB(config_file=config_file).config  # noqa: B018
 
 
 class TestConfigMirrorTableMapping:
@@ -226,6 +147,85 @@ class TestConfigMirrorTableMapping:
                 "        columns:\n          - destination_name: id\n",
             ),
         )
+
+        with pytest.raises(ValidationError):
+            peerdb.config  # noqa: B018
+
+
+class TestClientConfig:
+    """Offline tests for client timeout config parsing."""
+
+    def test_defaults(self, tmp_path: Path):
+        """Verify client timeout defaults."""
+        config_file = tmp_path / "peerdb.yaml"
+        config_file.write_text("client:\n  peerdb_ui_url: http://localhost:3000\n")
+        peerdb = PeerDB(config_file=config_file)
+        client = peerdb.config.client
+
+        assert client.api_metadata_timeout_seconds == 10
+        assert client.api_peer_info_timeout_seconds == 45
+        assert client.api_peer_create_timeout_seconds == 90
+        assert client.api_peer_drop_timeout_seconds == 30
+        assert client.api_mirror_create_timeout_seconds == 300
+        assert client.api_mirror_pause_resume_timeout_seconds == 30
+        assert client.api_mirror_resync_drop_timeout_seconds == 900
+        assert client.poll_interval_seconds == 1.0
+        assert client.mirror_pause_resume_wait_timeout_seconds == 30
+        assert client.mirror_resync_start_wait_timeout_seconds == 30
+        assert client.mirror_drop_wait_timeout_seconds == 420
+        assert client.peer_drop_timeout_seconds is None
+
+    def test_overrides(self, tmp_path: Path):
+        """Verify client timeout overrides."""
+        config_file = tmp_path / "peerdb.yaml"
+        config_file.write_text(
+            "client:\n"
+            "  peerdb_ui_url: http://localhost:3000\n"
+            "  api_metadata_timeout_seconds: 1\n"
+            "  api_peer_info_timeout_seconds: 2\n"
+            "  api_peer_create_timeout_seconds: 3\n"
+            "  api_peer_drop_timeout_seconds: 4\n"
+            "  api_mirror_create_timeout_seconds: 5\n"
+            "  api_mirror_pause_resume_timeout_seconds: 6\n"
+            "  api_mirror_resync_drop_timeout_seconds: 7\n"
+            "  poll_interval_seconds: 0.5\n"
+            "  mirror_pause_resume_wait_timeout_seconds: 8\n"
+            "  mirror_resync_start_wait_timeout_seconds: 9\n"
+            "  mirror_drop_wait_timeout_seconds: 10\n"
+            "  peer_drop_timeout_seconds: 11\n"
+        )
+        peerdb = PeerDB(config_file=config_file)
+        client = peerdb.config.client
+
+        assert client.api_metadata_timeout_seconds == 1
+        assert client.api_peer_info_timeout_seconds == 2
+        assert client.api_peer_create_timeout_seconds == 3
+        assert client.api_peer_drop_timeout_seconds == 4
+        assert client.api_mirror_create_timeout_seconds == 5
+        assert client.api_mirror_pause_resume_timeout_seconds == 6
+        assert client.api_mirror_resync_drop_timeout_seconds == 7
+        assert client.poll_interval_seconds == 0.5
+        assert client.mirror_pause_resume_wait_timeout_seconds == 8
+        assert client.mirror_resync_start_wait_timeout_seconds == 9
+        assert client.mirror_drop_wait_timeout_seconds == 10
+        assert client.peer_drop_timeout_seconds == 11
+
+    def test_old_top_level_keys_rejected(self, tmp_path: Path):
+        """Verify old top-level keys are rejected."""
+        config_file = tmp_path / "peerdb.yaml"
+        config_file.write_text("peerdb_ui_url: http://localhost:3000\noperation_timeout: 30\n")
+        peerdb = PeerDB(config_file=config_file)
+
+        with pytest.raises(ValueError, match="Unknown top-level config keys"):
+            peerdb.config  # noqa: B018
+
+    def test_unknown_client_key_rejected(self, tmp_path: Path):
+        """Verify unknown client keys are rejected."""
+        config_file = tmp_path / "peerdb.yaml"
+        config_file.write_text(
+            "client:\n  peerdb_ui_url: http://localhost:3000\n  operation_timeout: 30\n"
+        )
+        peerdb = PeerDB(config_file=config_file)
 
         with pytest.raises(ValidationError):
             peerdb.config  # noqa: B018

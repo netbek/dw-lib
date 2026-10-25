@@ -13,9 +13,11 @@ peerdb = PeerDB()
 
 @peer_app.command()
 def create(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the peer in the config."),
     all: bool = typer.Option(False, "--all", help="Create all peers."),
-    if_exists: Literal["fail", "keep", "replace"] = "keep",
+    if_exists: Literal["fail", "keep", "replace"] = typer.Option(
+        "keep", help="Behavior when the peer already exists: fail, keep, or replace."
+    ),
 ) -> None:
     """Create a peer, or all peers."""
     _validate_name_or_all(name, all)
@@ -40,10 +42,12 @@ def create(
 
 @peer_app.command()
 def drop(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the peer to drop."),
     all: bool = typer.Option(False, "--all", help="Drop all peers."),
-    drop_destination_tables: bool | None = False,
-    if_exists: bool | None = True,
+    drop_destination_tables: bool | None = typer.Option(
+        False, help="Drop destination tables of dependent mirrors."
+    ),
+    if_exists: bool | None = typer.Option(True, help="Skip missing peers instead of raising."),
 ) -> None:
     """Drop a peer and its mirrors, or all peers and mirrors."""
     _validate_name_or_all(name, all)

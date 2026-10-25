@@ -29,18 +29,18 @@ class TestLoadConfig(PeerDBIntegrationTest):
         expected = {
             "client": {
                 "peerdb_ui_url": HttpUrl("http://localhost:3000"),
-                "api_connect_timeout_seconds": 5,
-                "api_read_timeout_seconds": 30,
-                "peer_create_request_timeout_seconds": 90,
-                "peer_drop_request_timeout_seconds": 30,
-                "mirror_create_request_timeout_seconds": 300,
-                "mirror_state_change_request_timeout_seconds": 420,
-                "mirror_status_wait_timeout_seconds": 30,
-                "mirror_pause_wait_timeout_seconds": 30,
-                "mirror_resume_wait_timeout_seconds": 30,
-                "mirror_resync_wait_timeout_seconds": 30,
-                "mirror_drop_wait_timeout_seconds": 30,
-                "status_poll_interval_seconds": 1,
+                "api_metadata_timeout_seconds": 10,
+                "api_peer_info_timeout_seconds": 45,
+                "api_peer_create_timeout_seconds": 90,
+                "api_peer_drop_timeout_seconds": 30,
+                "api_mirror_create_timeout_seconds": 300,
+                "api_mirror_pause_resume_timeout_seconds": 30,
+                "api_mirror_resync_drop_timeout_seconds": 900,
+                "poll_interval_seconds": 1.0,
+                "mirror_pause_resume_wait_timeout_seconds": 30,
+                "mirror_resync_start_wait_timeout_seconds": 30,
+                "mirror_drop_wait_timeout_seconds": 420,
+                "peer_drop_timeout_seconds": None,
             },
             "settings": [
                 {
@@ -343,6 +343,18 @@ class TestCreateMirror(PeerDBClickHouseTest):
         # Tear down
         peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
 
+    def test_wait_ok(self, all_postgres_tables: list[Table], peerdb: PeerDB, peers: None):
+        """Verify creating a mirror with wait reaches running."""
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        peerdb.create_mirror(mirror.model_dump(), wait=True)
+
+        status = peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state
+        assert status == "STATUS_RUNNING"
+
+        # Tear down
+        peerdb.drop_mirror(mirror.flow_job_name, drop_destination_tables=True)
+
     def test_non_existant_source_table_raises_exception(
         self, some_postgres_tables: list[Table], peerdb: PeerDB, peers: None
     ):
@@ -484,6 +496,18 @@ class TestResyncMirror(PeerDBClickHouseTest):
 
         assert response.message == "Resync of mirror 'cdc_one' has been initiated"
 
+    def test_wait_ok(
+        self, all_postgres_tables: list[Table], peerdb: PeerDB, peers_and_mirrors: None
+    ):
+        """Verify resyncing a mirror with wait reaches running."""
+        mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
+
+        response = peerdb.resync_mirror(mirror.flow_job_name, wait=True)
+
+        assert response.message == "Resynced mirror 'cdc_one'"
+        status = peerdb.get_mirror_status(mirror.flow_job_name).current_flow_state
+        assert status == "STATUS_RUNNING"
+
     def test_non_existant_mirror_raises_exception(self, peerdb: PeerDB, peers: None):
         """Verify resyncing a missing mirror raises."""
         mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
@@ -507,16 +531,27 @@ class TestPauseMirror(PeerDBClickHouseTest):
         monkeypatch.setattr(
             peerdb,
             "get_mirror_status",
-            lambda flow_job_name: MirrorStatusResponse(
+            lambda flow_job_name, timeout_seconds=None: MirrorStatusResponse(
                 createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_RUNNING",
                 flowJobName=flow_job_name,
             ),
         )
 
-        # Prevent actual HTTP calls and status polling.
-        monkeypatch.setattr(peerdb, "_request", lambda *args, **kwargs: object())
-        monkeypatch.setattr(peerdb, "_poll_mirror_status", lambda *args, **kwargs: "STATUS_PAUSED")
+        # Prevent actual HTTP calls and waiting loop: simulate successful post and immediate paused state
+        class _Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            def raise_for_status(self):
+                return None
+
+            text = ""
+
+        monkeypatch.setattr("dw_lib.peerdb.requests.request", lambda *a, **k: _Response())
+        monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_PAUSED")
 
         response = peerdb.pause_mirror(mirror.flow_job_name)
         assert response.message == "Paused mirror 'cdc_one'"
@@ -544,16 +579,27 @@ class TestResumeMirror(PeerDBClickHouseTest):
         monkeypatch.setattr(
             peerdb,
             "get_mirror_status",
-            lambda flow_job_name: MirrorStatusResponse(
+            lambda flow_job_name, timeout_seconds=None: MirrorStatusResponse(
                 createdAt=datetime.datetime.now(),
                 currentFlowState="STATUS_PAUSED",
                 flowJobName=flow_job_name,
             ),
         )
 
-        # Prevent actual HTTP calls and status polling.
-        monkeypatch.setattr(peerdb, "_request", lambda *args, **kwargs: object())
-        monkeypatch.setattr(peerdb, "_poll_mirror_status", lambda *args, **kwargs: "STATUS_RUNNING")
+        # Prevent actual HTTP calls and waiting loop: simulate successful post and immediate running state
+        class _Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            def raise_for_status(self):
+                return None
+
+            text = ""
+
+        monkeypatch.setattr("dw_lib.peerdb.requests.request", lambda *a, **k: _Response())
+        monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_RUNNING")
 
         response = peerdb.resume_mirror(mirror.flow_job_name)
         assert response.message == "Resumed mirror 'cdc_one'"

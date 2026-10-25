@@ -1,6 +1,5 @@
 # This configuration is used to the test the Docker services being offline. The ports are intentionally incorrect.
-client:
-  peerdb_ui_url: http://localhost:39999
+peerdb_ui_url: http://localhost:39999
 
 settings:
   PEERDB_NULLABLE: "true"

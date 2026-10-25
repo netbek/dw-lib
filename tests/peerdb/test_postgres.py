@@ -25,21 +25,8 @@ class TestLoadConfig(PeerDBIntegrationTest):
     def test_valid_config(self, all_postgres_tables: list[Table]):
         """Verify the Postgres YAML config parses to expected peers and mirrors."""
         expected = {
-            "client": {
-                "peerdb_ui_url": HttpUrl("http://localhost:3000"),
-                "api_connect_timeout_seconds": 5,
-                "api_read_timeout_seconds": 30,
-                "peer_create_request_timeout_seconds": 90,
-                "peer_drop_request_timeout_seconds": 30,
-                "mirror_create_request_timeout_seconds": 300,
-                "mirror_state_change_request_timeout_seconds": 420,
-                "mirror_status_wait_timeout_seconds": 30,
-                "mirror_pause_wait_timeout_seconds": 30,
-                "mirror_resume_wait_timeout_seconds": 30,
-                "mirror_resync_wait_timeout_seconds": 30,
-                "mirror_drop_wait_timeout_seconds": 30,
-                "status_poll_interval_seconds": 1,
-            },
+            "peerdb_ui_url": HttpUrl("http://localhost:3000"),
+            "operation_timeout": 30,
             "settings": [
                 {
                     "name": "PEERDB_NULLABLE",
@@ -481,9 +468,20 @@ class TestPauseMirror(PeerDBPostgresTest):
             ),
         )
 
-        # Prevent actual HTTP calls and status polling.
-        monkeypatch.setattr(peerdb, "_request", lambda *args, **kwargs: object())
-        monkeypatch.setattr(peerdb, "_poll_mirror_status", lambda *args, **kwargs: "STATUS_PAUSED")
+        # Prevent actual HTTP calls and waiting loop: simulate successful post and immediate paused state
+        class _Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            def raise_for_status(self):
+                return None
+
+            text = ""
+
+        monkeypatch.setattr("dw_lib.peerdb.requests.post", lambda *a, **k: _Response())
+        monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_PAUSED")
 
         response = peerdb.pause_mirror(mirror.flow_job_name)
         assert response.message == "Paused mirror 'cdc_one'"
@@ -518,9 +516,20 @@ class TestResumeMirror(PeerDBPostgresTest):
             ),
         )
 
-        # Prevent actual HTTP calls and status polling.
-        monkeypatch.setattr(peerdb, "_request", lambda *args, **kwargs: object())
-        monkeypatch.setattr(peerdb, "_poll_mirror_status", lambda *args, **kwargs: "STATUS_RUNNING")
+        # Prevent actual HTTP calls and waiting loop: simulate successful post and immediate running state
+        class _Response:
+            status_code = 200
+
+            def json(self):
+                return {}
+
+            def raise_for_status(self):
+                return None
+
+            text = ""
+
+        monkeypatch.setattr("dw_lib.peerdb.requests.post", lambda *a, **k: _Response())
+        monkeypatch.setattr(peerdb, "wait_for_mirror_status", lambda *a, **k: "STATUS_RUNNING")
 
         response = peerdb.resume_mirror(mirror.flow_job_name)
         assert response.message == "Resumed mirror 'cdc_one'"

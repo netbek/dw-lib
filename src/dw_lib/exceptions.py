@@ -36,6 +36,10 @@ class MirrorNotFoundException(Exception):
     pass
 
 
+class MirrorStatusException(Exception):
+    pass
+
+
 class MirrorTimeoutException(Exception):
     pass
 

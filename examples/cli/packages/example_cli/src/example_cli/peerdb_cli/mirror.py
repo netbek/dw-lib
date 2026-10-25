@@ -45,7 +45,10 @@ def drop(
     drop_destination_tables: bool | None = False,
     if_exists: bool | None = True,
 ) -> None:
-    """Drop a mirror, or all mirrors."""
+    """Drop a mirror, or all mirrors.
+
+    Terminated mirrors cannot be dropped through the PeerDB API and raise an error.
+    """
     _validate_name_or_all(name, all)
 
     if all:
@@ -87,9 +90,16 @@ def pause(
 @mirror_app.command()
 def resume(
     name: str = typer.Argument(None),
-    all: bool = typer.Option(False, "--all", help="Resume all paused or pausing mirrors."),
+    all: bool = typer.Option(
+        False,
+        "--all",
+        help="Resume all paused mirrors; pausing mirrors are resumed after they pause.",
+    ),
 ) -> None:
-    """Resume a paused or pausing mirror, or all paused or pausing mirrors."""
+    """Resume a paused mirror, or all paused mirrors.
+
+    A pausing mirror is resumed after it finishes pausing.
+    """
     _validate_name_or_all(name, all)
 
     if all:
@@ -111,7 +121,8 @@ def resync(
     """
     Resync a mirror, or all mirrors.
 
-    Picks up added or removed columns and changed types.
+    Picks up added or removed columns and changed types. Terminating or terminated
+    mirrors cannot be resynced and raise an error.
     """
     _validate_name_or_all(name, all)
 

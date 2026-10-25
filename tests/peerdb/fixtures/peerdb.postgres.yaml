@@ -1,5 +1,5 @@
-peerdb_ui_url: http://localhost:3000
-operation_timeout: 30
+client:
+  peerdb_ui_url: http://localhost:3000
 
 settings:
   PEERDB_NULLABLE: "true"

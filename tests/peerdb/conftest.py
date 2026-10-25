@@ -75,7 +75,11 @@ def mirror_with_destination_table(
     mirror = pydash.find(peerdb.config.mirrors, lambda x: x.flow_job_name == "cdc_one")
 
     peerdb.create_mirror(mirror.model_dump())
-    peerdb.wait_for_mirror_status(mirror.flow_job_name, {"STATUS_RUNNING"})
+    peerdb.wait_for_mirror_status(
+        mirror.flow_job_name,
+        {"STATUS_RUNNING"},
+        timeout_seconds=peerdb.config.client.mirror_resync_start_wait_timeout_seconds,
+    )
 
     with postgres_adapter.create_client(autocommit=True) as (_, cur):
         cur.execute(

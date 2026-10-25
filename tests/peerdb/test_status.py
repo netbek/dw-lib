@@ -20,7 +20,7 @@ import requests
 def make_peerdb(
     tmp_path: Path,
     timeout: int = 3,
-    operation_interval: float = 1.0,
+    polling_interval: float = 1.0,
 ) -> PeerDB:
     """Write a minimal PeerDB config and return the client."""
     config_file = tmp_path / "peerdb.yaml"
@@ -28,11 +28,11 @@ def make_peerdb(
         "client:\n"
         "  peerdb_ui_url: http://localhost:3000\n"
         f"  read_timeout: {timeout}\n"
-        f"  operation_interval: {operation_interval}\n"
-        f"  mirror_drop_operation_timeout: {timeout}\n"
-        f"  mirror_pause_operation_timeout: {timeout}\n"
-        f"  mirror_resume_operation_timeout: {timeout}\n"
-        f"  mirror_resync_operation_timeout: {timeout}\n"
+        f"  polling_interval: {polling_interval}\n"
+        f"  mirror_drop_polling_timeout: {timeout}\n"
+        f"  mirror_pause_polling_timeout: {timeout}\n"
+        f"  mirror_resume_polling_timeout: {timeout}\n"
+        f"  mirror_resync_polling_timeout: {timeout}\n"
     )
 
     return PeerDB(config_file=config_file)
@@ -144,9 +144,9 @@ class TestWaitForMirrorStatus:
         with pytest.raises(MirrorTimeoutException):
             peerdb.wait_for_mirror_status("cdc_one", {"STATUS_PAUSED"})
 
-    def test_uses_operation_interval(self, tmp_path: Path, monkeypatch):
+    def test_uses_polling_interval(self, tmp_path: Path, monkeypatch):
         """Verify polling sleeps for the configured interval."""
-        peerdb = make_peerdb(tmp_path, operation_interval=2.5)
+        peerdb = make_peerdb(tmp_path, polling_interval=2.5)
         status_sequence(monkeypatch, peerdb, ["STATUS_RUNNING", "STATUS_PAUSED"])
         sleeps = fake_time(monkeypatch)
 

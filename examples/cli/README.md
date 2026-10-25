@@ -34,15 +34,19 @@ The connection settings of the database servers in this example are:
 
 ### CLI PeerDB commands
 
-| Command                                           | Description                                                                                                                 |
-|---------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| `cli peerdb debug`                                | Check the PeerDB configuration and connections.                                                                             |
-| `cli peerdb up`                                   | Add PeerDB publications and replication slots to the source database.                                                       |
-| `cli peerdb drop-peers --drop-destination-tables` | Remove PeerDB publications and replication slots from the source database, and remove tables from the destination database. |
+| Command | Description |
+|---|---|
+| `cli peerdb debug` | Check PeerDB configuration, connections, publications, peers, mirrors and replication slots. |
+| `cli peerdb up` | Apply settings, create all configured peers and mirrors, and start PeerDB setup. |
+| `cli peerdb settings update` | Apply settings from `peerdb.yaml`. |
+| `cli peerdb peer create` / `cli peerdb peer drop` | Create or drop one peer or all configured peers. |
+| `cli peerdb mirror create` / `cli peerdb mirror drop` | Create or drop one mirror or all mirrors. |
+| `cli peerdb mirror pause` / `cli peerdb mirror resume` | Pause or resume one mirror or all mirrors. |
+| `cli peerdb mirror resync` | Resync one mirror or all mirrors. |
 
-Append the `--help` option to see the options of each command.
+Append the `--help` option to see the options of each command. See [PeerDB CLI](../../docs/peerdb-cli.md) for command behavior, lifecycle statuses and blocking behavior.
 
-Check the status of peers and mirrors in the [PeerDB UI](http://localhost:3000) after running `cli peerdb up` and `cli peerdb drop-peers`.
+Check the status of peers and mirrors in the [PeerDB UI](http://localhost:3000) after running `cli peerdb up`, or run `cli peerdb debug`. To tear down the example, run `cli peerdb peer drop --all --drop-destination-tables`.
 
 ## dbt
 

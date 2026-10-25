@@ -754,7 +754,7 @@ wheels = [
 
 [[package]]
 name = "netbek-dw-lib"
-version = "1.39.3"
+version = "1.40.1"
 source = { editable = "../../" }
 dependencies = [
     { name = "jinja2" },
@@ -1238,11 +1238,11 @@ wheels = [
 
 [[package]]
 name = "pytimeparse"
-version = "1.1.9"
+version = "1.1.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/25/54/09a581001791222c59d26f6317fc42955f011e79de2be933dfbf12bee3ed/pytimeparse-1.1.9.tar.gz", hash = "sha256:1f1c0bedcfbe481b78f7cb11dba7d81039455af8ba014eafc6df060c9c0ab156", size = 10955, upload-time = "2026-10-03T08:41:40.365Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/bf/87bd96fd60abf241cae10e6f7fc3882c8a81ebdbe76f49f9c3116b5b38ab/pytimeparse-1.1.10.tar.gz", hash = "sha256:ecf0ee613a72cb0b1d3d5404bd398a64266576fc36ccf3149178af6f2ec6f736", size = 11613, upload-time = "2026-10-17T12:38:58.437Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/3e/4b31b0368f0a8796506337bd3a44fd9a524de1adb82e108ad29caafd0bf2/pytimeparse-1.1.9-py3-none-any.whl", hash = "sha256:627b2f483d8b713cc86d78f95c17d5acc06794949afc51ad8dabfa9655e3c8ba", size = 9957, upload-time = "2026-10-03T08:41:39.237Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/e4/507b557e0f2a8dcddb14bb951bcf2ac04afc229e73c7256ccbc3a930ca58/pytimeparse-1.1.10-py3-none-any.whl", hash = "sha256:a9f9117a02eaa32efd268e70af29bc3ec1e84f473d3edef6d9809b36793b1c5d", size = 10661, upload-time = "2026-10-17T12:38:57.254Z" },
 ]
 
 [[package]]

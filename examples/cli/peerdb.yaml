@@ -1,5 +1,7 @@
 client:
   peerdb_ui_url: http://localhost:3000
+
+  # Optional. Timeouts and intervals are in seconds.
   api_metadata_timeout_seconds: 10
   api_peer_info_timeout_seconds: 45
   api_peer_create_timeout_seconds: 90

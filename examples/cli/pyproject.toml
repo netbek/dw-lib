@@ -12,6 +12,7 @@ dependencies = [
 
 [tool.uv]
 exclude-newer = "7 days"
+exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
 
 [tool.uv.sources]
 example-cli = { path = "./packages/example_cli", editable = true }

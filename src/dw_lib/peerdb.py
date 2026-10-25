@@ -21,6 +21,7 @@ from .exceptions import (
     ListPeersException,
     MirrorExistsException,
     MirrorNotFoundException,
+    MirrorStatusException,
     MirrorTimeoutException,
     PauseMirrorException,
     PeerExistsException,
@@ -94,6 +95,28 @@ LITERAL_FLOW_STATUS_LABELS = {
     attr: attr.removeprefix("STATUS_").replace("_", " ").title()
     for attr in dir(FlowStatus)
     if attr.startswith("STATUS_")
+}
+
+# Statuses that prevent a mirror from reaching a running or paused state
+STOPPED_STATUSES = {
+    "STATUS_COMPLETED",
+    "STATUS_FAILED",
+    "STATUS_TERMINATING",
+    "STATUS_TERMINATED",
+}
+
+# Statuses that show a resync has started. Terminal mirrors are recreated by
+# the API before it returns, so their new flow may already be in setup or
+# snapshot.
+RESYNC_STARTED_STATUSES = {
+    "STATUS_RESYNC",
+    "STATUS_SETUP",
+    "STATUS_SNAPSHOT",
+}
+
+RESYNC_TERMINAL_STARTED_STATUSES = RESYNC_STARTED_STATUSES | {
+    "STATUS_COMPLETED",
+    "STATUS_RUNNING",
 }
 
 
@@ -1589,6 +1612,7 @@ class PeerDB:
 
         Raises:
             PeerNotFoundException: If the peer is missing and `if_exists` is False.
+            MirrorStatusException: If a dependent mirror is terminated.
             DropPeerException: If the drop request fails.
         """
         if timeout is None:
@@ -1683,6 +1707,27 @@ class PeerDB:
 
         return ListPeersResponse(**response.json())
 
+    def _get_mirror_status_or_none(self, flow_job_name: str) -> str | None:
+        """
+        Return a mirror status, or None when the mirror is absent or unknown.
+
+        Args:
+            flow_job_name: Mirror (flow job) name to look up.
+
+        Returns:
+            str | None: Current flow status, or None for HTTP 404 and
+                `STATUS_UNKNOWN`.
+
+        Raises:
+            GetMirrorStatusException: If the status request fails otherwise.
+        """
+        try:
+            status = self.get_mirror_status(flow_job_name).current_flow_state
+        except MirrorNotFoundException:
+            return None
+
+        return None if status == "STATUS_UNKNOWN" else status
+
     def has_mirror(self, flow_job_name: str) -> bool:
         """
         Check whether a mirror exists on the server.
@@ -1694,10 +1739,7 @@ class PeerDB:
             bool: True when the mirror status is known, False when the
                 mirror is not found.
         """
-        try:
-            return self.get_mirror_status(flow_job_name).current_flow_state != "STATUS_UNKNOWN"
-        except MirrorNotFoundException:
-            return False
+        return self._get_mirror_status_or_none(flow_job_name) is not None
 
     def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
         """
@@ -1763,6 +1805,8 @@ class PeerDB:
             str: The reached status value.
 
         Raises:
+            MirrorStatusException: If the mirror enters a stopped status that
+                is not a target.
             MirrorTimeoutException: If no target status is reached in time.
         """
         if timeout is None:
@@ -1775,6 +1819,11 @@ class PeerDB:
 
             if current_status in target_statuses:
                 return current_status
+
+            if current_status in STOPPED_STATUSES:
+                raise MirrorStatusException(
+                    f"Mirror '{flow_job_name}' is '{current_status}' and cannot reach status {target_statuses}"
+                )
 
             time.sleep(1)
 
@@ -1807,6 +1856,7 @@ class PeerDB:
 
         Raises:
             MirrorExistsException: If the mirror exists and `if_exists` is `fail`.
+            MirrorStatusException: If replacing a terminated mirror.
             PeerNotFoundException: If the source peer is missing from config.
             UnsupportedAdapterException: If the source adapter is not Postgres.
             TableNotFoundException: If a mapped source table is missing.
@@ -1911,7 +1961,7 @@ class PeerDB:
 
         Sends `POST v1/mirrors/state_change` with `STATUS_TERMINATING`,
         `dropMirrorStats=True`, and `skipDestinationDrop=False`, then polls
-        until `has_mirror()` is False.
+        until the mirror disappears.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -1930,6 +1980,7 @@ class PeerDB:
 
         Raises:
             MirrorNotFoundException: If missing and `if_exists` is False.
+            MirrorStatusException: If the mirror is terminated.
             DropMirrorException: If the state-change request fails.
             MirrorTimeoutException: If the mirror still exists after timeout.
         """
@@ -1938,13 +1989,20 @@ class PeerDB:
 
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
-        if not self.has_mirror(flow_job_name):
+        current_status = self._get_mirror_status_or_none(flow_job_name)
+
+        if current_status is None:
             if if_exists:
                 return DropMirrorResponse(
                     message=f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
                 )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
+        if current_status == "STATUS_TERMINATED":
+            raise MirrorStatusException(
+                f"Mirror '{flow_job_name}' is terminated and cannot be dropped via the PeerDB API"
+            )
 
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
@@ -1970,8 +2028,16 @@ class PeerDB:
             )
 
         for _ in range(timeout):
-            if not self.has_mirror(flow_job_name):
+            current_status = self._get_mirror_status_or_none(flow_job_name)
+
+            if current_status is None:
                 break
+
+            if current_status == "STATUS_TERMINATED":
+                raise MirrorStatusException(
+                    f"Mirror '{flow_job_name}' is terminated and cannot be dropped via the PeerDB API"
+                )
+
             time.sleep(1)
         else:
             raise MirrorTimeoutException(
@@ -1995,10 +2061,11 @@ class PeerDB:
         self, flow_job_name: str, if_exists: bool | None = False, timeout: int | None = None
     ) -> ResyncMirrorResponse:
         """
-        Request a resync of a mirror and wait for resync state.
+        Request a resync of a mirror and wait for resync to start.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_RESYNC` and
-        `dropMirrorStats=True`.
+        `dropMirrorStats=True`. A mirror that is already terminating or
+        terminated cannot be resynced.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -2016,21 +2083,36 @@ class PeerDB:
 
         Raises:
             MirrorNotFoundException: If missing and `if_exists` is False.
+            MirrorStatusException: If the mirror is terminating or terminated,
+                or stops before resync starts.
             ResyncMirrorException: If the state-change request fails.
-            MirrorTimeoutException: If `STATUS_RESYNC` is not reached in time.
+            MirrorTimeoutException: If resync does not start in time.
         """
         if timeout is None:
             timeout = self.config.client.operation_timeout
 
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
 
-        if not self.has_mirror(flow_job_name):
+        current_status = self._get_mirror_status_or_none(flow_job_name)
+
+        if current_status is None:
             if if_exists:
                 return ResyncMirrorResponse(
                     message=f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
                 )
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
+        if current_status in {"STATUS_TERMINATING", "STATUS_TERMINATED"}:
+            raise MirrorStatusException(
+                f"Mirror '{flow_job_name}' is '{current_status}' and cannot be resynced"
+            )
+
+        target_statuses = (
+            RESYNC_TERMINAL_STARTED_STATUSES
+            if current_status in {"STATUS_COMPLETED", "STATUS_FAILED"}
+            else RESYNC_STARTED_STATUSES
+        )
 
         url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
@@ -2051,7 +2133,7 @@ class PeerDB:
                 f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
             )
 
-        self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
+        self.wait_for_mirror_status(flow_job_name, target_statuses, timeout=timeout)
 
         return ResyncMirrorResponse(
             message=f"Resync of mirror '{flow_job_name}' has been initiated"
@@ -2063,7 +2145,7 @@ class PeerDB:
 
         Only sends `POST v1/mirrors/state_change` with `STATUS_PAUSED` when
         the current status is `STATUS_RUNNING`; otherwise returns a no-op
-        message.
+        message. A terminated mirror raises an error.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -2080,6 +2162,7 @@ class PeerDB:
 
         Raises:
             MirrorNotFoundException: If the mirror does not exist.
+            MirrorStatusException: If the mirror stops before it can be paused.
             PauseMirrorException: If the state-change request fails.
             MirrorTimeoutException: If `STATUS_PAUSED` is not reached in time.
         """
@@ -2088,10 +2171,16 @@ class PeerDB:
 
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
-        if not self.has_mirror(flow_job_name):
+        current_flow_state = self._get_mirror_status_or_none(flow_job_name)
+
+        if current_flow_state is None:
             raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-        current_flow_state = self.get_mirror_status(flow_job_name).current_flow_state
+        if current_flow_state == "STATUS_TERMINATED":
+            raise MirrorStatusException(
+                f"Mirror '{flow_job_name}' is terminated and cannot be paused"
+            )
+
         if current_flow_state not in {"STATUS_RUNNING"}:
             return PauseMirrorResponse(
                 message=f"Not pausing mirror '{flow_job_name}' because its status is '{current_flow_state}'"
@@ -2123,9 +2212,9 @@ class PeerDB:
         """
         Resume a paused mirror and wait for running state.
 
-        Only sends `POST v1/mirrors/state_change` with `STATUS_RUNNING` when
-        the current status is `STATUS_PAUSED` or `STATUS_PAUSING`; otherwise
-        returns a no-op message.
+        A mirror that is pausing is first allowed to reach `STATUS_PAUSED`.
+        Only then does the method send `POST v1/mirrors/state_change` with
+        `STATUS_RUNNING`. Other non-terminated statuses return a no-op message.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -2142,6 +2231,8 @@ class PeerDB:
 
         Raises:
             MirrorNotFoundException: If the mirror does not exist.
+            MirrorStatusException: If the mirror is terminated or stops before
+                it can be resumed.
             ResumeMirrorException: If the state-change request fails.
             MirrorTimeoutException: If `STATUS_RUNNING` is not reached in time.
         """
@@ -2150,11 +2241,19 @@ class PeerDB:
 
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 
-        if not self.has_mirror(flow_job_name):
+        current_flow_state = self._get_mirror_status_or_none(flow_job_name)
+
+        if current_flow_state is None:
             raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-        current_flow_state = self.get_mirror_status(flow_job_name).current_flow_state
-        if current_flow_state not in {"STATUS_PAUSED", "STATUS_PAUSING"}:
+        if current_flow_state == "STATUS_TERMINATED":
+            raise MirrorStatusException(
+                f"Mirror '{flow_job_name}' is terminated and cannot be resumed"
+            )
+
+        if current_flow_state == "STATUS_PAUSING":
+            self.wait_for_mirror_status(flow_job_name, {"STATUS_PAUSED"}, timeout=timeout)
+        elif current_flow_state != "STATUS_PAUSED":
             return ResumeMirrorResponse(
                 message=f"Not resuming mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )

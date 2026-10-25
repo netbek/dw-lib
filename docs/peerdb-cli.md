@@ -23,7 +23,7 @@ The `peerdb` commands wrap the `PeerDB` client in `src/dw_lib/peerdb.py`. They r
 | `cli peerdb mirror create [NAME] [--all] [--if-exists MODE]` | Create one configured mirror or all configured mirrors. |
 | `cli peerdb mirror drop [NAME] [--all] [--drop-destination-tables] [--if-exists]` | Drop one server mirror or all server mirrors. |
 | `cli peerdb mirror pause [NAME] [--all]` | Pause one running mirror or all running mirrors. |
-| `cli peerdb mirror resume [NAME] [--all]` | Resume one paused or pausing mirror or all paused or pausing mirrors. |
+| `cli peerdb mirror resume [NAME] [--all]` | Resume one paused mirror or all paused mirrors; a pausing mirror is resumed after it pauses. |
 | `cli peerdb mirror resync [NAME] [--all] [--if-exists]` | Resync one server mirror or all server mirrors. |
 
 Append `--help` to any command to see its options.
@@ -151,9 +151,11 @@ Drops one server mirror, or all server mirrors. A missing mirror is skipped when
 
 The command sends `STATUS_TERMINATING` with `dropMirrorStats=True` and polls until the mirror no longer exists. PeerDB cleans up its own source and destination objects during termination, except for a flow that already completed an `initial_snapshot_only` run. It does not drop user destination tables.
 
+A mirror that is already `Terminated` cannot be dropped through the PeerDB API. The command raises a client-side error instead of waiting for a timeout.
+
 With `--drop-destination-tables`, the command drops the mapped destination tables after the mirror disappears. This step needs the mirror in the local config. If the mirror is missing from the config, the command prints a skip message and leaves the tables in place.
 
-**Blocking:** synchronous until the mirror disappears or the polling timeout expires. A timeout does not cancel the backend termination workflow; the mirror may still disappear later.
+**Blocking:** synchronous until the mirror disappears, the mirror reports `Terminated`, or the polling timeout expires. A timeout does not cancel the backend termination workflow; the mirror may still disappear later.
 
 ## `peerdb mirror pause`
 
@@ -163,7 +165,7 @@ cli peerdb mirror pause [NAME] [--all]
 
 Pauses one server mirror, or all server mirrors.
 
-The command reads the current status first. It only sends `STATUS_PAUSED` when the mirror is `Running`. For any other status it returns a no-op message. PeerDB may report `Pausing` while the current sync finishes, then `Paused`.
+The command reads the current status first. It only sends `STATUS_PAUSED` when the mirror is `Running`. For any other status it returns a no-op message. PeerDB may report `Pausing` while the current sync finishes, then `Paused`. A mirror that is already `Terminated` raises a client-side error.
 
 **Blocking:** the no-op path returns immediately. Otherwise the command waits until the mirror reports `Paused` or the polling timeout expires. It does not pause a mirror during setup or snapshot.
 
@@ -175,11 +177,9 @@ cli peerdb mirror resume [NAME] [--all]
 
 Resumes one server mirror, or all server mirrors.
 
-The command only sends `STATUS_RUNNING` when the mirror is `Paused` or `Pausing`. For any other status it returns a no-op message.
+The command reads the current status first. A mirror that is `Paused` receives `STATUS_RUNNING` immediately. A mirror that is `Pausing` first waits for `Paused`, then receives `STATUS_RUNNING`. For any other status it returns a no-op message. A mirror that is already `Terminated` raises a client-side error.
 
-**Blocking:** the no-op path returns immediately. Otherwise the command waits until the mirror reports `Running` or the polling timeout expires.
-
-**Caveat:** PeerDB only signals a workflow to resume from `Paused`. A resume sent while the mirror is `Pausing` can be accepted by the wrapper but ignored by the backend, ending in a polling timeout.
+**Blocking:** the no-op path returns immediately. Otherwise the command waits for `Paused` when needed, then waits until the mirror reports `Running` or the polling timeout expires.
 
 ## `peerdb mirror resync`
 
@@ -189,11 +189,13 @@ cli peerdb mirror resync [NAME] [--all] [--if-exists]
 
 Resyncs one server mirror, or all server mirrors. A missing mirror is skipped when `--if-exists` is true, which is the default.
 
-The command sends `STATUS_RESYNC` with `dropMirrorStats=True`, then waits for the mirror to report `Resync`. It does not wait for the resync to finish.
+The command sends `STATUS_RESYNC` with `dropMirrorStats=True`, then waits for a resync-started status: `Resync`, `Setup` or `Snapshot`. It does not wait for the resync to finish.
 
-PeerDB resyncs a CDC mirror by dropping and recreating the flow. A running mirror normally moves through `Resync`, `Setup`, `Snapshot`, `Resync` and then `Running`. For a mirror in a terminal state (`Completed` or `Failed`), PeerDB shuts the flow down and recreates it, so `Resync` may only appear after the new snapshot. The default 15-second timeout can expire first.
+PeerDB resyncs a CDC mirror by dropping and recreating the flow. A running mirror normally moves through `Resync`, `Setup`, `Snapshot`, `Resync` and then `Running`. For a mirror in a terminal state (`Completed` or `Failed`), PeerDB recreates the flow before the API returns, so the command also accepts `Completed` and `Running` as signs that the new flow has started.
 
-**Blocking:** synchronous until the mirror reports `Resync` or the polling timeout expires.
+A mirror that is `Terminating` or `Terminated` cannot be resynced. The command raises a client-side error before sending the request.
+
+**Blocking:** synchronous until a resync-started status appears, a stopped status raises, or the polling timeout expires.
 
 **Caveat:** `--all` uses the server mirror list. A non-CDC mirror causes the API to reject the resync request, and the command stops before processing the remaining mirrors.
 
@@ -208,7 +210,7 @@ PeerDB records a flow status in the catalog `flows.status` column. The API retur
 - **Snapshot:** PeerDB copies the mapped tables. During the initial snapshot, the mirror is not applying changes yet.
 - **Sync:** The workflow enters the CDC loop and applies changes in batches. Status is `Running`.
 - **Pause:** A pause signal stops the current sync activity. Status moves through `Pausing` to `Paused`.
-- **Resume:** A resume signal restarts the sync. Status returns to `Running`.
+- **Resume:** A resume signal restarts the sync. Status returns to `Running`. A mirror that is still pausing must reach `Paused` first.
 - **Resync:** PeerDB drops and recreates the flow, takes a new snapshot and swaps the destination tables. Status uses `Resync`, `Setup`, `Snapshot` and `Resync`.
 - **Table changes:** Added tables use a child snapshot (`Snapshot`). Removed tables use `Modifying`.
 - **Terminate:** A termination signal removes the flow and normally cleans up source and destination objects. Status is `Terminating`.
@@ -225,7 +227,7 @@ PeerDB records a flow status in the catalog `flows.status` column. The API retur
 | `STATUS_SETUP` | 4 | The flow was created. PeerDB checks connections and creates metadata, the publication, the replication slot and destination objects. |
 | `STATUS_SNAPSHOT` | 5 | The initial snapshot, a resync snapshot or a table-addition snapshot is running. |
 | `STATUS_TERMINATING` | 6 | Termination was requested. PeerDB normally cleans up source and destination objects and mirror stats. |
-| `STATUS_TERMINATED` | 7 | The workflow stopped or was cancelled. Terminal. |
+| `STATUS_TERMINATED` | 7 | The workflow stopped or was cancelled. Terminal. Operations that require an active flow raise a client-side error. |
 | `STATUS_COMPLETED` | 8 | The flow finished because `initial_snapshot_only` was set. Terminal. |
 | `STATUS_RESYNC` | 9 | A resync is in progress: either the drop/recreate phase or the final table swap after the resync snapshot. |
 | `STATUS_FAILED` | 10 | Setup, snapshot, rename or a configuration update failed. Terminal until a resync recreates the flow. |
@@ -255,10 +257,10 @@ PeerDB records a flow status in the catalog `flows.status` column. The API retur
 |---|---|
 | `peerdb up`, `peerdb peer create` | Creates peers. No flow status. |
 | `peerdb up`, `peerdb mirror create` | Creates flows, which enter `Setup`. |
-| `peerdb mirror pause` | Sends a pause signal. |
-| `peerdb mirror resume` | Sends a resume signal. |
-| `peerdb mirror resync` | Sends a resync signal, or recreates a terminal flow. |
-| `peerdb mirror drop`, `peerdb peer drop` | Sends a termination signal and removes the flow. |
+| `peerdb mirror pause` | Sends a pause signal. Terminated mirrors raise an error. |
+| `peerdb mirror resume` | Waits for `Paused` when the mirror is pausing, then sends a resume signal. Terminated mirrors raise an error. |
+| `peerdb mirror resync` | Sends a resync signal, or recreates a terminal flow. Terminating and terminated mirrors raise an error. |
+| `peerdb mirror drop`, `peerdb peer drop` | Sends a termination signal and removes the flow. Terminated mirrors raise an error. |
 | `peerdb settings update`, `peerdb up` | Updates dynamic settings. |
 | `peerdb debug` | Read-only. |
 
@@ -269,7 +271,7 @@ Two layers matter:
 - **PeerDB API:** most flow state changes are asynchronous. The API accepts a signal and returns before the workflow acts.
 - **CLI wrapper:** some commands add polling on top of the API. These commands block until a target status appears, the mirror disappears or the timeout expires.
 
-For a mirror in a terminal state (`Completed` or `Failed`), the API may drop or recreate the flow before it returns. The state-change request itself can therefore take longer than usual.
+For a mirror in a terminal state (`Completed` or `Failed`), the API may drop or recreate the flow before it returns. The state-change request itself can therefore take longer than usual. A `Terminated` mirror cannot be changed and raises a client-side error.
 
 ### Timeouts
 
@@ -289,17 +291,19 @@ For a mirror in a terminal state (`Completed` or `Failed`), the API may drop or 
 | `peer create` | Peer validation and creation | The peer is created | None |
 | `peer drop` | Dependent mirror drops and peer deletion | The peer is deleted | None |
 | `mirror create` | Source-table checks, destination-table cleanup and creation | PeerDB starts the workflow | Setup, snapshot and sync |
-| `mirror drop` | Termination request and mirror disappearance | The mirror is gone or the timeout expires | Termination may continue after a timeout |
-| `mirror pause` | Status check and pause polling when running | The mirror is `Paused` or the timeout expires | Signal processing if the poll times out |
-| `mirror resume` | Status check and resume polling when paused | The mirror is `Running` or the timeout expires | Signal processing if the poll times out |
-| `mirror resync` | Resync request and status polling | The mirror reports `Resync` or the timeout expires | Drop, setup, snapshot, swap and sync |
+| `mirror drop` | Termination request and mirror disappearance | The mirror is gone, a stopped status raises, or the timeout expires | Termination may continue after a timeout |
+| `mirror pause` | Status check and pause polling when running | The mirror is `Paused`, a stopped status raises, or the timeout expires | Signal processing if the poll times out |
+| `mirror resume` | Status check, wait for `Paused` when pausing, and resume polling | The mirror is `Running`, a stopped status raises, or the timeout expires | Signal processing if the poll times out |
+| `mirror resync` | Resync request and resync-status polling | A resync-started status appears, a stopped status raises, or the timeout expires | Drop, setup, snapshot, swap and sync |
 
 ## Known limitations
 
 - `up` does not wait for mirrors to reach `Running`. Check `debug` or the PeerDB UI before relying on replication.
 - The `up` docstring says it adds replication slots. The command itself creates peers and mirrors. PeerDB creates the publication and replication slot later, during setup.
-- `mirror resync` waits for `Resync`, not for the resync to finish. A resync of a terminal mirror can time out before `Resync` appears.
-- `mirror resume` can time out when sent during `Pausing`.
+- `mirror resync` waits for a resync-started status, not for the resync to finish.
+- `mirror drop`, `mirror pause`, `mirror resume` and `mirror resync` raise a client-side error for terminated mirrors. The PeerDB API cannot remove terminated rows.
+- `peer drop` and `create --if-exists replace` propagate the terminated-mirror error when a dependent mirror is terminated.
+- `create --if-exists keep` and `up --if-exists keep` still report a terminated mirror as kept. `replace` raises because the terminated row cannot be removed.
 - `mirror drop` can time out while the backend continues termination.
 - `--drop-destination-tables` only works when the mirror is in the local config.
 - `peer drop --all` uses the local config, so peers that exist only on the server are not dropped.

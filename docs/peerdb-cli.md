@@ -6,7 +6,7 @@ The `peerdb` commands wrap the `PeerDB` client in `src/dw_lib/peerdb.py`. They r
 
 - The CLI uses `PEERDB_CONFIG_FILE` when set. Otherwise it searches upward from the working directory for `peerdb.yaml`.
 - The API base URL is `client.peerdb_ui_url` joined with `api`.
-- `client.operation_timeout` sets the polling timeout for state changes. The default is 15 seconds.
+- Client timeouts are flat keys under `client`. All are optional and have defaults; see [Timeouts](#timeouts).
 - `debug` expects peers named `source` and `destination`. Publication and replication-slot checks use the `source` peer.
 - Mirror creation requires the source peer to use the Postgres adapter.
 - The config file is resolved when the CLI starts. `--help` therefore needs a discoverable `peerdb.yaml`.
@@ -201,7 +201,7 @@ A mirror that is `Terminating` or `Terminated` cannot be resynced. The command r
 
 ## Lifecycle events and statuses
 
-PeerDB records a flow status in the catalog `flows.status` column. The API returns that value as `currentFlowState`. The status can lag the actual Temporal workflow by a moment. State-change commands poll it once per second.
+PeerDB records a flow status in the catalog `flows.status` column. The API returns that value as `currentFlowState`. The status can lag the actual Temporal workflow by a moment. State-change commands poll at `client.polling_interval`, which defaults to one second.
 
 ### Events
 
@@ -275,11 +275,31 @@ For a mirror in a terminal state (`Completed` or `Failed`), the API may drop or 
 
 ### Timeouts
 
-- Most API requests use a 5-second HTTP timeout.
-- Drop and state-change requests use no HTTP timeout. They can wait indefinitely for the API response.
-- Polling uses `client.operation_timeout`, which defaults to 15 seconds, with a one-second interval.
-- Direct database checks have no wrapper-level timeout.
-- `--all` processes items sequentially. One failure stops the remaining items.
+Client timeouts are flat keys under `client`. Every key is optional and has a default.
+
+| Key | Default | Used by |
+|---|---:|---|
+| `connect_timeout` | 5 | Every API request, as the TCP connect timeout. |
+| `read_timeout` | 60 | Read-only API calls: version, settings read, peer info/type, peer list, mirror list, mirror status. |
+| `polling_interval` | 1.0 | Interval between polling requests. |
+| `settings_update_read_timeout` | 60 | Settings updates, including `up`. |
+| `peer_create_read_timeout` | 90 | Peer creation, including `up`. |
+| `peer_drop_read_timeout` | 60 | Peer deletion, including `--if-exists replace`. |
+| `mirror_create_read_timeout` | 300 | Mirror creation, including `up`. |
+| `mirror_drop_read_timeout` | 900 | Mirror deletion, including `peer drop` and `--if-exists replace`. |
+| `mirror_pause_read_timeout` | 60 | Mirror pause requests. |
+| `mirror_resume_read_timeout` | 60 | Mirror resume requests. |
+| `mirror_resync_read_timeout` | 900 | Mirror resync requests. |
+| `mirror_drop_polling_timeout` | 600 | Polling while a mirror is deleted. |
+| `mirror_pause_polling_timeout` | 120 | Polling while a mirror pauses. |
+| `mirror_resume_polling_timeout` | 180 | Polling while a mirror resumes. |
+| `mirror_resync_polling_timeout` | 300 | Polling until a resync starts. |
+
+`*_read_timeout` keys are HTTP response read timeouts. `*_polling_timeout` keys are deadlines for polling a state change or disappearance. `polling_interval` is the delay between polling requests.
+
+`up` uses the timeouts of the operations it calls: settings update, peer creation and mirror creation. `debug` uses `read_timeout`. Nested operations use their own keys; for example, `peer drop` uses `mirror_drop_read_timeout` and `mirror_drop_polling_timeout` for dependent mirrors.
+
+A request timeout does not cancel the backend operation. The command raises after the timeout, but PeerDB may continue processing. Direct database checks have no wrapper-level timeout. `--all` processes items sequentially. One failure stops the remaining items.
 
 ### Command summary
 

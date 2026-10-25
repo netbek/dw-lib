@@ -1,6 +1,25 @@
 client:
   peerdb_ui_url: http://localhost:3000
 
+  # Optional client timeouts. All values are in seconds and have defaults.
+  # *_read_timeout keys are HTTP response read timeouts.
+  # *_polling_timeout keys are polling deadlines.
+  # connect_timeout: 5
+  # read_timeout: 60
+  # polling_interval: 1.0
+  # settings_update_read_timeout: 60
+  # peer_create_read_timeout: 90
+  # peer_drop_read_timeout: 60
+  # mirror_create_read_timeout: 300
+  # mirror_drop_read_timeout: 900
+  # mirror_pause_read_timeout: 60
+  # mirror_resume_read_timeout: 60
+  # mirror_resync_read_timeout: 900
+  # mirror_drop_polling_timeout: 600
+  # mirror_pause_polling_timeout: 120
+  # mirror_resume_polling_timeout: 180
+  # mirror_resync_polling_timeout: 300
+
 # Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/internal/dynamicconf.go
 settings:
   PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: "peerdb"

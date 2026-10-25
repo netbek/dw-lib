@@ -27,7 +27,21 @@ class TestLoadConfig(PeerDBIntegrationTest):
         expected = {
             "client": {
                 "peerdb_ui_url": HttpUrl("http://localhost:3000"),
-                "operation_timeout": 30,
+                "connect_timeout": 5,
+                "read_timeout": 60,
+                "operation_interval": 1.0,
+                "settings_update_timeout": 60,
+                "peer_create_timeout": 90,
+                "peer_drop_timeout": 60,
+                "mirror_create_timeout": 300,
+                "mirror_drop_timeout": 900,
+                "mirror_pause_timeout": 60,
+                "mirror_resume_timeout": 60,
+                "mirror_resync_timeout": 900,
+                "mirror_drop_operation_timeout": 600,
+                "mirror_pause_operation_timeout": 120,
+                "mirror_resume_operation_timeout": 180,
+                "mirror_resync_operation_timeout": 300,
             },
             "settings": [
                 {

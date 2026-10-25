@@ -1,4 +1,5 @@
 from dw_lib.exceptions import (
+    GetDynamicSettingsException,
     MirrorNotFoundException,
     MirrorStatusException,
     MirrorTimeoutException,
@@ -13,15 +14,25 @@ from pathlib import Path
 
 import datetime
 import pytest
+import requests
 
 
-def make_peerdb(tmp_path: Path, operation_timeout: int = 3) -> PeerDB:
+def make_peerdb(
+    tmp_path: Path,
+    timeout: int = 3,
+    operation_interval: float = 1.0,
+) -> PeerDB:
     """Write a minimal PeerDB config and return the client."""
     config_file = tmp_path / "peerdb.yaml"
     config_file.write_text(
         "client:\n"
         "  peerdb_ui_url: http://localhost:3000\n"
-        f"  operation_timeout: {operation_timeout}\n"
+        f"  read_timeout: {timeout}\n"
+        f"  operation_interval: {operation_interval}\n"
+        f"  mirror_drop_operation_timeout: {timeout}\n"
+        f"  mirror_pause_operation_timeout: {timeout}\n"
+        f"  mirror_resume_operation_timeout: {timeout}\n"
+        f"  mirror_resync_operation_timeout: {timeout}\n"
     )
 
     return PeerDB(config_file=config_file)
@@ -34,6 +45,24 @@ def mirror_status(flow_job_name: str, current_flow_state: str) -> MirrorStatusRe
         currentFlowState=current_flow_state,
         flowJobName=flow_job_name,
     )
+
+
+def fake_time(monkeypatch) -> list[float]:
+    """Replace the polling clock; return a mutable list of sleep durations."""
+    now = [0.0]
+    sleeps: list[float] = []
+
+    def monotonic() -> float:
+        return now[0]
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr("dw_lib.peerdb.time.monotonic", monotonic)
+    monkeypatch.setattr("dw_lib.peerdb.time.sleep", sleep)
+
+    return sleeps
 
 
 def status_sequence(monkeypatch, peerdb: PeerDB, states: list[str | None]) -> None:
@@ -52,7 +81,7 @@ def status_sequence(monkeypatch, peerdb: PeerDB, states: list[str | None]) -> No
         return mirror_status(flow_job_name, state)
 
     monkeypatch.setattr(peerdb, "get_mirror_status", fake_get_mirror_status)
-    monkeypatch.setattr("dw_lib.peerdb.time.sleep", lambda _: None)
+    fake_time(monkeypatch)
 
 
 class FakeResponse:
@@ -62,11 +91,19 @@ class FakeResponse:
         return None
 
 
-def fake_post(monkeypatch, calls: list[dict]) -> None:
-    """Record state-change request bodies."""
+def fake_post(
+    monkeypatch,
+    calls: list[dict],
+    timeouts: list[tuple[float, float]] | None = None,
+) -> None:
+    """Record state-change request bodies and timeouts."""
 
     def post(url, json=None, headers=None, timeout=None):
         calls.append(json)
+
+        if timeouts is not None:
+            timeouts.append(timeout)
+
         return FakeResponse()
 
     monkeypatch.setattr("dw_lib.peerdb.requests.post", post)
@@ -101,11 +138,21 @@ class TestWaitForMirrorStatus:
 
     def test_raises_on_timeout(self, tmp_path: Path, monkeypatch):
         """Verify an unreached target raises a timeout."""
-        peerdb = make_peerdb(tmp_path, operation_timeout=2)
+        peerdb = make_peerdb(tmp_path, timeout=2)
         status_sequence(monkeypatch, peerdb, ["STATUS_RUNNING", "STATUS_RUNNING"])
 
         with pytest.raises(MirrorTimeoutException):
             peerdb.wait_for_mirror_status("cdc_one", {"STATUS_PAUSED"})
+
+    def test_uses_operation_interval(self, tmp_path: Path, monkeypatch):
+        """Verify polling sleeps for the configured interval."""
+        peerdb = make_peerdb(tmp_path, operation_interval=2.5)
+        status_sequence(monkeypatch, peerdb, ["STATUS_RUNNING", "STATUS_PAUSED"])
+        sleeps = fake_time(monkeypatch)
+
+        peerdb.wait_for_mirror_status("cdc_one", {"STATUS_PAUSED"})
+
+        assert sleeps == [2.5]
 
 
 class TestResumeMirror:
@@ -233,6 +280,18 @@ class TestDropMirror:
         assert response.message == "Dropped mirror 'cdc_one'"
         assert len(calls) == 1
 
+    def test_uses_configured_request_timeout(self, tmp_path: Path, monkeypatch):
+        """Verify drop requests use the configured connect and request timeouts."""
+        peerdb = make_peerdb(tmp_path)
+        status_sequence(monkeypatch, peerdb, ["STATUS_RUNNING", None])
+        calls: list[dict] = []
+        timeouts: list[tuple[float, float]] = []
+        fake_post(monkeypatch, calls, timeouts)
+
+        peerdb.drop_mirror("cdc_one")
+
+        assert timeouts == [(5, 900)]
+
     def test_status_becoming_terminated_raises(self, tmp_path: Path, monkeypatch):
         """Verify a mirror that becomes terminated while dropping raises."""
         peerdb = make_peerdb(tmp_path)
@@ -272,3 +331,42 @@ class TestPauseMirror:
 
         assert response.message == "Paused mirror 'cdc_one'"
         assert calls == [{"flowJobName": "cdc_one", "requestedFlowState": "STATUS_PAUSED"}]
+
+    def test_uses_configured_request_timeout(self, tmp_path: Path, monkeypatch):
+        """Verify pause requests use the configured connect and request timeouts."""
+        peerdb = make_peerdb(tmp_path)
+        status_sequence(monkeypatch, peerdb, ["STATUS_RUNNING", "STATUS_PAUSED"])
+        calls: list[dict] = []
+        timeouts: list[tuple[float, float]] = []
+        fake_post(monkeypatch, calls, timeouts)
+
+        peerdb.pause_mirror("cdc_one")
+
+        assert timeouts == [(5, 60)]
+
+
+class TestRequestTimeouts:
+    """Tests for request timeout handling."""
+
+    def test_can_connect_returns_false_on_timeout(self, tmp_path: Path, monkeypatch):
+        """Verify a timeout during the connectivity check returns False."""
+        peerdb = make_peerdb(tmp_path)
+
+        def get(*args, **kwargs):
+            raise requests.Timeout("timed out")
+
+        monkeypatch.setattr("dw_lib.peerdb.requests.get", get)
+
+        assert peerdb.can_connect() is False
+
+    def test_get_settings_raises_on_timeout(self, tmp_path: Path, monkeypatch):
+        """Verify a timeout while reading settings raises a client exception."""
+        peerdb = make_peerdb(tmp_path)
+
+        def get(*args, **kwargs):
+            raise requests.Timeout("timed out")
+
+        monkeypatch.setattr("dw_lib.peerdb.requests.get", get)
+
+        with pytest.raises(GetDynamicSettingsException):
+            peerdb.get_settings()

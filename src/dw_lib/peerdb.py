@@ -51,11 +51,21 @@ import pydash
 import requests
 import time
 
-# Timeout in seconds for individual HTTP requests to the PeerDB API
-REQUEST_TIMEOUT = 5
-
-# Timeout in seconds for waiting on long-running PeerDB operations (e.g. mirror state changes)
-OPERATION_TIMEOUT = 15
+DEFAULT_CONNECT_TIMEOUT = 5
+DEFAULT_READ_TIMEOUT = 60
+DEFAULT_OPERATION_INTERVAL = 1.0
+DEFAULT_SETTINGS_UPDATE_TIMEOUT = 60
+DEFAULT_PEER_CREATE_TIMEOUT = 90
+DEFAULT_PEER_DROP_TIMEOUT = 60
+DEFAULT_MIRROR_CREATE_TIMEOUT = 300
+DEFAULT_MIRROR_DROP_TIMEOUT = 900
+DEFAULT_MIRROR_PAUSE_TIMEOUT = 60
+DEFAULT_MIRROR_RESUME_TIMEOUT = 60
+DEFAULT_MIRROR_RESYNC_TIMEOUT = 900
+DEFAULT_MIRROR_DROP_OPERATION_TIMEOUT = 600
+DEFAULT_MIRROR_PAUSE_OPERATION_TIMEOUT = 120
+DEFAULT_MIRROR_RESUME_OPERATION_TIMEOUT = 180
+DEFAULT_MIRROR_RESYNC_OPERATION_TIMEOUT = 300
 
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
@@ -915,11 +925,45 @@ class ConfigClient(BaseModel):
 
     Attributes:
         peerdb_ui_url: PeerDB UI base URL; the API URL appends `api`.
-        operation_timeout: Timeout in seconds for polling operations.
+        connect_timeout: TCP connect timeout in seconds for API requests.
+        read_timeout: Timeout in seconds for read-only API requests.
+        operation_interval: Interval in seconds between polling requests.
+        settings_update_timeout: Timeout in seconds for settings updates.
+        peer_create_timeout: Timeout in seconds for peer creation.
+        peer_drop_timeout: Timeout in seconds for peer deletion.
+        mirror_create_timeout: Timeout in seconds for mirror creation.
+        mirror_drop_timeout: Timeout in seconds for mirror deletion.
+        mirror_pause_timeout: Timeout in seconds for mirror pause requests.
+        mirror_resume_timeout: Timeout in seconds for mirror resume requests.
+        mirror_resync_timeout: Timeout in seconds for mirror resync requests.
+        mirror_drop_operation_timeout: Polling timeout for mirror deletion.
+        mirror_pause_operation_timeout: Polling timeout for mirror pause.
+        mirror_resume_operation_timeout: Polling timeout for mirror resume.
+        mirror_resync_operation_timeout: Polling timeout for mirror resync.
     """
 
     peerdb_ui_url: HttpUrl
-    operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
+    connect_timeout: int = Field(default=DEFAULT_CONNECT_TIMEOUT, ge=1)
+    read_timeout: int = Field(default=DEFAULT_READ_TIMEOUT, ge=1)
+    operation_interval: float = Field(default=DEFAULT_OPERATION_INTERVAL, gt=0)
+    settings_update_timeout: int = Field(default=DEFAULT_SETTINGS_UPDATE_TIMEOUT, ge=1)
+    peer_create_timeout: int = Field(default=DEFAULT_PEER_CREATE_TIMEOUT, ge=1)
+    peer_drop_timeout: int = Field(default=DEFAULT_PEER_DROP_TIMEOUT, ge=1)
+    mirror_create_timeout: int = Field(default=DEFAULT_MIRROR_CREATE_TIMEOUT, ge=1)
+    mirror_drop_timeout: int = Field(default=DEFAULT_MIRROR_DROP_TIMEOUT, ge=1)
+    mirror_pause_timeout: int = Field(default=DEFAULT_MIRROR_PAUSE_TIMEOUT, ge=1)
+    mirror_resume_timeout: int = Field(default=DEFAULT_MIRROR_RESUME_TIMEOUT, ge=1)
+    mirror_resync_timeout: int = Field(default=DEFAULT_MIRROR_RESYNC_TIMEOUT, ge=1)
+    mirror_drop_operation_timeout: int = Field(default=DEFAULT_MIRROR_DROP_OPERATION_TIMEOUT, ge=1)
+    mirror_pause_operation_timeout: int = Field(
+        default=DEFAULT_MIRROR_PAUSE_OPERATION_TIMEOUT, ge=1
+    )
+    mirror_resume_operation_timeout: int = Field(
+        default=DEFAULT_MIRROR_RESUME_OPERATION_TIMEOUT, ge=1
+    )
+    mirror_resync_operation_timeout: int = Field(
+        default=DEFAULT_MIRROR_RESYNC_OPERATION_TIMEOUT, ge=1
+    )
 
 
 class Config(BaseModel):
@@ -1100,10 +1144,7 @@ class PeerDB:
         client_config = config.get("client") or {}
 
         return Config(
-            client={
-                "peerdb_ui_url": client_config.get("peerdb_ui_url"),
-                "operation_timeout": client_config.get("operation_timeout", OPERATION_TIMEOUT),
-            },
+            client=client_config,
             settings=settings,
             peers=peers,
             mirrors=mirrors,
@@ -1125,10 +1166,14 @@ class PeerDB:
         url = self.config.peerdb_api_url.join("v1/version")
 
         try:
-            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response = requests.get(
+                str(url),
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
+            )
             response.raise_for_status()
             return True
-        except (requests.HTTPError, requests.ConnectionError):
+        except requests.RequestException:
             return False
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, Any]]:
@@ -1376,9 +1421,13 @@ class PeerDB:
         url = self.config.peerdb_api_url.join("v1/dynamic_settings")
 
         try:
-            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response = requests.get(
+                str(url),
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1414,10 +1463,16 @@ class PeerDB:
 
             try:
                 response = requests.post(
-                    str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+                    str(url),
+                    json=data,
+                    headers=self._headers,
+                    timeout=(
+                        self.config.client.connect_timeout,
+                        self.config.client.settings_update_timeout,
+                    ),
                 )
                 response.raise_for_status()
-            except (requests.HTTPError, requests.ConnectionError) as exc:
+            except requests.RequestException as exc:
                 try:
                     error_message = response.json().get("message")
                 except Exception:  # noqa: BLE001
@@ -1463,9 +1518,13 @@ class PeerDB:
         url = self.config.peerdb_api_url.join(f"v1/peers/info/{peer_name}")
 
         try:
-            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response = requests.get(
+                str(url),
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1498,9 +1557,13 @@ class PeerDB:
         url = self.config.peerdb_api_url.join(f"v1/peers/type/{peer_name}")
 
         try:
-            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response = requests.get(
+                str(url),
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1554,10 +1617,16 @@ class PeerDB:
 
         try:
             response = requests.post(
-                str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(
+                    self.config.client.connect_timeout,
+                    self.config.client.peer_create_timeout,
+                ),
             )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1605,7 +1674,7 @@ class PeerDB:
                 destination tables.
             if_exists: When True, skip instead of raising if missing.
             timeout: Timeout for dependent mirror drops. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.mirror_drop_operation_timeout`.
 
         Returns:
             DropPeerResponse: Result with dropped/skipped message.
@@ -1616,7 +1685,7 @@ class PeerDB:
             DropPeerException: If the drop request fails.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.mirror_drop_operation_timeout
 
         self._console.print(f"Dropping peer '{peer_name}'")
 
@@ -1639,9 +1708,14 @@ class PeerDB:
         data = {"peerName": peer_name}
 
         try:
-            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response = requests.post(
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.peer_drop_timeout),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1664,10 +1738,10 @@ class PeerDB:
             drop_destination_tables: Whether mirror drops also drop
                 destination tables.
             timeout: Timeout per mirror drop. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.mirror_drop_operation_timeout`.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.mirror_drop_operation_timeout
 
         for mirror in self.list_mirrors().mirrors:
             if mirror.source_name == peer_name or mirror.destination_name == peer_name:
@@ -1696,9 +1770,13 @@ class PeerDB:
         url = self.config.peerdb_api_url.join("v1/peers/list")
 
         try:
-            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response = requests.get(
+                str(url),
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1768,9 +1846,12 @@ class PeerDB:
 
         try:
             response = requests.post(
-                str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
             )
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1799,7 +1880,7 @@ class PeerDB:
             target_statuses: Statuses that stop polling (e.g.
                 `{"STATUS_RUNNING"}`).
             timeout: Polling timeout in seconds. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.read_timeout`.
 
         Returns:
             str: The reached status value.
@@ -1810,11 +1891,12 @@ class PeerDB:
             MirrorTimeoutException: If no target status is reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.read_timeout
 
         current_status = "UNKNOWN"
+        deadline = time.monotonic() + timeout
 
-        for _ in range(timeout):
+        while time.monotonic() < deadline:
             current_status = self.get_mirror_status(flow_job_name).current_flow_state
 
             if current_status in target_statuses:
@@ -1825,7 +1907,10 @@ class PeerDB:
                     f"Mirror '{flow_job_name}' is '{current_status}' and cannot reach status {target_statuses}"
                 )
 
-            time.sleep(1)
+            remaining = deadline - time.monotonic()
+
+            if remaining > 0:
+                time.sleep(min(self.config.client.operation_interval, remaining))
 
         raise MirrorTimeoutException(
             f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
@@ -1921,10 +2006,16 @@ class PeerDB:
 
         try:
             response = requests.post(
-                str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(
+                    self.config.client.connect_timeout,
+                    self.config.client.mirror_create_timeout,
+                ),
             )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -1973,7 +2064,7 @@ class PeerDB:
                 via `drop_destination_tables_of_mirror()`.
             if_exists: When True, skip instead of raising if missing.
             timeout: Polling timeout in seconds. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.mirror_drop_operation_timeout`.
 
         Returns:
             DropMirrorResponse: Result with dropped/skipped message.
@@ -1985,7 +2076,7 @@ class PeerDB:
             MirrorTimeoutException: If the mirror still exists after timeout.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.mirror_drop_operation_timeout
 
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
@@ -2016,9 +2107,17 @@ class PeerDB:
         }
 
         try:
-            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response = requests.post(
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(
+                    self.config.client.connect_timeout,
+                    self.config.client.mirror_drop_timeout,
+                ),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -2027,7 +2126,9 @@ class PeerDB:
                 f"Failed to drop mirror '{flow_job_name}' ({error_message or exc})"
             )
 
-        for _ in range(timeout):
+        deadline = time.monotonic() + timeout
+
+        while time.monotonic() < deadline:
             current_status = self._get_mirror_status_or_none(flow_job_name)
 
             if current_status is None:
@@ -2038,7 +2139,10 @@ class PeerDB:
                     f"Mirror '{flow_job_name}' is terminated and cannot be dropped via the PeerDB API"
                 )
 
-            time.sleep(1)
+            remaining = deadline - time.monotonic()
+
+            if remaining > 0:
+                time.sleep(min(self.config.client.operation_interval, remaining))
         else:
             raise MirrorTimeoutException(
                 f"Failed to drop mirror '{flow_job_name}' after {timeout}s"
@@ -2076,7 +2180,7 @@ class PeerDB:
             flow_job_name: Mirror (flow job) name to resync.
             if_exists: When True, skip instead of raising if missing.
             timeout: Wait timeout in seconds. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.mirror_resync_operation_timeout`.
 
         Returns:
             ResyncMirrorResponse: Result with initiated/skipped message.
@@ -2089,7 +2193,7 @@ class PeerDB:
             MirrorTimeoutException: If resync does not start in time.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.mirror_resync_operation_timeout
 
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
 
@@ -2122,9 +2226,17 @@ class PeerDB:
         }
 
         try:
-            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response = requests.post(
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(
+                    self.config.client.connect_timeout,
+                    self.config.client.mirror_resync_timeout,
+                ),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -2155,7 +2267,7 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to pause.
             timeout: Wait timeout in seconds. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.mirror_pause_operation_timeout`.
 
         Returns:
             PauseMirrorResponse: Result with paused or not-pausing message.
@@ -2167,7 +2279,7 @@ class PeerDB:
             MirrorTimeoutException: If `STATUS_PAUSED` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.mirror_pause_operation_timeout
 
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
@@ -2193,9 +2305,17 @@ class PeerDB:
         }
 
         try:
-            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response = requests.post(
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(
+                    self.config.client.connect_timeout,
+                    self.config.client.mirror_pause_timeout,
+                ),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -2224,7 +2344,7 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to resume.
             timeout: Wait timeout in seconds. Defaults to
-                `config.client.operation_timeout`.
+                `config.client.mirror_resume_operation_timeout`.
 
         Returns:
             ResumeMirrorResponse: Result with resumed or not-resuming message.
@@ -2237,7 +2357,7 @@ class PeerDB:
             MirrorTimeoutException: If `STATUS_RUNNING` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.operation_timeout
+            timeout = self.config.client.mirror_resume_operation_timeout
 
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 
@@ -2265,9 +2385,17 @@ class PeerDB:
         }
 
         try:
-            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response = requests.post(
+                str(url),
+                json=data,
+                headers=self._headers,
+                timeout=(
+                    self.config.client.connect_timeout,
+                    self.config.client.mirror_resume_timeout,
+                ),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001
@@ -2358,9 +2486,13 @@ class PeerDB:
         url = self.config.peerdb_api_url.join("v1/mirrors/list")
 
         try:
-            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response = requests.get(
+                str(url),
+                headers=self._headers,
+                timeout=(self.config.client.connect_timeout, self.config.client.read_timeout),
+            )
             response.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as exc:
+        except requests.RequestException as exc:
             try:
                 error_message = response.json().get("message")
             except Exception:  # noqa: BLE001

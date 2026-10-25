@@ -150,3 +150,79 @@ class TestConfigMirrorTableMapping:
 
         with pytest.raises(ValidationError):
             peerdb.config  # noqa: B018
+
+
+class TestConfigClient:
+    """Tests for flat PeerDB client timeout settings."""
+
+    def test_defaults(self, tmp_path: Path):
+        """Verify client timeouts have the documented defaults."""
+        peerdb = make_peerdb(tmp_path, minimal_table_mapping())
+        client = peerdb.config.client
+
+        assert client.connect_timeout == 5
+        assert client.read_timeout == 60
+        assert client.operation_interval == 1.0
+        assert client.settings_update_timeout == 60
+        assert client.peer_create_timeout == 90
+        assert client.peer_drop_timeout == 60
+        assert client.mirror_create_timeout == 300
+        assert client.mirror_drop_timeout == 900
+        assert client.mirror_pause_timeout == 60
+        assert client.mirror_resume_timeout == 60
+        assert client.mirror_resync_timeout == 900
+        assert client.mirror_drop_operation_timeout == 600
+        assert client.mirror_pause_operation_timeout == 120
+        assert client.mirror_resume_operation_timeout == 180
+        assert client.mirror_resync_operation_timeout == 300
+
+    def test_overrides(self, tmp_path: Path):
+        """Verify every flat client timeout can be overridden."""
+        config_file = tmp_path / "peerdb.yaml"
+        config_file.write_text(
+            "client:\n"
+            "  peerdb_ui_url: http://localhost:3000\n"
+            "  connect_timeout: 1\n"
+            "  read_timeout: 2\n"
+            "  operation_interval: 0.5\n"
+            "  settings_update_timeout: 3\n"
+            "  peer_create_timeout: 4\n"
+            "  peer_drop_timeout: 5\n"
+            "  mirror_create_timeout: 6\n"
+            "  mirror_drop_timeout: 7\n"
+            "  mirror_pause_timeout: 8\n"
+            "  mirror_resume_timeout: 9\n"
+            "  mirror_resync_timeout: 10\n"
+            "  mirror_drop_operation_timeout: 11\n"
+            "  mirror_pause_operation_timeout: 12\n"
+            "  mirror_resume_operation_timeout: 13\n"
+            "  mirror_resync_operation_timeout: 14\n"
+        )
+        client = PeerDB(config_file).config.client
+
+        assert client.connect_timeout == 1
+        assert client.read_timeout == 2
+        assert client.operation_interval == 0.5
+        assert client.settings_update_timeout == 3
+        assert client.peer_create_timeout == 4
+        assert client.peer_drop_timeout == 5
+        assert client.mirror_create_timeout == 6
+        assert client.mirror_drop_timeout == 7
+        assert client.mirror_pause_timeout == 8
+        assert client.mirror_resume_timeout == 9
+        assert client.mirror_resync_timeout == 10
+        assert client.mirror_drop_operation_timeout == 11
+        assert client.mirror_pause_operation_timeout == 12
+        assert client.mirror_resume_operation_timeout == 13
+        assert client.mirror_resync_operation_timeout == 14
+
+    def test_operation_interval_must_be_positive(self, tmp_path: Path):
+        """Verify a non-positive polling interval is rejected."""
+        config_file = tmp_path / "peerdb.yaml"
+        config_file.write_text(
+            "client:\n  peerdb_ui_url: http://localhost:3000\n  operation_interval: 0\n"
+        )
+        peerdb = PeerDB(config_file)
+
+        with pytest.raises(ValidationError):
+            peerdb.config  # noqa: B018

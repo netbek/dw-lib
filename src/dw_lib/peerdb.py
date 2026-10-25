@@ -51,20 +51,65 @@ import pydash
 import requests
 import time
 
+# TCP connect timeout in seconds for every PeerDB API request. This bounds
+# connection setup before any backend handler runs.
 DEFAULT_CONNECT_TIMEOUT = 5
+
+# HTTP response read timeout in seconds for read-only API requests. These
+# calls inspect catalog state and do not change a workflow's lifecycle.
 DEFAULT_READ_TIMEOUT = 60
+
+# Interval in seconds between status polls while waiting for an asynchronous
+# workflow transition (pause, resume, drop, or resync).
 DEFAULT_POLLING_INTERVAL = 1.0
+
+# HTTP response read timeout in seconds for settings update requests. PeerDB
+# writes the setting; deferred apply modes take effect after a later lifecycle event.
 DEFAULT_SETTINGS_UPDATE_READ_TIMEOUT = 60
+
+# HTTP response read timeout in seconds for peer creation requests. PeerDB
+# validates the peer connection before inserting it into the catalog.
 DEFAULT_PEER_CREATE_READ_TIMEOUT = 90
+
+# HTTP response read timeout in seconds for peer deletion requests. PeerDB
+# removes the catalog row; dependent mirrors must already be gone.
 DEFAULT_PEER_DROP_READ_TIMEOUT = 60
+
+# HTTP response read timeout in seconds for mirror creation requests. PeerDB
+# validates mappings and starts the CDC workflow; setup, snapshot, and sync
+# continue after the response.
 DEFAULT_MIRROR_CREATE_READ_TIMEOUT = 300
+
+# HTTP response read timeout in seconds for mirror drop requests. PeerDB
+# signals termination, or synchronously removes terminal flows, before returning.
 DEFAULT_MIRROR_DROP_READ_TIMEOUT = 900
+
+# HTTP response read timeout in seconds for mirror pause requests. PeerDB
+# signals the workflow to pause; the transition to Paused happens asynchronously.
 DEFAULT_MIRROR_PAUSE_READ_TIMEOUT = 60
+
+# HTTP response read timeout in seconds for mirror resume requests. PeerDB
+# signals the workflow to resume; the transition to Running happens asynchronously.
 DEFAULT_MIRROR_RESUME_READ_TIMEOUT = 60
+
+# HTTP response read timeout in seconds for mirror resync requests. PeerDB
+# validates, may drop and recreate the flow, then starts the new workflow.
 DEFAULT_MIRROR_RESYNC_READ_TIMEOUT = 900
+
+# Polling deadline in seconds for mirror deletion. The command waits for the
+# flow row to disappear after the termination request.
 DEFAULT_MIRROR_DROP_POLLING_TIMEOUT = 600
+
+# Polling deadline in seconds for mirror pause. The command waits for the
+# workflow to finish its current sync batch and report Paused.
 DEFAULT_MIRROR_PAUSE_POLLING_TIMEOUT = 120
+
+# Polling deadline in seconds for mirror resume. The command waits for
+# Pausing to reach Paused and then for the resumed workflow to report Running.
 DEFAULT_MIRROR_RESUME_POLLING_TIMEOUT = 180
+
+# Polling deadline in seconds for mirror resync. The command waits for a
+# resync-started status; the resync snapshot and swap continue afterwards.
 DEFAULT_MIRROR_RESYNC_POLLING_TIMEOUT = 300
 
 PEERDB_SOURCE_PEER = "source"

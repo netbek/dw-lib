@@ -21,10 +21,8 @@ from .exceptions import (
     ListPeersException,
     MirrorExistsException,
     MirrorNotFoundException,
-    MirrorTerminalStateException,
     MirrorTimeoutException,
     PauseMirrorException,
-    PeerDBAPIException,
     PeerExistsException,
     PeerNotFoundException,
     ResumeMirrorException,
@@ -52,41 +50,11 @@ import pydash
 import requests
 import time
 
-# Default timeout in seconds for the connect phase of an HTTP request to the PeerDB API
-DEFAULT_API_CONNECT_TIMEOUT_SECONDS = 5
+# Timeout in seconds for individual HTTP requests to the PeerDB API
+REQUEST_TIMEOUT = 5
 
-# Default timeout in seconds for the read phase of a fast HTTP request to the PeerDB API
-DEFAULT_API_READ_TIMEOUT_SECONDS = 30
-
-# Default timeout in seconds for a peer creation request (covers PeerDB peer validation)
-DEFAULT_PEER_CREATE_REQUEST_TIMEOUT_SECONDS = 90
-
-# Default timeout in seconds for a peer drop request
-DEFAULT_PEER_DROP_REQUEST_TIMEOUT_SECONDS = 30
-
-# Default timeout in seconds for a mirror creation request (covers PeerDB mirror validation)
-DEFAULT_MIRROR_CREATE_REQUEST_TIMEOUT_SECONDS = 300
-
-# Default timeout in seconds for a mirror state-change request
-DEFAULT_MIRROR_STATE_CHANGE_REQUEST_TIMEOUT_SECONDS = 420
-
-# Default timeout in seconds for waiting on a mirror status
-DEFAULT_MIRROR_STATUS_WAIT_TIMEOUT_SECONDS = 600
-
-# Default timeout in seconds for waiting on a mirror to pause
-DEFAULT_MIRROR_PAUSE_WAIT_TIMEOUT_SECONDS = 120
-
-# Default timeout in seconds for waiting on a mirror to resume
-DEFAULT_MIRROR_RESUME_WAIT_TIMEOUT_SECONDS = 120
-
-# Default timeout in seconds for waiting on a mirror resync to progress
-DEFAULT_MIRROR_RESYNC_WAIT_TIMEOUT_SECONDS = 300
-
-# Default timeout in seconds for waiting on a mirror to disappear
-DEFAULT_MIRROR_DROP_WAIT_TIMEOUT_SECONDS = 300
-
-# Default interval in seconds between mirror status polls
-DEFAULT_STATUS_POLL_INTERVAL_SECONDS = 1
+# Timeout in seconds for waiting on long-running PeerDB operations (e.g. mirror state changes)
+OPERATION_TIMEOUT = 15
 
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
@@ -918,57 +886,23 @@ class ConfigMirror(BaseModel):
     synced_at_col_name: str | None = "_peerdb_synced_at"
 
 
-class ClientConfig(BaseModel):
+class Config(BaseModel):
     """
-    PeerDB client connection and timing settings.
+    Parsed PeerDB YAML config.
 
     Attributes:
         peerdb_ui_url: PeerDB UI base URL; `peerdb_api_url` appends `api`.
-        api_connect_timeout_seconds: Connect timeout for API requests.
-        api_read_timeout_seconds: Read timeout for fast API requests.
-        peer_create_request_timeout_seconds: Timeout for peer creation requests.
-        peer_drop_request_timeout_seconds: Timeout for peer drop requests.
-        mirror_create_request_timeout_seconds: Timeout for mirror creation requests.
-        mirror_state_change_request_timeout_seconds: Timeout for mirror state changes.
-        mirror_status_wait_timeout_seconds: Default wait for a mirror status.
-        mirror_pause_wait_timeout_seconds: Wait for a mirror to pause.
-        mirror_resume_wait_timeout_seconds: Wait for a mirror to resume.
-        mirror_resync_wait_timeout_seconds: Wait for a mirror resync to progress.
-        mirror_drop_wait_timeout_seconds: Wait for a mirror to disappear.
-        status_poll_interval_seconds: Interval between mirror status polls.
+        operation_timeout: Timeout in seconds for polling operations.
+        settings: Dynamic settings from config.
+        peers: Configured peers.
+        mirrors: Configured mirrors.
     """
 
     peerdb_ui_url: HttpUrl
-    api_connect_timeout_seconds: int = Field(default=DEFAULT_API_CONNECT_TIMEOUT_SECONDS, ge=1)
-    api_read_timeout_seconds: int = Field(default=DEFAULT_API_READ_TIMEOUT_SECONDS, ge=1)
-    peer_create_request_timeout_seconds: int = Field(
-        default=DEFAULT_PEER_CREATE_REQUEST_TIMEOUT_SECONDS, ge=1
-    )
-    peer_drop_request_timeout_seconds: int = Field(
-        default=DEFAULT_PEER_DROP_REQUEST_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_create_request_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_CREATE_REQUEST_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_state_change_request_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_STATE_CHANGE_REQUEST_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_status_wait_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_STATUS_WAIT_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_pause_wait_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_PAUSE_WAIT_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_resume_wait_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_RESUME_WAIT_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_resync_wait_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_RESYNC_WAIT_TIMEOUT_SECONDS, ge=1
-    )
-    mirror_drop_wait_timeout_seconds: int = Field(
-        default=DEFAULT_MIRROR_DROP_WAIT_TIMEOUT_SECONDS, ge=1
-    )
-    status_poll_interval_seconds: int = Field(default=DEFAULT_STATUS_POLL_INTERVAL_SECONDS, ge=1)
+    operation_timeout: int = Field(default=OPERATION_TIMEOUT, ge=1)
+    settings: list[ConfigSetting]
+    peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
+    mirrors: list[ConfigMirror]
 
     @property
     def peerdb_api_url(self) -> HttpUrl:
@@ -979,23 +913,6 @@ class ClientConfig(BaseModel):
             HttpUrl: `peerdb_ui_url` joined with `api`.
         """
         return self.peerdb_ui_url.join("api")
-
-
-class Config(BaseModel):
-    """
-    Parsed PeerDB YAML config.
-
-    Attributes:
-        client: PeerDB client connection and timing settings.
-        settings: Dynamic settings from config.
-        peers: Configured peers.
-        mirrors: Configured mirrors.
-    """
-
-    client: ClientConfig
-    settings: list[ConfigSetting]
-    peers: list[ConfigPeerClickHouse | ConfigPeerPostgres]
-    mirrors: list[ConfigMirror]
 
 
 class PeerDB:
@@ -1147,229 +1064,12 @@ class PeerDB:
             mirrors = list(config["mirrors"].values())
 
         return Config(
-            client=config.get("client"),
+            peerdb_ui_url=config.get("peerdb_ui_url"),
+            operation_timeout=config.get("operation_timeout", OPERATION_TIMEOUT),
             settings=settings,
             peers=peers,
             mirrors=mirrors,
         )
-
-    @staticmethod
-    def _response_error_message(response: requests.Response | None, exc: Exception) -> str:
-        """
-        Extract a PeerDB API error message from a response, if available.
-
-        Args:
-            response: Response returned by the API, if the request completed.
-            exc: Exception raised by the request.
-
-        Returns:
-            str: Server message when present, otherwise the exception text.
-        """
-        if response is not None:
-            try:
-                message = response.json().get("message")
-            except Exception:  # noqa: BLE001
-                message = None
-
-            if message:
-                return message
-
-        return str(exc)
-
-    def _request(
-        self,
-        method: str,
-        url: HttpUrl | str,
-        *,
-        timeout: tuple[int, int],
-        exception_class: type[PeerDBAPIException],
-        error_prefix: str,
-        json: dict | None = None,
-        raise_for_status: bool = True,
-    ) -> requests.Response:
-        """
-        Send a request to the PeerDB API and wrap request errors.
-
-        Args:
-            method: HTTP method.
-            url: Request URL.
-            timeout: Connect and read timeouts in seconds.
-            exception_class: Library exception to raise on request failure.
-            error_prefix: Error message prefix for the library exception.
-            json: JSON request body, if any.
-            raise_for_status: Whether to raise on non-success HTTP status.
-
-        Returns:
-            requests.Response: Response returned by the API.
-
-        Raises:
-            PeerDBAPIException: If the request fails.
-        """
-        response = None
-
-        try:
-            response = requests.request(
-                method,
-                str(url),
-                json=json,
-                headers=self._headers,
-                timeout=timeout,
-            )
-
-            if raise_for_status:
-                response.raise_for_status()
-
-            return response
-        except requests.RequestException as exc:
-            message = self._response_error_message(response, exc)
-            raise exception_class(f"{error_prefix} ({message})") from exc
-
-    def _poll_mirror_status(
-        self,
-        flow_job_name: str,
-        *,
-        target_statuses: set[str],
-        timeout: int,
-        poll_interval: int | None = None,
-        failure_statuses: set[str] | None = None,
-        allow_missing: bool = False,
-    ) -> str:
-        """
-        Poll a mirror status until a target status is reached or the timeout elapses.
-
-        Args:
-            flow_job_name: Mirror (flow job) name to poll.
-            target_statuses: Statuses that stop polling.
-            timeout: Wall-clock timeout in seconds.
-            poll_interval: Interval between polls in seconds.
-            failure_statuses: Statuses that stop polling with an error.
-            allow_missing: Whether a missing mirror is retried instead of raised.
-
-        Returns:
-            str: The reached target status.
-
-        Raises:
-            MirrorNotFoundException: If the mirror is missing and `allow_missing` is False.
-            MirrorTerminalStateException: If a failure status is reached.
-            MirrorTimeoutException: If no target status is reached in time.
-        """
-        if not target_statuses:
-            raise ValueError("target_statuses must not be empty")
-
-        if timeout < 1:
-            raise ValueError("timeout must be at least 1 second")
-
-        if poll_interval is None:
-            poll_interval = self.config.client.status_poll_interval_seconds
-
-        if poll_interval < 1:
-            raise ValueError("poll_interval must be at least 1 second")
-
-        if failure_statuses is None:
-            failure_statuses = {"STATUS_FAILED", "STATUS_TERMINATED"}
-
-        deadline = time.monotonic() + timeout
-        last_status = "STATUS_UNKNOWN"
-        last_error: Exception | None = None
-
-        def timeout_error() -> MirrorTimeoutException:
-            detail = f"last status: {last_status}"
-
-            if last_error is not None:
-                detail += f"; last error: {last_error}"
-
-            return MirrorTimeoutException(
-                f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s ({detail})"
-            )
-
-        while True:
-            if deadline - time.monotonic() <= 0:
-                raise timeout_error()
-
-            try:
-                last_status = self.get_mirror_status(flow_job_name).current_flow_state
-                last_error = None
-            except MirrorNotFoundException:
-                if not allow_missing:
-                    raise
-                last_status = "NOT_FOUND"
-            except GetMirrorStatusException as exc:
-                last_error = exc
-
-            if last_status in target_statuses:
-                return last_status
-
-            if last_status in failure_statuses:
-                raise MirrorTerminalStateException(
-                    f"Mirror '{flow_job_name}' reached terminal status '{last_status}'"
-                )
-
-            remaining = deadline - time.monotonic()
-
-            if remaining <= 0:
-                raise timeout_error()
-
-            time.sleep(min(poll_interval, remaining))
-
-    def _wait_for_mirror_gone(
-        self,
-        flow_job_name: str,
-        *,
-        timeout: int,
-        poll_interval: int | None = None,
-    ) -> None:
-        """
-        Wait until a mirror is no longer reported by the API.
-
-        Args:
-            flow_job_name: Mirror (flow job) name to poll.
-            timeout: Wall-clock timeout in seconds.
-            poll_interval: Interval between polls in seconds.
-
-        Raises:
-            MirrorTimeoutException: If the mirror is still reported after the timeout.
-        """
-        if timeout < 1:
-            raise ValueError("timeout must be at least 1 second")
-
-        if poll_interval is None:
-            poll_interval = self.config.client.status_poll_interval_seconds
-
-        if poll_interval < 1:
-            raise ValueError("poll_interval must be at least 1 second")
-
-        deadline = time.monotonic() + timeout
-        last_status = "STATUS_UNKNOWN"
-        last_error: Exception | None = None
-
-        def timeout_error() -> MirrorTimeoutException:
-            detail = f"last status: {last_status}"
-
-            if last_error is not None:
-                detail += f"; last error: {last_error}"
-
-            return MirrorTimeoutException(
-                f"Failed to drop mirror '{flow_job_name}' after {timeout}s ({detail})"
-            )
-
-        while True:
-            if deadline - time.monotonic() <= 0:
-                raise timeout_error()
-
-            try:
-                last_status = self.get_mirror_status(flow_job_name).current_flow_state
-                last_error = None
-            except MirrorNotFoundException:
-                return
-            except GetMirrorStatusException as exc:
-                last_error = exc
-
-            remaining = deadline - time.monotonic()
-
-            if remaining <= 0:
-                raise timeout_error()
-
-            time.sleep(min(poll_interval, remaining))
 
     def can_connect(self) -> bool:
         """
@@ -1384,20 +1084,13 @@ class PeerDB:
         Returns:
             bool: True on HTTP success, False on HTTP or connection errors.
         """
-        url = self.config.client.peerdb_api_url.join("v1/version")
+        url = self.config.peerdb_api_url.join("v1/version")
 
         try:
-            response = requests.get(
-                str(url),
-                headers=self._headers,
-                timeout=(
-                    self.config.client.api_connect_timeout_seconds,
-                    self.config.client.api_read_timeout_seconds,
-                ),
-            )
+            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
             return True
-        except requests.RequestException:
+        except (requests.HTTPError, requests.ConnectionError):
             return False
 
     def debug(self, echo: bool = False) -> dict[str, dict[str, Any]]:
@@ -1479,7 +1172,7 @@ class PeerDB:
 
         result = {
             "API": {
-                "URL": self.config.client.peerdb_api_url,
+                "URL": self.config.peerdb_api_url,
                 "Connection test": create_message(api_can_connect),
             },
             "Source peer": {
@@ -1642,17 +1335,19 @@ class PeerDB:
         Raises:
             GetDynamicSettingsException: If the request fails.
         """
-        url = self.config.client.peerdb_api_url.join("v1/dynamic_settings")
-        response = self._request(
-            "GET",
-            url,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.api_read_timeout_seconds,
-            ),
-            exception_class=GetDynamicSettingsException,
-            error_prefix="Failed to get dynamic settings",
-        )
+        url = self.config.peerdb_api_url.join("v1/dynamic_settings")
+
+        try:
+            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise GetDynamicSettingsException(
+                f"Failed to get dynamic settings ({error_message or exc})"
+            )
 
         return GetDynamicSettingsResponse(**response.json())
 
@@ -1674,21 +1369,24 @@ class PeerDB:
         """
         self._console.print("Updating settings")
 
-        url = self.config.client.peerdb_api_url.join("v1/dynamic_settings")
+        url = self.config.peerdb_api_url.join("v1/dynamic_settings")
 
         for key, value in settings.items():
             data = {"name": key, "value": value}
-            self._request(
-                "POST",
-                url,
-                json=data,
-                timeout=(
-                    self.config.client.api_connect_timeout_seconds,
-                    self.config.client.api_read_timeout_seconds,
-                ),
-                exception_class=SetDynamicSettingsException,
-                error_prefix=f"Failed to set {key}={value}",
-            )
+
+            try:
+                response = requests.post(
+                    str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+                )
+                response.raise_for_status()
+            except (requests.HTTPError, requests.ConnectionError) as exc:
+                try:
+                    error_message = response.json().get("message")
+                except Exception:  # noqa: BLE001
+                    error_message = None
+                raise SetDynamicSettingsException(
+                    f"Failed to set {key}={value} ({error_message or exc})"
+                )
 
     def has_peer(self, peer_name: str) -> bool:
         """
@@ -1724,17 +1422,19 @@ class PeerDB:
         Raises:
             GetPeerInfoException: If the request fails.
         """
-        url = self.config.client.peerdb_api_url.join(f"v1/peers/info/{peer_name}")
-        response = self._request(
-            "GET",
-            url,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.api_read_timeout_seconds,
-            ),
-            exception_class=GetPeerInfoException,
-            error_prefix=f"Failed to get peer info of '{peer_name}'",
-        )
+        url = self.config.peerdb_api_url.join(f"v1/peers/info/{peer_name}")
+
+        try:
+            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise GetPeerInfoException(
+                f"Failed to get peer info of '{peer_name}' ({error_message or exc})"
+            )
 
         return PeerInfoResponse(**response.json())
 
@@ -1757,17 +1457,19 @@ class PeerDB:
         Raises:
             GetPeerTypeException: If the request fails.
         """
-        url = self.config.client.peerdb_api_url.join(f"v1/peers/type/{peer_name}")
-        response = self._request(
-            "GET",
-            url,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.api_read_timeout_seconds,
-            ),
-            exception_class=GetPeerTypeException,
-            error_prefix=f"Failed to get peer type of '{peer_name}'",
-        )
+        url = self.config.peerdb_api_url.join(f"v1/peers/type/{peer_name}")
+
+        try:
+            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise GetPeerTypeException(
+                f"Failed to get peer type of '{peer_name}' ({error_message or exc})"
+            )
 
         return PeerTypeResponse(**response.json())
 
@@ -1809,19 +1511,22 @@ class PeerDB:
             else:
                 raise PeerExistsException(f"Peer '{peer['name']}' exists")
 
-        url = self.config.client.peerdb_api_url.join("v1/peers/create")
+        url = self.config.peerdb_api_url.join("v1/peers/create")
         data = {"peer": peer}
-        response = self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.peer_create_request_timeout_seconds,
-            ),
-            exception_class=CreatePeerException,
-            error_prefix=f"Failed to create peer '{peer['name']}'",
-        )
+
+        try:
+            response = requests.post(
+                str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+            )
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise CreatePeerException(
+                f"Failed to create peer '{peer['name']}' ({error_message or exc})"
+            )
 
         deserialized = RawCreatePeerResponse(**response.json())
 
@@ -1843,6 +1548,7 @@ class PeerDB:
         drop_mirrors: bool | None = True,
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
+        timeout: int | None = None,
     ) -> DropPeerResponse:
         """
         Drop a peer from the server.
@@ -1860,6 +1566,8 @@ class PeerDB:
             drop_destination_tables: Whether mirror drops also drop
                 destination tables.
             if_exists: When True, skip instead of raising if missing.
+            timeout: Timeout for dependent mirror drops. Defaults to
+                `config.operation_timeout`.
 
         Returns:
             DropPeerResponse: Result with dropped/skipped message.
@@ -1867,14 +1575,17 @@ class PeerDB:
         Raises:
             PeerNotFoundException: If the peer is missing and `if_exists` is False.
             DropPeerException: If the drop request fails.
-            MirrorTimeoutException: If a dependent mirror drop times out.
         """
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         self._console.print(f"Dropping peer '{peer_name}'")
 
         if drop_mirrors:
             self.drop_mirrors_of_peer(
                 peer_name,
                 drop_destination_tables=drop_destination_tables,
+                timeout=timeout,
             )
 
         if not self.has_peer(peer_name):
@@ -1885,19 +1596,18 @@ class PeerDB:
             else:
                 raise PeerNotFoundException(f"Peer '{peer_name}' not found")
 
-        url = self.config.client.peerdb_api_url.join("v1/peers/drop")
+        url = self.config.peerdb_api_url.join("v1/peers/drop")
         data = {"peerName": peer_name}
-        self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.peer_drop_request_timeout_seconds,
-            ),
-            exception_class=DropPeerException,
-            error_prefix=f"Failed to drop peer '{peer_name}'",
-        )
+
+        try:
+            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise DropPeerException(f"Failed to drop peer '{peer_name}' ({error_message or exc})")
 
         return DropPeerResponse(message=f"Dropped peer '{peer_name}'")
 
@@ -1905,6 +1615,7 @@ class PeerDB:
         self,
         peer_name: str,
         drop_destination_tables: bool | None = False,
+        timeout: int | None = None,
     ) -> None:
         """
         Drop all mirrors using a peer as source or destination.
@@ -1913,15 +1624,18 @@ class PeerDB:
             peer_name: Peer name to match against mirror endpoints.
             drop_destination_tables: Whether mirror drops also drop
                 destination tables.
-
-        Raises:
-            MirrorTimeoutException: If a dependent mirror drop times out.
+            timeout: Timeout per mirror drop. Defaults to
+                `config.operation_timeout`.
         """
+        if timeout is None:
+            timeout = self.config.operation_timeout
+
         for mirror in self.list_mirrors().mirrors:
             if mirror.source_name == peer_name or mirror.destination_name == peer_name:
                 self.drop_mirror(
                     mirror.name,
                     drop_destination_tables=drop_destination_tables,
+                    timeout=timeout,
                 )
 
     def list_peers(self) -> ListPeersResponse:
@@ -1940,17 +1654,17 @@ class PeerDB:
         Raises:
             ListPeersException: If the request fails.
         """
-        url = self.config.client.peerdb_api_url.join("v1/peers/list")
-        response = self._request(
-            "GET",
-            url,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.api_read_timeout_seconds,
-            ),
-            exception_class=ListPeersException,
-            error_prefix="Failed to list peers",
-        )
+        url = self.config.peerdb_api_url.join("v1/peers/list")
+
+        try:
+            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise ListPeersException(f"Failed to list peers ({error_message or exc})")
 
         return ListPeersResponse(**response.json())
 
@@ -1962,12 +1676,11 @@ class PeerDB:
             flow_job_name: Mirror (flow job) name to look up.
 
         Returns:
-            bool: True when the mirror status is reported, False when the
+            bool: True when the mirror status is known, False when the
                 mirror is not found.
         """
         try:
-            self.get_mirror_status(flow_job_name)
-            return True
+            return self.get_mirror_status(flow_job_name).current_flow_state != "STATUS_UNKNOWN"
         except MirrorNotFoundException:
             return False
 
@@ -1993,20 +1706,21 @@ class PeerDB:
             MirrorNotFoundException: If the server returns HTTP 404.
             GetMirrorStatusException: If the request fails otherwise.
         """
-        url = self.config.client.peerdb_api_url.join("v1/mirrors/status")
+        url = self.config.peerdb_api_url.join("v1/mirrors/status")
         data = {"flowJobName": flow_job_name}
-        response = self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.api_read_timeout_seconds,
-            ),
-            exception_class=GetMirrorStatusException,
-            error_prefix=f"Failed to get status of mirror '{flow_job_name}'",
-            raise_for_status=False,
-        )
+
+        try:
+            response = requests.post(
+                str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+            )
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise GetMirrorStatusException(
+                f"Failed to get status of mirror '{flow_job_name}' ({error_message or exc})"
+            )
 
         if response.status_code == 200:
             return MirrorStatusResponse(**response.json())
@@ -2018,12 +1732,7 @@ class PeerDB:
             )
 
     def wait_for_mirror_status(
-        self,
-        flow_job_name: str,
-        target_statuses: set[str],
-        timeout: int | None = None,
-        poll_interval: int | None = None,
-        failure_statuses: set[str] | None = None,
+        self, flow_job_name: str, target_statuses: set[str], timeout: int | None = None
     ) -> str:
         """
         Poll mirror status until a target status is reached.
@@ -2032,29 +1741,30 @@ class PeerDB:
             flow_job_name: Mirror (flow job) name to poll.
             target_statuses: Statuses that stop polling (e.g.
                 `{"STATUS_RUNNING"}`).
-            timeout: Wall-clock timeout in seconds. Defaults to
-                `config.client.mirror_status_wait_timeout_seconds`.
-            poll_interval: Interval between polls in seconds. Defaults to
-                `config.client.status_poll_interval_seconds`.
-            failure_statuses: Statuses that stop polling with an error.
-                Defaults to `{"STATUS_FAILED", "STATUS_TERMINATED"}`.
+            timeout: Polling timeout in seconds. Defaults to
+                `config.operation_timeout`.
 
         Returns:
             str: The reached status value.
 
         Raises:
-            MirrorTerminalStateException: If a failure status is reached.
             MirrorTimeoutException: If no target status is reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.mirror_status_wait_timeout_seconds
+            timeout = self.config.operation_timeout
 
-        return self._poll_mirror_status(
-            flow_job_name,
-            target_statuses=target_statuses,
-            timeout=timeout,
-            poll_interval=poll_interval,
-            failure_statuses=failure_statuses,
+        current_status = "UNKNOWN"
+
+        for _ in range(timeout):
+            current_status = self.get_mirror_status(flow_job_name).current_flow_state
+
+            if current_status in target_statuses:
+                return current_status
+
+            time.sleep(1)
+
+        raise MirrorTimeoutException(
+            f"Timeout: Mirror '{flow_job_name}' failed to reach status {target_statuses} after {timeout}s (current status: {current_status})"
         )
 
     def create_mirror(
@@ -2141,19 +1851,22 @@ class PeerDB:
             self._console.print(f"Skipping drop of destination tables because of {exc}")
 
         # Step 3: Create the mirror
-        url = self.config.client.peerdb_api_url.join("v1/flows/cdc/create")
+        url = self.config.peerdb_api_url.join("v1/flows/cdc/create")
         data = {"connection_configs": mirror}
-        response = self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.mirror_create_request_timeout_seconds,
-            ),
-            exception_class=CreateMirrorException,
-            error_prefix=f"Failed to create mirror '{mirror['flow_job_name']}'",
-        )
+
+        try:
+            response = requests.post(
+                str(url), json=data, headers=self._headers, timeout=REQUEST_TIMEOUT
+            )
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise CreateMirrorException(
+                f"Failed to create mirror '{mirror['flow_job_name']}' ({error_message or exc})"
+            )
 
         workflow_id = response.json().get("workflowId")
 
@@ -2177,14 +1890,13 @@ class PeerDB:
         drop_destination_tables: bool | None = False,
         if_exists: bool | None = False,
         timeout: int | None = None,
-        state_change_request_timeout: int | None = None,
     ) -> DropMirrorResponse:
         """
         Drop a mirror and wait until it disappears.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_TERMINATING`,
         `dropMirrorStats=True`, and `skipDestinationDrop=False`, then polls
-        until the API no longer reports the mirror.
+        until `has_mirror()` is False.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -2195,11 +1907,8 @@ class PeerDB:
             drop_destination_tables: Whether to also drop destination tables
                 via `drop_destination_tables_of_mirror()`.
             if_exists: When True, skip instead of raising if missing.
-            timeout: Wall-clock wait for the mirror to disappear. Defaults to
-                `config.client.mirror_drop_wait_timeout_seconds`.
-            state_change_request_timeout: Timeout for the state-change request.
-                Defaults to
-                `config.client.mirror_state_change_request_timeout_seconds`.
+            timeout: Polling timeout in seconds. Defaults to
+                `config.operation_timeout`.
 
         Returns:
             DropMirrorResponse: Result with dropped/skipped message.
@@ -2210,15 +1919,7 @@ class PeerDB:
             MirrorTimeoutException: If the mirror still exists after timeout.
         """
         if timeout is None:
-            timeout = self.config.client.mirror_drop_wait_timeout_seconds
-
-        if state_change_request_timeout is None:
-            state_change_request_timeout = (
-                self.config.client.mirror_state_change_request_timeout_seconds
-            )
-
-        if state_change_request_timeout < 1:
-            raise ValueError("state_change_request_timeout must be at least 1 second")
+            timeout = self.config.operation_timeout
 
         self._console.print(f"Dropping mirror '{flow_job_name}'")
 
@@ -2230,7 +1931,7 @@ class PeerDB:
             else:
                 raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-        url = self.config.client.peerdb_api_url.join("v1/mirrors/state_change")
+        url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": FlowStatus.STATUS_TERMINATING,
@@ -2240,19 +1941,27 @@ class PeerDB:
             # tables; those are only dropped when drop_destination_tables = True.
             "skipDestinationDrop": False,
         }
-        self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                state_change_request_timeout,
-            ),
-            exception_class=DropMirrorException,
-            error_prefix=f"Failed to drop mirror '{flow_job_name}'",
-        )
 
-        self._wait_for_mirror_gone(flow_job_name, timeout=timeout)
+        try:
+            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise DropMirrorException(
+                f"Failed to drop mirror '{flow_job_name}' ({error_message or exc})"
+            )
+
+        for _ in range(timeout):
+            if not self.has_mirror(flow_job_name):
+                break
+            time.sleep(1)
+        else:
+            raise MirrorTimeoutException(
+                f"Failed to drop mirror '{flow_job_name}' after {timeout}s"
+            )
 
         if drop_destination_tables:
             try:
@@ -2271,13 +1980,10 @@ class PeerDB:
         self, flow_job_name: str, if_exists: bool | None = False, timeout: int | None = None
     ) -> ResyncMirrorResponse:
         """
-        Request a resync of a mirror and wait for resync progress.
+        Request a resync of a mirror and wait for resync state.
 
         Sends `POST v1/mirrors/state_change` with `STATUS_RESYNC` and
-        `dropMirrorStats=True`. Failed and completed mirrors are recreated
-        synchronously, so no status wait is performed for them. Other mirrors
-        are waited on until a status that can only follow the resync request
-        is observed.
+        `dropMirrorStats=True`.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -2287,72 +1993,50 @@ class PeerDB:
         Args:
             flow_job_name: Mirror (flow job) name to resync.
             if_exists: When True, skip instead of raising if missing.
-            timeout: Wall-clock wait for resync progress. Defaults to
-                `config.client.mirror_resync_wait_timeout_seconds`.
+            timeout: Wait timeout in seconds. Defaults to
+                `config.operation_timeout`.
 
         Returns:
             ResyncMirrorResponse: Result with initiated/skipped message.
 
         Raises:
             MirrorNotFoundException: If missing and `if_exists` is False.
-            ResyncMirrorException: If the state-change request fails or the
-                mirror cannot be resynced in its current state.
-            MirrorTerminalStateException: If the mirror reaches a failure state.
-            MirrorTimeoutException: If resync progress is not observed in time.
+            ResyncMirrorException: If the state-change request fails.
+            MirrorTimeoutException: If `STATUS_RESYNC` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.mirror_resync_wait_timeout_seconds
+            timeout = self.config.operation_timeout
 
         self._console.print(f"Resyncing mirror '{flow_job_name}'")
 
-        try:
-            previous_status = self.get_mirror_status(flow_job_name).current_flow_state
-        except MirrorNotFoundException:
+        if not self.has_mirror(flow_job_name):
             if if_exists:
                 return ResyncMirrorResponse(
                     message=f"Mirror '{flow_job_name}' not found, skipping because if_exists=True"
                 )
-            raise
+            else:
+                raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
 
-        if previous_status in {"STATUS_TERMINATING", "STATUS_TERMINATED"}:
-            raise ResyncMirrorException(
-                f"Cannot resync mirror '{flow_job_name}' because its status is '{previous_status}'"
-            )
-
-        url = self.config.client.peerdb_api_url.join("v1/mirrors/state_change")
+        url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": FlowStatus.STATUS_RESYNC,
             "dropMirrorStats": True,
         }
-        self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.mirror_state_change_request_timeout_seconds,
-            ),
-            exception_class=ResyncMirrorException,
-            error_prefix=f"Failed to resync mirror '{flow_job_name}'",
-        )
 
-        if previous_status in {"STATUS_FAILED", "STATUS_COMPLETED"}:
-            return ResyncMirrorResponse(
-                message=f"Resync of mirror '{flow_job_name}' has been initiated"
+        try:
+            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise ResyncMirrorException(
+                f"Failed to resync mirror '{flow_job_name}' ({error_message or exc})"
             )
 
-        progress_statuses = {"STATUS_RESYNC"}
-
-        if previous_status not in {"STATUS_SETUP", "STATUS_SNAPSHOT", "STATUS_UNKNOWN"}:
-            progress_statuses.update({"STATUS_SETUP", "STATUS_SNAPSHOT"})
-
-        self._poll_mirror_status(
-            flow_job_name,
-            target_statuses=progress_statuses,
-            timeout=timeout,
-            failure_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
-        )
+        self.wait_for_mirror_status(flow_job_name, {"STATUS_RESYNC"}, timeout=timeout)
 
         return ResyncMirrorResponse(
             message=f"Resync of mirror '{flow_job_name}' has been initiated"
@@ -2362,10 +2046,9 @@ class PeerDB:
         """
         Pause a running mirror and wait for paused state.
 
-        Sends `POST v1/mirrors/state_change` with `STATUS_PAUSED` when the
-        current status is `STATUS_RUNNING`. A mirror in `STATUS_PAUSING` is
-        waited on until it reaches `STATUS_PAUSED`. Other statuses return a
-        no-op message.
+        Only sends `POST v1/mirrors/state_change` with `STATUS_PAUSED` when
+        the current status is `STATUS_RUNNING`; otherwise returns a no-op
+        message.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
@@ -2374,8 +2057,8 @@ class PeerDB:
 
         Args:
             flow_job_name: Mirror (flow job) name to pause.
-            timeout: Wall-clock wait for `STATUS_PAUSED`. Defaults to
-                `config.client.mirror_pause_wait_timeout_seconds`.
+            timeout: Wait timeout in seconds. Defaults to
+                `config.operation_timeout`.
 
         Returns:
             PauseMirrorResponse: Result with paused or not-pausing message.
@@ -2383,54 +2066,41 @@ class PeerDB:
         Raises:
             MirrorNotFoundException: If the mirror does not exist.
             PauseMirrorException: If the state-change request fails.
-            MirrorTerminalStateException: If the mirror reaches a failure state.
             MirrorTimeoutException: If `STATUS_PAUSED` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.mirror_pause_wait_timeout_seconds
+            timeout = self.config.operation_timeout
 
         self._console.print(f"Pausing mirror '{flow_job_name}'")
 
+        if not self.has_mirror(flow_job_name):
+            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
         current_flow_state = self.get_mirror_status(flow_job_name).current_flow_state
-
-        if current_flow_state == "STATUS_PAUSING":
-            self._poll_mirror_status(
-                flow_job_name,
-                target_statuses={"STATUS_PAUSED"},
-                timeout=timeout,
-                failure_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
-            )
-
-            return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
-
-        if current_flow_state != "STATUS_RUNNING":
+        if current_flow_state not in {"STATUS_RUNNING"}:
             return PauseMirrorResponse(
                 message=f"Not pausing mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )
 
-        url = self.config.client.peerdb_api_url.join("v1/mirrors/state_change")
+        url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": "STATUS_PAUSED",
         }
-        self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.mirror_state_change_request_timeout_seconds,
-            ),
-            exception_class=PauseMirrorException,
-            error_prefix=f"Failed to pause mirror '{flow_job_name}'",
-        )
 
-        self._poll_mirror_status(
-            flow_job_name,
-            target_statuses={"STATUS_PAUSED"},
-            timeout=timeout,
-            failure_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
-        )
+        try:
+            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise PauseMirrorException(
+                f"Failed to pause mirror '{flow_job_name}' ({error_message or exc})"
+            )
+
+        self.wait_for_mirror_status(flow_job_name, {"STATUS_PAUSED"}, timeout=timeout)
 
         return PauseMirrorResponse(message=f"Paused mirror '{flow_job_name}'")
 
@@ -2449,11 +2119,8 @@ class PeerDB:
 
         Args:
             flow_job_name: Mirror (flow job) name to resume.
-            timeout: Wall-clock wait for `STATUS_RUNNING` after the resume
-                request. Defaults to
-                `config.client.mirror_resume_wait_timeout_seconds`. A mirror
-                in `STATUS_PAUSING` is first waited on with
-                `config.client.mirror_pause_wait_timeout_seconds`.
+            timeout: Wait timeout in seconds. Defaults to
+                `config.operation_timeout`.
 
         Returns:
             ResumeMirrorResponse: Result with resumed or not-resuming message.
@@ -2461,53 +2128,41 @@ class PeerDB:
         Raises:
             MirrorNotFoundException: If the mirror does not exist.
             ResumeMirrorException: If the state-change request fails.
-            MirrorTerminalStateException: If the mirror reaches a failure state.
             MirrorTimeoutException: If `STATUS_RUNNING` is not reached in time.
         """
         if timeout is None:
-            timeout = self.config.client.mirror_resume_wait_timeout_seconds
+            timeout = self.config.operation_timeout
 
         self._console.print(f"Resuming mirror '{flow_job_name}'")
 
+        if not self.has_mirror(flow_job_name):
+            raise MirrorNotFoundException(f"Mirror '{flow_job_name}' not found")
+
         current_flow_state = self.get_mirror_status(flow_job_name).current_flow_state
-
-        if current_flow_state == "STATUS_PAUSING":
-            self._poll_mirror_status(
-                flow_job_name,
-                target_statuses={"STATUS_PAUSED"},
-                timeout=self.config.client.mirror_pause_wait_timeout_seconds,
-                failure_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
-            )
-            current_flow_state = "STATUS_PAUSED"
-
-        if current_flow_state != "STATUS_PAUSED":
+        if current_flow_state not in {"STATUS_PAUSED", "STATUS_PAUSING"}:
             return ResumeMirrorResponse(
                 message=f"Not resuming mirror '{flow_job_name}' because its status is '{current_flow_state}'"
             )
 
-        url = self.config.client.peerdb_api_url.join("v1/mirrors/state_change")
+        url = self.config.peerdb_api_url.join("v1/mirrors/state_change")
         data = {
             "flowJobName": flow_job_name,
             "requestedFlowState": "STATUS_RUNNING",
         }
-        self._request(
-            "POST",
-            url,
-            json=data,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.mirror_state_change_request_timeout_seconds,
-            ),
-            exception_class=ResumeMirrorException,
-            error_prefix=f"Failed to resume mirror '{flow_job_name}'",
-        )
 
-        self._poll_mirror_status(
-            flow_job_name,
-            target_statuses={"STATUS_RUNNING"},
-            timeout=timeout,
-            failure_statuses={"STATUS_FAILED", "STATUS_TERMINATED"},
-        )
+        try:
+            response = requests.post(str(url), json=data, headers=self._headers, timeout=None)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise ResumeMirrorException(
+                f"Failed to resume mirror '{flow_job_name}' ({error_message or exc})"
+            )
+
+        self.wait_for_mirror_status(flow_job_name, {"STATUS_RUNNING"}, timeout=timeout)
 
         return ResumeMirrorResponse(message=f"Resumed mirror '{flow_job_name}'")
 
@@ -2586,17 +2241,17 @@ class PeerDB:
         Raises:
             ListMirrorsException: If the request fails.
         """
-        url = self.config.client.peerdb_api_url.join("v1/mirrors/list")
-        response = self._request(
-            "GET",
-            url,
-            timeout=(
-                self.config.client.api_connect_timeout_seconds,
-                self.config.client.api_read_timeout_seconds,
-            ),
-            exception_class=ListMirrorsException,
-            error_prefix="Failed to list mirrors",
-        )
+        url = self.config.peerdb_api_url.join("v1/mirrors/list")
+
+        try:
+            response = requests.get(str(url), headers=self._headers, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            try:
+                error_message = response.json().get("message")
+            except Exception:  # noqa: BLE001
+                error_message = None
+            raise ListMirrorsException(f"Failed to list mirrors ({error_message or exc})")
 
         mirrors = pydash.sort_by(response.json()["mirrors"], "name")
 

@@ -25,7 +25,9 @@ def debug() -> None:
 
 @peerdb_app.command()
 def up(
-    if_exists: Literal["fail", "keep", "replace"] = "keep",
+    if_exists: Literal["fail", "keep", "replace"] = typer.Option(
+        "keep", help="Behavior when a peer or mirror already exists: fail, keep, or replace."
+    ),
     wait: bool = typer.Option(
         False,
         "--wait/--no-wait",

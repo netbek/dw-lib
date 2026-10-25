@@ -13,9 +13,11 @@ peerdb = PeerDB()
 
 @mirror_app.command()
 def create(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the mirror in the config."),
     all: bool = typer.Option(False, "--all", help="Create all mirrors."),
-    if_exists: Literal["fail", "keep", "replace"] = "keep",
+    if_exists: Literal["fail", "keep", "replace"] = typer.Option(
+        "keep", help="Behavior when the mirror already exists: fail, keep, or replace."
+    ),
     wait: bool = typer.Option(
         False,
         "--wait/--no-wait",
@@ -48,10 +50,12 @@ def create(
 
 @mirror_app.command()
 def drop(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the mirror to drop."),
     all: bool = typer.Option(False, "--all", help="Drop all mirrors."),
-    drop_destination_tables: bool | None = False,
-    if_exists: bool | None = True,
+    drop_destination_tables: bool | None = typer.Option(
+        False, help="Drop destination tables after dropping the mirror."
+    ),
+    if_exists: bool | None = typer.Option(True, help="Skip missing mirrors instead of raising."),
 ) -> None:
     """Drop a mirror, or all mirrors."""
     _validate_name_or_all(name, all)
@@ -76,7 +80,7 @@ def drop(
 
 @mirror_app.command()
 def pause(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the mirror to pause."),
     all: bool = typer.Option(False, "--all", help="Pause all running mirrors."),
 ) -> None:
     """Pause a running mirror, or all running mirrors."""
@@ -94,7 +98,7 @@ def pause(
 
 @mirror_app.command()
 def resume(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the mirror to resume."),
     all: bool = typer.Option(False, "--all", help="Resume all paused or pausing mirrors."),
 ) -> None:
     """Resume a paused or pausing mirror, or all paused or pausing mirrors."""
@@ -112,9 +116,9 @@ def resume(
 
 @mirror_app.command()
 def resync(
-    name: str = typer.Argument(None),
+    name: str = typer.Argument(None, help="Name of the mirror to resync."),
     all: bool = typer.Option(False, "--all", help="Resync all mirrors."),
-    if_exists: bool | None = True,
+    if_exists: bool | None = typer.Option(True, help="Skip missing mirrors instead of raising."),
     wait: bool = typer.Option(
         False,
         "--wait/--no-wait",

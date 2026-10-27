@@ -555,6 +555,322 @@ class ResumeMirrorResponse(BaseModel):
     message: str
 
 
+class CDCMirrorStatusColumnSetting(BaseModel):
+    """
+    Per-column override in a CDC mirror table mapping.
+
+    Mirrors the `ColumnSetting` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L25
+
+    Attributes:
+        source_name: Source column name.
+        destination_name: Destination column name.
+        destination_type: Destination type override.
+        ordering: Ordering position.
+        partitioning: Partitioning position.
+        nullable_enabled: Whether the destination column allows nulls.
+    """
+
+    source_name: str = Field(alias="sourceName")
+    destination_name: str | None = Field(default=None, alias="destinationName")
+    destination_type: str | None = Field(default=None, alias="destinationType")
+    ordering: int | None = None
+    partitioning: int | None = None
+    nullable_enabled: bool | None = Field(default=None, alias="nullableEnabled")
+
+
+class CDCMirrorStatusStructuredIngestionTableConfig(BaseModel):
+    """
+    Structured ingestion settings for a CDC table mapping.
+
+    Mirrors the `StructuredIngestionTableConfig` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L64
+
+    Attributes:
+        enabled: Whether structured ingestion is enabled.
+        drop_unexpected_values: Whether values that do not fit are dropped
+            without reporting their contents.
+    """
+
+    enabled: bool | None = None
+    drop_unexpected_values: bool | None = Field(default=None, alias="dropUnexpectedValues")
+
+
+class CDCMirrorStatusTableMapping(BaseModel):
+    """
+    Source-to-destination table mapping in a CDC mirror status response.
+
+    Mirrors the `TableMapping` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L43
+
+    Attributes:
+        source_table_identifier: Source `schema.table` identifier.
+        destination_table_identifier: Destination table identifier.
+        partition_key: Initial-snapshot partition column.
+        exclude: Columns excluded from replication.
+        columns: Per-column overrides.
+        engine: ClickHouse table engine.
+        sharding_key: ClickHouse sharding key expression.
+        policy_name: ClickHouse load balancing policy.
+        partition_by_expr: ClickHouse `PARTITION BY` expression.
+        bigquery_cdc_events_function: BigQuery CDC events function.
+        query_cdc_watermark_column: BigQuery query-based CDC watermark
+            column.
+        structured_ingestion_config: Structured ingestion settings.
+    """
+
+    source_table_identifier: str = Field(alias="sourceTableIdentifier")
+    destination_table_identifier: str = Field(alias="destinationTableIdentifier")
+    partition_key: str | None = Field(default=None, alias="partitionKey")
+    exclude: list[str] | None = None
+    columns: list[CDCMirrorStatusColumnSetting] | None = None
+    engine: str | None = None
+    sharding_key: str | None = Field(default=None, alias="shardingKey")
+    policy_name: str | None = Field(default=None, alias="policyName")
+    partition_by_expr: str | None = Field(default=None, alias="partitionByExpr")
+    bigquery_cdc_events_function: str | None = Field(
+        default=None, alias="bigqueryCdcEventsFunction"
+    )
+    query_cdc_watermark_column: str | None = Field(default=None, alias="queryCdcWatermarkColumn")
+    structured_ingestion_config: CDCMirrorStatusStructuredIngestionTableConfig | None = Field(
+        default=None, alias="structuredIngestionConfig"
+    )
+
+
+class CDCMirrorStatusQueryCdcConfig(BaseModel):
+    """
+    Query-based CDC settings in a CDC mirror status response.
+
+    Mirrors the `QueryCdcConfig` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L87
+
+    Attributes:
+        pull_sync_parallelism: Number of tables queried and staged
+            concurrently.
+        safety_lag_seconds: Delay of each query window behind the source
+            clock.
+        max_query_window_seconds: Maximum duration covered by a pull query.
+    """
+
+    pull_sync_parallelism: int | None = Field(default=None, alias="pullSyncParallelism")
+    safety_lag_seconds: int | None = Field(default=None, alias="safetyLagSeconds")
+    max_query_window_seconds: int | None = Field(default=None, alias="maxQueryWindowSeconds")
+
+
+class CDCMirrorStatusBigQueryCdcConfig(BaseModel):
+    """
+    BigQuery CDC settings in a CDC mirror status response.
+
+    Mirrors the `BigqueryCdcConfig` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L98
+
+    Attributes:
+        replication_method: BigQuery replication method.
+        query_cdc: Query-based CDC settings.
+    """
+
+    replication_method: str | None = Field(default=None, alias="replicationMethod")
+    query_cdc: CDCMirrorStatusQueryCdcConfig | None = Field(default=None, alias="queryCdc")
+
+
+class CDCMirrorStatusConfig(BaseModel):
+    """
+    CDC mirror configuration from the mirror status API.
+
+    Mirrors the `FlowConnectionConfigs` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L105
+
+    Attributes:
+        flow_job_name: Mirror (flow job) name.
+        table_mappings: Tables replicated by the mirror.
+        max_batch_size: Maximum rows pulled in a single batch.
+        idle_timeout_seconds: Idle timeout before flushing pulled rows.
+        cdc_staging_path: CDC staging path.
+        publication_name: Publication name.
+        replication_slot_name: Replication slot name.
+        do_initial_snapshot: Whether an initial snapshot was enabled.
+        snapshot_num_rows_per_partition: Snapshot rows per partition.
+        snapshot_num_partitions_override: Snapshot partition override.
+        snapshot_staging_path: Snapshot staging path.
+        snapshot_max_parallel_workers: Snapshot parallel workers per table.
+        snapshot_num_tables_in_parallel: Snapshot tables in parallel.
+        resync: Whether the mirror is a resync.
+        initial_snapshot_only: Whether the mirror runs only the initial
+            snapshot.
+        soft_delete_col_name: Soft-delete marker column name.
+        synced_at_col_name: Sync timestamp column name.
+        script: Lua script configured for the mirror.
+        system: Data type system (`Q` or `PG`).
+        source_name: Source peer name.
+        destination_name: Destination peer name.
+        env: Environment variables.
+        version: Config version.
+        flags: Connector capabilities detected at flow creation time.
+        skip_validation: Whether peer validation was skipped.
+        bigquery_cdc_config: BigQuery-specific CDC settings.
+        query_cdc_pull_sync_parallelism: Deprecated query CDC parallelism.
+    """
+
+    flow_job_name: str = Field(alias="flowJobName")
+    table_mappings: list[CDCMirrorStatusTableMapping] = Field(
+        default_factory=list, alias="tableMappings"
+    )
+    max_batch_size: int | None = Field(default=None, alias="maxBatchSize")
+    idle_timeout_seconds: int | None = Field(default=None, alias="idleTimeoutSeconds")
+    cdc_staging_path: str | None = Field(default=None, alias="cdcStagingPath")
+    publication_name: str | None = Field(default=None, alias="publicationName")
+    replication_slot_name: str | None = Field(default=None, alias="replicationSlotName")
+    do_initial_snapshot: bool | None = Field(default=None, alias="doInitialSnapshot")
+    snapshot_num_rows_per_partition: int | None = Field(
+        default=None, alias="snapshotNumRowsPerPartition"
+    )
+    snapshot_num_partitions_override: int | None = Field(
+        default=None, alias="snapshotNumPartitionsOverride"
+    )
+    snapshot_staging_path: str | None = Field(default=None, alias="snapshotStagingPath")
+    snapshot_max_parallel_workers: int | None = Field(
+        default=None, alias="snapshotMaxParallelWorkers"
+    )
+    snapshot_num_tables_in_parallel: int | None = Field(
+        default=None, alias="snapshotNumTablesInParallel"
+    )
+    resync: bool | None = None
+    initial_snapshot_only: bool | None = Field(default=None, alias="initialSnapshotOnly")
+    soft_delete_col_name: str | None = Field(default=None, alias="softDeleteColName")
+    synced_at_col_name: str | None = Field(default=None, alias="syncedAtColName")
+    script: str | None = None
+    system: str | None = None
+    source_name: str | None = Field(default=None, alias="sourceName")
+    destination_name: str | None = Field(default=None, alias="destinationName")
+    env: dict[str, str] | None = None
+    version: int | None = None
+    flags: list[str] | None = None
+    skip_validation: bool | None = Field(default=None, alias="skipValidation")
+    bigquery_cdc_config: CDCMirrorStatusBigQueryCdcConfig | None = Field(
+        default=None, alias="bigqueryCdcConfig"
+    )
+    query_cdc_pull_sync_parallelism: int | None = Field(
+        default=None, alias="queryCdcPullSyncParallelism"
+    )
+
+
+class CDCMirrorStatusClone(BaseModel):
+    """
+    Initial-load summary for a single table.
+
+    Mirrors the `CloneTableSummary` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L337
+
+    Attributes:
+        table_name: Destination table name.
+        start_time: When the clone started.
+        num_partitions_completed: Completed partitions.
+        num_partitions_total: Total partitions.
+        num_rows_synced: Rows synced.
+        avg_time_per_partition_ms: Average time per partition in
+            milliseconds.
+        flow_job_name: Clone job name.
+        source_table: Source table.
+        fetch_completed: Whether fetching completed.
+        consolidate_completed: Whether consolidation completed.
+        mirror_name: Mirror name.
+    """
+
+    table_name: str = Field(alias="tableName")
+    start_time: datetime.datetime | None = Field(default=None, alias="startTime")
+    num_partitions_completed: int | None = Field(default=None, alias="numPartitionsCompleted")
+    num_partitions_total: int | None = Field(default=None, alias="numPartitionsTotal")
+    num_rows_synced: int | None = Field(default=None, alias="numRowsSynced")
+    avg_time_per_partition_ms: int | None = Field(default=None, alias="avgTimePerPartitionMs")
+    flow_job_name: str | None = Field(default=None, alias="flowJobName")
+    source_table: str | None = Field(default=None, alias="sourceTable")
+    fetch_completed: bool | None = Field(default=None, alias="fetchCompleted")
+    consolidate_completed: bool | None = Field(default=None, alias="consolidateCompleted")
+    mirror_name: str | None = Field(default=None, alias="mirrorName")
+
+
+class CDCMirrorStatusSnapshot(BaseModel):
+    """
+    Initial-load status for a CDC mirror.
+
+    Mirrors the `SnapshotStatus` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L351
+
+    Attributes:
+        clones: Initial-load summaries per table.
+    """
+
+    clones: list[CDCMirrorStatusClone] = Field(default_factory=list)
+
+
+class CDCMirrorStatusBatch(BaseModel):
+    """
+    CDC batch summary.
+
+    Mirrors the `CDCBatch` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L124
+
+    Attributes:
+        start_lsn: Batch start LSN.
+        end_lsn: Batch end LSN.
+        num_rows: Rows in the batch.
+        start_time: When the batch started.
+        end_time: When the batch ended.
+        batch_id: Batch ID.
+    """
+
+    start_lsn: int | None = Field(default=None, alias="startLsn")
+    end_lsn: int | None = Field(default=None, alias="endLsn")
+    num_rows: int | None = Field(default=None, alias="numRows")
+    start_time: datetime.datetime | None = Field(default=None, alias="startTime")
+    end_time: datetime.datetime | None = Field(default=None, alias="endTime")
+    batch_id: int | None = Field(default=None, alias="batchId")
+
+
+class CDCMirrorStatus(BaseModel):
+    """
+    CDC mirror details included when `includeFlowInfo` is true.
+
+    Mirrors the `CDCMirrorStatus` message in the PeerDB API.
+
+    See:
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L353
+
+    Attributes:
+        config: Mirror configuration.
+        snapshot_status: Initial-load status.
+        cdc_batches: CDC batch summaries.
+        source_type: Source peer type.
+        destination_type: Destination peer type.
+        rows_synced: Total rows synced.
+    """
+
+    config: CDCMirrorStatusConfig | None = None
+    snapshot_status: CDCMirrorStatusSnapshot | None = Field(default=None, alias="snapshotStatus")
+    cdc_batches: list[CDCMirrorStatusBatch] = Field(default_factory=list, alias="cdcBatches")
+    source_type: str | None = Field(default=None, alias="sourceType")
+    destination_type: str | None = Field(default=None, alias="destinationType")
+    rows_synced: int | None = Field(default=None, alias="rowsSynced")
+
+
 class MirrorStatusResponse(BaseModel):
     """
     Current status of a mirror.
@@ -568,6 +884,7 @@ class MirrorStatusResponse(BaseModel):
         created_at: When the mirror workflow was created.
         current_flow_state: Flow status enum value (e.g. `STATUS_RUNNING`).
         flow_job_name: Mirror (flow job) name.
+        cdc_status: CDC mirror details, present when flow info is requested.
     """
 
     created_at: datetime.datetime = Field(alias="createdAt")
@@ -586,6 +903,7 @@ class MirrorStatusResponse(BaseModel):
         "STATUS_MODIFYING",
     ] = Field(alias="currentFlowState")
     flow_job_name: str = Field(alias="flowJobName")
+    cdc_status: CDCMirrorStatus | None = Field(default=None, alias="cdcStatus")
 
 
 class ListMirrorsItem(BaseModel):
@@ -1861,12 +2179,14 @@ class PeerDB:
         """
         return self._get_mirror_status_or_none(flow_job_name) is not None
 
-    def get_mirror_status(self, flow_job_name: str) -> MirrorStatusResponse:
+    def get_mirror_status(
+        self, flow_job_name: str, include_flow_info: bool = False
+    ) -> MirrorStatusResponse:
         """
         Fetch the current status of a mirror.
 
-        Sends `POST v1/mirrors/status` with `{flowJobName}`. HTTP 404 means
-        the mirror does not exist.
+        Sends `POST v1/mirrors/status` with `{flowJobName, includeFlowInfo}`.
+        HTTP 404 means the mirror does not exist.
 
         See:
             https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L772
@@ -1875,16 +2195,19 @@ class PeerDB:
 
         Args:
             flow_job_name: Mirror (flow job) name to inspect.
+            include_flow_info: Whether to include non-status flow details,
+                such as mirror configuration and initial-load information.
 
         Returns:
-            MirrorStatusResponse: Status including `current_flow_state`.
+            MirrorStatusResponse: Status including `current_flow_state`, and
+                `cdc_status` when `include_flow_info` is true.
 
         Raises:
             MirrorNotFoundException: If the server returns HTTP 404.
             GetMirrorStatusException: If the request fails otherwise.
         """
         url = self.config.peerdb_api_url.join("v1/mirrors/status")
-        data = {"flowJobName": flow_job_name}
+        data = {"flowJobName": flow_job_name, "includeFlowInfo": include_flow_info}
 
         try:
             response = requests.post(

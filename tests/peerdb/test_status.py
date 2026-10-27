@@ -109,6 +109,155 @@ def fake_post(
     monkeypatch.setattr("dw_lib.peerdb.requests.post", post)
 
 
+class FakeMirrorStatusResponse:
+    """Minimal requests response for mirror status calls."""
+
+    def __init__(self, data: dict, status_code: int = 200) -> None:
+        self._data = data
+        self.status_code = status_code
+
+    def json(self) -> dict:
+        return self._data
+
+
+def fake_mirror_status_post(
+    monkeypatch, calls: list[dict], data: dict, status_code: int = 200
+) -> None:
+    """Record mirror status request bodies and return a canned response."""
+
+    def post(url, json=None, headers=None, timeout=None):
+        calls.append(json)
+        return FakeMirrorStatusResponse(data, status_code)
+
+    monkeypatch.setattr("dw_lib.peerdb.requests.post", post)
+
+
+def mirror_status_data(flow_job_name: str, cdc_status: dict | None = None) -> dict:
+    """Build a mirror status API response."""
+    data = {
+        "createdAt": "2026-01-01T00:00:00Z",
+        "currentFlowState": "STATUS_RUNNING",
+        "flowJobName": flow_job_name,
+    }
+
+    if cdc_status is not None:
+        data["cdcStatus"] = cdc_status
+
+    return data
+
+
+class TestGetMirrorStatus:
+    """Tests for `PeerDB.get_mirror_status`."""
+
+    def test_default_request_body(self, tmp_path: Path, monkeypatch):
+        """Verify flow info is excluded by default."""
+        peerdb = make_peerdb(tmp_path)
+        calls: list[dict] = []
+        fake_mirror_status_post(monkeypatch, calls, mirror_status_data("cdc_one"))
+
+        response = peerdb.get_mirror_status("cdc_one")
+
+        assert calls == [{"flowJobName": "cdc_one", "includeFlowInfo": False}]
+        assert response.cdc_status is None
+
+    def test_include_flow_info_request_body(self, tmp_path: Path, monkeypatch):
+        """Verify flow info is requested when enabled."""
+        peerdb = make_peerdb(tmp_path)
+        calls: list[dict] = []
+        fake_mirror_status_post(
+            monkeypatch,
+            calls,
+            mirror_status_data("cdc_one", cdc_status={"rowsSynced": "0"}),
+        )
+
+        response = peerdb.get_mirror_status("cdc_one", include_flow_info=True)
+
+        assert calls == [{"flowJobName": "cdc_one", "includeFlowInfo": True}]
+        assert response.cdc_status is not None
+        assert response.cdc_status.rows_synced == 0
+
+    def test_parses_cdc_status(self, tmp_path: Path, monkeypatch):
+        """Verify CDC status details are parsed from the response."""
+        peerdb = make_peerdb(tmp_path)
+        calls: list[dict] = []
+        cdc_status = {
+            "config": {
+                "flowJobName": "cdc_one",
+                "tableMappings": [
+                    {
+                        "sourceTableIdentifier": "public.sales",
+                        "destinationTableIdentifier": "public_sales",
+                        "partitionKey": "",
+                        "exclude": [],
+                    }
+                ],
+                "maxBatchSize": 1000000,
+                "idleTimeoutSeconds": "60",
+                "doInitialSnapshot": True,
+                "snapshotNumRowsPerPartition": 1000000,
+                "snapshotMaxParallelWorkers": 4,
+                "snapshotNumTablesInParallel": 1,
+                "resync": False,
+                "initialSnapshotOnly": False,
+                "softDeleteColName": "_PEERDB_IS_DELETED",
+                "syncedAtColName": "_PEERDB_SYNCED_AT",
+                "script": "",
+                "system": "Q",
+                "sourceName": "postgres_local",
+                "destinationName": "bq_peer",
+            },
+            "snapshotStatus": {
+                "clones": [
+                    {
+                        "tableName": "public_sales",
+                        "startTime": "2024-06-27T14:37:48.701204Z",
+                        "numPartitionsCompleted": 1,
+                        "numPartitionsTotal": 1,
+                        "numRowsSynced": "4",
+                        "avgTimePerPartitionMs": "11381",
+                        "flowJobName": "clone_cdc_one_public_sales",
+                        "sourceTable": "public.sales",
+                        "fetchCompleted": True,
+                        "consolidateCompleted": True,
+                        "mirrorName": "cdc_one",
+                    }
+                ]
+            },
+            "cdcBatches": [
+                {
+                    "startLsn": "123",
+                    "endLsn": "456",
+                    "numRows": "10",
+                    "startTime": "2024-06-27T14:37:48Z",
+                    "endTime": "2024-06-27T14:38:48Z",
+                    "batchId": "1",
+                }
+            ],
+            "sourceType": "POSTGRES",
+            "destinationType": "BIGQUERY",
+            "rowsSynced": "14",
+        }
+        fake_mirror_status_post(
+            monkeypatch, calls, mirror_status_data("cdc_one", cdc_status=cdc_status)
+        )
+
+        response = peerdb.get_mirror_status("cdc_one", include_flow_info=True)
+
+        assert response.cdc_status is not None
+        assert response.cdc_status.config is not None
+        assert response.cdc_status.config.flow_job_name == "cdc_one"
+        assert response.cdc_status.config.idle_timeout_seconds == 60
+        assert (
+            response.cdc_status.config.table_mappings[0].source_table_identifier == "public.sales"
+        )
+        assert response.cdc_status.snapshot_status is not None
+        assert response.cdc_status.snapshot_status.clones[0].num_rows_synced == 4
+        assert response.cdc_status.cdc_batches[0].batch_id == 1
+        assert response.cdc_status.source_type == "POSTGRES"
+        assert response.cdc_status.destination_type == "BIGQUERY"
+        assert response.cdc_status.rows_synced == 14
+
+
 class TestWaitForMirrorStatus:
     """Tests for `PeerDB.wait_for_mirror_status`."""
 

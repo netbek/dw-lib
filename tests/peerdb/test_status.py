@@ -157,7 +157,14 @@ class TestGetMirrorStatus:
 
         response = peerdb.get_mirror_status("cdc_one")
 
-        assert calls == [{"flowJobName": "cdc_one", "includeFlowInfo": False}]
+        assert calls == [
+            {
+                "flowJobName": "cdc_one",
+                "includeFlowInfo": False,
+                "excludeBatches": False,
+                "excludeSnapshotStatus": False,
+            }
+        ]
         assert response.cdc_status is None
 
     def test_include_flow_info_request_body(self, tmp_path: Path, monkeypatch):
@@ -172,9 +179,86 @@ class TestGetMirrorStatus:
 
         response = peerdb.get_mirror_status("cdc_one", include_flow_info=True)
 
-        assert calls == [{"flowJobName": "cdc_one", "includeFlowInfo": True}]
+        assert calls == [
+            {
+                "flowJobName": "cdc_one",
+                "includeFlowInfo": True,
+                "excludeBatches": False,
+                "excludeSnapshotStatus": False,
+            }
+        ]
         assert response.cdc_status is not None
         assert response.cdc_status.rows_synced == 0
+
+    def test_exclude_batches_request_body(self, tmp_path: Path, monkeypatch):
+        """Verify CDC batch history can be excluded."""
+        peerdb = make_peerdb(tmp_path)
+        calls: list[dict] = []
+        fake_mirror_status_post(
+            monkeypatch,
+            calls,
+            mirror_status_data("cdc_one", cdc_status={"rowsSynced": "0"}),
+        )
+
+        response = peerdb.get_mirror_status("cdc_one", include_flow_info=True, exclude_batches=True)
+
+        assert calls == [
+            {
+                "flowJobName": "cdc_one",
+                "includeFlowInfo": True,
+                "excludeBatches": True,
+                "excludeSnapshotStatus": False,
+            }
+        ]
+        assert response.cdc_status is not None
+        assert response.cdc_status.cdc_batches == []
+
+    def test_exclude_snapshot_status_request_body(self, tmp_path: Path, monkeypatch):
+        """Verify initial-load snapshot status can be excluded."""
+        peerdb = make_peerdb(tmp_path)
+        calls: list[dict] = []
+        fake_mirror_status_post(
+            monkeypatch,
+            calls,
+            mirror_status_data("cdc_one", cdc_status={"rowsSynced": "0"}),
+        )
+
+        peerdb.get_mirror_status("cdc_one", include_flow_info=True, exclude_snapshot_status=True)
+
+        assert calls == [
+            {
+                "flowJobName": "cdc_one",
+                "includeFlowInfo": True,
+                "excludeBatches": False,
+                "excludeSnapshotStatus": True,
+            }
+        ]
+
+    def test_exclude_batches_and_snapshot_status_request_body(self, tmp_path: Path, monkeypatch):
+        """Verify both exclude flags can be combined."""
+        peerdb = make_peerdb(tmp_path)
+        calls: list[dict] = []
+        fake_mirror_status_post(
+            monkeypatch,
+            calls,
+            mirror_status_data("cdc_one", cdc_status={"rowsSynced": "0"}),
+        )
+
+        peerdb.get_mirror_status(
+            "cdc_one",
+            include_flow_info=True,
+            exclude_batches=True,
+            exclude_snapshot_status=True,
+        )
+
+        assert calls == [
+            {
+                "flowJobName": "cdc_one",
+                "includeFlowInfo": True,
+                "excludeBatches": True,
+                "excludeSnapshotStatus": True,
+            }
+        ]
 
     def test_parses_cdc_status(self, tmp_path: Path, monkeypatch):
         """Verify CDC status details are parsed from the response."""

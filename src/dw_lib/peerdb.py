@@ -2180,12 +2180,16 @@ class PeerDB:
         return self._get_mirror_status_or_none(flow_job_name) is not None
 
     def get_mirror_status(
-        self, flow_job_name: str, include_flow_info: bool = False
+        self,
+        flow_job_name: str,
+        include_flow_info: bool = False,
+        exclude_batches: bool = False,
+        exclude_snapshot_status: bool = False,
     ) -> MirrorStatusResponse:
         """
         Fetch the current status of a mirror.
 
-        Sends `POST v1/mirrors/status` with `{flowJobName, includeFlowInfo}`.
+        Sends `POST v1/mirrors/status` with `{flowJobName, includeFlowInfo, excludeBatches, excludeSnapshotStatus}`.
         HTTP 404 means the mirror does not exist.
 
         See:
@@ -2197,6 +2201,10 @@ class PeerDB:
             flow_job_name: Mirror (flow job) name to inspect.
             include_flow_info: Whether to include non-status flow details,
                 such as mirror configuration and initial-load information.
+            exclude_batches: Whether to omit CDC batch history from the
+                response.
+            exclude_snapshot_status: Whether to omit initial-load snapshot
+                status from the response.
 
         Returns:
             MirrorStatusResponse: Status including `current_flow_state`, and
@@ -2207,7 +2215,12 @@ class PeerDB:
             GetMirrorStatusException: If the request fails otherwise.
         """
         url = self.config.peerdb_api_url.join("v1/mirrors/status")
-        data = {"flowJobName": flow_job_name, "includeFlowInfo": include_flow_info}
+        data = {
+            "flowJobName": flow_job_name,
+            "includeFlowInfo": include_flow_info,
+            "excludeBatches": exclude_batches,
+            "excludeSnapshotStatus": exclude_snapshot_status,
+        }
 
         try:
             response = requests.post(

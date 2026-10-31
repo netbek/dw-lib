@@ -208,14 +208,19 @@ class TestDebug(PeerDBPostgresTest):
             "Source peer": {
                 "URL": make_url("postgresql+psycopg2://postgres:postgres@localhost:25432/test"),
                 "Connection test": "OK",
-                "max_replication_slots >= 4": "OK",
-                "max_wal_senders >= 1": "OK",
-                "wal_level = logical": "OK",
+                "max_replication_slots": "OK (4)",
+                "max_wal_senders": "OK (2)",
+                "wal_level": "OK (logical)",
             },
             "Destination peer": {
                 "URL": make_url("postgresql+psycopg2://postgres:postgres@localhost:25432/test"),
                 "Connection test": "OK",
             },
+            "Missing publications": [],
+            "Unused publications": [],
+            "Peers": [],
+            "Mirrors": [],
+            "Replication slots": [],
         }
         assert actual == expected
 

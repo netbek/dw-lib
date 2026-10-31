@@ -1539,7 +1539,7 @@ class PeerDB:
 
         Verifies the PeerDB API, source/destination adapter connections, and
         source Postgres settings (`max_replication_slots >= 4`,
-        `max_wal_senders >= 1`, `wal_level = logical`). Prints or returns
+        `max_wal_senders >= 1`, `wal_level = logical`). Prints and returns
         missing/unused publications, peers, mirrors, and replication slots.
 
         See:
@@ -1549,9 +1549,12 @@ class PeerDB:
             echo: Whether to print Rich tables to the console.
 
         Returns:
-            dict[str, Any]: Nested `API` / `Source peer` / `Destination peer`
-                check results. When `echo` is False, also includes missing and
-                unused publications, peers, mirrors, and replication slots.
+            dict[str, Any]: All check and detail sections. Checks are `API`,
+                `Source peer`, and `Destination peer`. Detail sections are
+                `Missing publications`, `Unused publications`, `Peers`,
+                `Mirrors`, and `Replication slots`; each is a list of dicts or
+                None when it cannot be collected. When `echo` is True the same
+                data is printed.
         """
         # TODO Table mappings: check whether the source schema and table exists, check whether the destination schema exists
 
@@ -1579,48 +1582,74 @@ class PeerDB:
 
             return table
 
+        def safe_get(func, default=None):
+            try:
+                return func()
+            except Exception:  # noqa: BLE001
+                return default
+
+        def get_adapter(peer_name: str) -> ClickHouseAdapter | PostgresAdapter | None:
+            return safe_get(lambda: self.get_peer_adapter(peer_name))
+
+        def get_url(adapter: ClickHouseAdapter | PostgresAdapter | None) -> Any | None:
+            if not adapter:
+                return None
+            return safe_get(lambda: adapter.settings.to_sqlalchemy_url())
+
+        def can_connect(adapter: ClickHouseAdapter | PostgresAdapter | None) -> bool:
+            if not adapter:
+                return False
+            return bool(safe_get(adapter.can_connect, False))
+
         try:
             self.get_settings()
             api_can_connect = True
         except Exception:  # noqa: BLE001
             api_can_connect = False
 
-        source_adapter = self.get_peer_adapter(PEERDB_SOURCE_PEER)
-        destination_adapter = self.get_peer_adapter(PEERDB_DESTINATION_PEER)
-        source_can_connect = source_adapter.can_connect()
-        destination_can_connect = destination_adapter.can_connect()
+        source_adapter = get_adapter(PEERDB_SOURCE_PEER)
+        destination_adapter = get_adapter(PEERDB_DESTINATION_PEER)
+        source_can_connect = can_connect(source_adapter)
+        destination_can_connect = can_connect(destination_adapter)
 
         # Check settings of source peer
         # https://docs.peerdb.io/usecases/Real-time%20CDC/postgres-to-postgres#prerequisites
         max_replication_slots = None
         max_wal_senders = None
         wal_level = None
+        max_replication_slots_is_valid = False
+        max_wal_senders_is_valid = False
+        wal_level_is_valid = False
 
-        if source_can_connect:
-            with source_adapter.create_client() as (_, cur):
-                cur.execute("""
-                    SELECT
-                        current_setting('max_replication_slots')::int,
-                        current_setting('max_wal_senders')::int,
-                        lower(current_setting('wal_level'));
-                    """)
-                max_replication_slots, max_wal_senders, wal_level = cur.fetchone()
+        if source_can_connect and source_adapter:
+            try:
+                with source_adapter.create_client() as (_, cur):
+                    cur.execute("""
+                        SELECT
+                            current_setting('max_replication_slots')::int,
+                            current_setting('max_wal_senders')::int,
+                            lower(current_setting('wal_level'));
+                        """)
+                    max_replication_slots, max_wal_senders, wal_level = cur.fetchone()
 
-            max_replication_slots_is_valid = max_replication_slots >= 4
-            max_wal_senders_is_valid = max_wal_senders >= 1
-            wal_level_is_valid = wal_level == "logical"
-        else:
-            max_replication_slots_is_valid = False
-            max_wal_senders_is_valid = False
-            wal_level_is_valid = False
+                max_replication_slots_is_valid = max_replication_slots >= 4
+                max_wal_senders_is_valid = max_wal_senders >= 1
+                wal_level_is_valid = wal_level == "logical"
+            except Exception:  # noqa: BLE001
+                max_replication_slots = None
+                max_wal_senders = None
+                wal_level = None
+                max_replication_slots_is_valid = False
+                max_wal_senders_is_valid = False
+                wal_level_is_valid = False
 
-        result = {
+        checks = {
             "API": {
-                "URL": self.config.peerdb_api_url,
+                "URL": safe_get(lambda: self.config.peerdb_api_url),
                 "Connection test": create_message(api_can_connect),
             },
             "Source peer": {
-                "URL": source_adapter.settings.to_sqlalchemy_url(),
+                "URL": get_url(source_adapter),
                 "Connection test": create_message(source_can_connect),
                 "max_replication_slots": (
                     f"{create_message(max_replication_slots_is_valid)} ({max_replication_slots})"
@@ -1631,13 +1660,13 @@ class PeerDB:
                 "wal_level": f"{create_message(wal_level_is_valid)} ({wal_level})",
             },
             "Destination peer": {
-                "URL": destination_adapter.settings.to_sqlalchemy_url(),
+                "URL": get_url(destination_adapter),
                 "Connection test": create_message(destination_can_connect),
             },
         }
 
-        def get_details() -> dict[str, list[dict[str, Any]]]:
-            missing_publications_data = [
+        def get_missing_publications() -> list[dict[str, Any]]:
+            return [
                 {
                     "publication": publication.publication_name,
                     "schema": publication.relation.schema_,
@@ -1645,7 +1674,9 @@ class PeerDB:
                 }
                 for publication in self.list_missing_publications()
             ]
-            unused_publications_data = [
+
+        def get_unused_publications() -> list[dict[str, Any]]:
+            return [
                 {
                     "publication": publication.publication_name,
                     "schema": publication.relation.schema_,
@@ -1653,8 +1684,11 @@ class PeerDB:
                 }
                 for publication in self.list_unused_publications()
             ]
-            peers_data = [peer.model_dump() for peer in self.list_peers().items]
 
+        def get_peers() -> list[dict[str, Any]]:
+            return [peer.model_dump() for peer in self.list_peers().items]
+
+        def get_mirrors_and_slots() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             mirrors_data = []
             mirrors = self.list_mirrors(include_replication_slot=True).mirrors
             for mirror in mirrors:
@@ -1690,26 +1724,36 @@ class PeerDB:
                 if mirror.replication_slot
             ]
 
-            return {
-                "Missing publications": missing_publications_data,
-                "Unused publications": unused_publications_data,
-                "Peers": peers_data,
-                "Mirrors": mirrors_data,
-                "Replication slots": replication_slots_data,
-            }
+            return mirrors_data, replication_slots_data
+
+        mirrors_and_slots = safe_get(get_mirrors_and_slots)
+        if mirrors_and_slots is None:
+            mirrors_data = None
+            replication_slots_data = None
+        else:
+            mirrors_data, replication_slots_data = mirrors_and_slots
+
+        details = {
+            "Missing publications": safe_get(get_missing_publications),
+            "Unused publications": safe_get(get_unused_publications),
+            "Peers": safe_get(get_peers),
+            "Mirrors": mirrors_data,
+            "Replication slots": replication_slots_data,
+        }
+
+        result = {**checks, **details}
 
         if echo:
-            for i, item in enumerate(result.items()):
-                k1, v1 = item
-                self._console.print(f"{'\n' if i > 0 else ''}{k1}:")
-                for k2, v2 in v1.items():
-                    self._console.print(f"  {k2}: {v2}")
-
-            details = get_details()
+            for i, (title, values) in enumerate(checks.items()):
+                self._console.print(f"{'\n' if i > 0 else ''}{title}:")
+                for name, value in values.items():
+                    self._console.print(f"  {name}: {value}")
 
             # Missing publications
             self._console.print()
-            if details["Missing publications"]:
+            if details["Missing publications"] is None:
+                self._console.print("Missing publications: [red]Not OK (unable to check)[/red]")
+            elif details["Missing publications"]:
                 self._console.print(
                     render_table(details["Missing publications"], title="Missing publications")
                 )
@@ -1718,7 +1762,9 @@ class PeerDB:
 
             # Unused publications
             self._console.print()
-            if details["Unused publications"]:
+            if details["Unused publications"] is None:
+                self._console.print("Unused publications: [red]Not OK (unable to check)[/red]")
+            elif details["Unused publications"]:
                 self._console.print(
                     render_table(details["Unused publications"], title="Unused publications")
                 )
@@ -1727,27 +1773,34 @@ class PeerDB:
 
             # Peers
             self._console.print()
-            if details["Peers"]:
+            if details["Peers"] is None:
+                self._console.print("Peers: [red]Not OK (unable to check)[/red]")
+            elif details["Peers"]:
                 self._console.print(render_table(details["Peers"], title="Peers"))
             else:
                 self._console.print("Peers: None")
 
             # Mirrors
             self._console.print()
-            if details["Mirrors"]:
+            if details["Mirrors"] is None:
+                self._console.print("Mirrors: [red]Not OK (unable to check)[/red]")
+            elif details["Mirrors"]:
                 self._console.print(render_table(details["Mirrors"], title="Mirrors"))
             else:
                 self._console.print("Mirrors: None")
 
             # Replication slots
             self._console.print()
-            if details["Replication slots"]:
+            if details["Replication slots"] is None:
+                self._console.print("Replication slots: [red]Not OK (unable to check)[/red]")
+            elif details["Replication slots"]:
                 self._console.print(
                     render_table(details["Replication slots"], title="Replication slots")
                 )
             else:
-                has_running_mirror = any(
-                    mirror["status"] == "Running" for mirror in details["Mirrors"]
+                mirrors = details["Mirrors"]
+                has_running_mirror = isinstance(mirrors, list) and any(
+                    mirror["status"] == "Running" for mirror in mirrors
                 )
                 if has_running_mirror:
                     self._console.print(
@@ -1755,11 +1808,6 @@ class PeerDB:
                     )
                 else:
                     self._console.print("Replication slots: None")
-        else:
-            try:
-                result.update(get_details())
-            except Exception:  # noqa: BLE001,S110
-                pass
 
         return result
 

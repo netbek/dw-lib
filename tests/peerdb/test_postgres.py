@@ -224,6 +224,39 @@ class TestDebug(PeerDBPostgresTest):
         }
         assert actual == expected
 
+    def test_unavailable_values_do_not_crash(self, peerdb: PeerDB, monkeypatch):
+        """Verify `debug` returns every key when checks cannot be collected."""
+
+        def raise_error(*args, **kwargs):
+            raise RuntimeError("unavailable")
+
+        monkeypatch.setattr(peerdb, "get_settings", raise_error)
+        monkeypatch.setattr(peerdb, "get_peer_adapter", raise_error)
+        monkeypatch.setattr(peerdb, "list_missing_publications", raise_error)
+        monkeypatch.setattr(peerdb, "list_unused_publications", raise_error)
+        monkeypatch.setattr(peerdb, "list_peers", raise_error)
+        monkeypatch.setattr(peerdb, "list_mirrors", raise_error)
+
+        actual = peerdb.debug()
+
+        assert actual["API"]["Connection test"] == "Not OK"
+        assert actual["Source peer"] == {
+            "URL": None,
+            "Connection test": "Not OK",
+            "max_replication_slots": "Not OK (None)",
+            "max_wal_senders": "Not OK (None)",
+            "wal_level": "Not OK (None)",
+        }
+        assert actual["Destination peer"] == {
+            "URL": None,
+            "Connection test": "Not OK",
+        }
+        assert actual["Missing publications"] is None
+        assert actual["Unused publications"] is None
+        assert actual["Peers"] is None
+        assert actual["Mirrors"] is None
+        assert actual["Replication slots"] is None
+
 
 class TestCreatePeer(PeerDBPostgresTest):
     """Tests for `PeerDB.create_peer` creation and idempotency."""

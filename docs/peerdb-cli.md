@@ -55,6 +55,8 @@ Checks, in order:
 6. Mirrors on the server, with their current status and replication-slot name.
 7. Replication slots. It reports `Not OK` when no mirror has a replication slot and at least one mirror is `Running`.
 
+Each section is checked independently. If a section cannot be collected, for example because a connection fails, it reports `Not OK (unable to check)` instead of failing.
+
 The command does not check table mappings, destination schemas or whether a sync is healthy beyond the reported status. It also does not wait for any workflow to change state.
 
 Missing publications only include config entries with an explicit `publication_name`. PeerDB-managed publications are ignored. Unused publications can include PeerDB-managed publications when the config leaves `publication_name` empty.

@@ -1758,7 +1758,7 @@ class PeerDB:
         else:
             try:
                 result.update(get_details())
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001,S110
                 pass
 
         return result

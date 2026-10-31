@@ -1,6 +1,6 @@
 [tools]
 gh = "latest"
-node = "24"
+node = "26"
 pnpm = "latest"
 python = "3.13"
 ripgrep = "latest"

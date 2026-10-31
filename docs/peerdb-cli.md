@@ -49,11 +49,13 @@ Checks, in order:
 
 1. The PeerDB API, by requesting dynamic settings.
 2. The source and destination database connections.
-3. The source Postgres settings `max_replication_slots >= 4`, `max_wal_senders >= 1` and `wal_level = logical`.
+3. The source Postgres settings `max_replication_slots` (OK when at least 4), `max_wal_senders` (OK when at least 1) and `wal_level` (OK when `logical`), each with its current value.
 4. Missing and unused publications, by comparing the local config with `pg_publication_tables`.
 5. Peers on the server.
 6. Mirrors on the server, with their current status and replication-slot name.
 7. Replication slots. It reports `Not OK` when no mirror has a replication slot and at least one mirror is `Running`.
+
+Each section is checked independently. If a section cannot be collected, for example because a connection fails, it reports `Not OK (unable to check)` instead of failing.
 
 The command does not check table mappings, destination schemas or whether a sync is healthy beyond the reported status. It also does not wait for any workflow to change state.
 

@@ -24,6 +24,7 @@ Follow these steps when the user asks to upgrade PeerDB.
 
 2. Search and replace the current and next version tags in these files:
 
+    - `docs/peerdb-cli.md`
     - `examples/cli/.env`
     - `examples/cli/peerdb.yaml`
     - `infra/peerdb/.env`

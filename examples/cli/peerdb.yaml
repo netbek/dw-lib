@@ -20,7 +20,7 @@ client:
   # mirror_resume_polling_timeout: 180
   # mirror_resync_polling_timeout: 300
 
-# Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/internal/dynamicconf.go
+# Reference: https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/internal/dynamicconf.go
 settings:
   PEERDB_CLICKHOUSE_AWS_S3_BUCKET_NAME: "peerdb"
   PEERDB_CLICKHOUSE_BINARY_FORMAT: "raw"
@@ -87,7 +87,7 @@ mirrors:
       - source_table_identifier: public.table_1
         destination_table_identifier: table_1
         # Optional table mapping options. See:
-        # https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L43
+        # https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L43
         # `partition_key` partitions the initial snapshot (Postgres and ClickHouse).
         partition_key: id
         # The remaining options apply to ClickHouse destinations only.

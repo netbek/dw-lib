@@ -125,6 +125,15 @@ services:
     ports:
       - 8085:8080
 
+  peerdb-flow-migrate:
+    image: ${PEERDB_FLOW_API_IMAGE}
+    entrypoint: ["/home/peerdb/peer-flow", "migrate"]
+    environment:
+      <<: *catalog-env
+    depends_on:
+      catalog:
+        condition: service_healthy
+
   peerdb-flow-api:
     image: ${PEERDB_FLOW_API_IMAGE}
     restart: unless-stopped
@@ -137,6 +146,8 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
+      peerdb-flow-migrate:
+        condition: service_completed_successfully
       temporal-create-namespace:
         condition: service_completed_successfully
 
@@ -146,6 +157,8 @@ services:
     environment:
       <<: [*catalog-env, *peerdb-flow-worker-env, *garage-env]
     depends_on:
+      peerdb-flow-migrate:
+        condition: service_completed_successfully
       temporal-create-namespace:
         condition: service_completed_successfully
 
@@ -157,6 +170,8 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
+      peerdb-flow-migrate:
+        condition: service_completed_successfully
       temporal-create-namespace:
         condition: service_completed_successfully
 
@@ -175,6 +190,8 @@ services:
     depends_on:
       catalog:
         condition: service_healthy
+      peerdb-flow-migrate:
+        condition: service_completed_successfully
 
   peerdb-ui:
     image: ${PEERDB_UI_IMAGE}

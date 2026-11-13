@@ -64,6 +64,12 @@ services:
       service: temporal-ui
     stop_grace_period: 0s
 
+  peerdb-flow-migrate:
+    extends:
+      file: ../infra/peerdb/docker-compose.yml
+      service: peerdb-flow-migrate
+    stop_grace_period: 0s
+
   peerdb-flow-api:
     extends:
       file: ../infra/peerdb/docker-compose.yml

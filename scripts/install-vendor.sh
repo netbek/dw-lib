@@ -34,7 +34,7 @@ install_vendor() {
     checkout_tag vendor/dbt v1.12.5
     checkout_branch vendor/dbt-adapters main
     checkout_tag vendor/dbt-clickhouse v1.10.3
-    checkout_tag vendor/peerdb v0.37.10
+    checkout_tag vendor/peerdb v0.37.15
 
     echo "${GREEN}Vendor submodules ready (checkout only, nothing staged).${RESET}"
 }

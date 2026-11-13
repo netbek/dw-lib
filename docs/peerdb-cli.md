@@ -1,6 +1,6 @@
 # PeerDB CLI
 
-The `peerdb` commands wrap the `PeerDB` client in `src/dw_lib/peerdb.py`. They read `peerdb.yaml`, call the PeerDB REST API and, for some checks, connect directly to the source and destination databases. The commands target PeerDB v0.37.10.
+The `peerdb` commands wrap the `PeerDB` client in `src/dw_lib/peerdb.py`. They read `peerdb.yaml`, call the PeerDB REST API and, for some checks, connect directly to the source and destination databases. The commands target PeerDB v0.37.15.
 
 ## Configuration
 

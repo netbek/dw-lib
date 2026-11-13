@@ -115,7 +115,7 @@ DEFAULT_MIRROR_RESYNC_POLLING_TIMEOUT = 300
 PEERDB_SOURCE_PEER = "source"
 PEERDB_DESTINATION_PEER = "destination"
 
-# https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
+# https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L299
 DIALECT_TO_PEERDB_TYPE_MAP = {
     Dialects.POSTGRES: 3,
     Dialects.CLICKHOUSE: 8,
@@ -129,7 +129,7 @@ class FlowStatus:
     Mirrors the `FlowStatus` enum in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L586
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L601
     """
 
     STATUS_UNKNOWN = 0
@@ -186,7 +186,7 @@ class ListReplicationSlotsItem(BaseModel):
 
     See:
         https://www.postgresql.org/docs/17/view-pg-replication-slots.html
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/connectors/postgres/client.go#L295
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/connectors/postgres/client.go#L295
 
     Attributes:
         slot_name: Name of the replication slot.
@@ -246,7 +246,7 @@ class DynamicSetting(BaseModel):
     Mirrors the `DynamicSetting` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L39
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L39
 
     Attributes:
         name: Setting name.
@@ -276,7 +276,7 @@ class GetDynamicSettingsResponse(BaseModel):
     Response listing PeerDB dynamic settings.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L49
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L49
 
     Attributes:
         settings: Dynamic settings returned by the server.
@@ -290,7 +290,7 @@ class ClickHouseConfig(BaseModel):
     ClickHouse peer configuration as expected by the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L193
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L202
 
     Attributes:
         host: ClickHouse host.
@@ -323,7 +323,7 @@ class ClickHousePeer(BaseModel):
     ClickHouse peer payload for the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L193
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L202
 
     Attributes:
         type: Peer type discriminator, always `CLICKHOUSE`.
@@ -341,7 +341,7 @@ class PostgresConfig(BaseModel):
     Postgres peer configuration as expected by the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L123
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L132
 
     Attributes:
         host: Postgres host.
@@ -363,7 +363,7 @@ class PostgresPeer(BaseModel):
     Postgres peer payload for the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L123
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L132
 
     Attributes:
         type: Peer type discriminator, always `POSTGRES`.
@@ -381,8 +381,8 @@ class PeerInfoResponse(BaseModel):
     Peer details with the live PeerDB version.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L265
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/peer_data.go#L46
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L265
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/peer_data.go#L46
 
     Attributes:
         peer: ClickHouse or Postgres peer payload.
@@ -398,8 +398,8 @@ class PeerTypeResponse(BaseModel):
     Peer type name reported by the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L270
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/peer_data.go#L87
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L270
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/peer_data.go#L87
 
     Attributes:
         peer_type: Peer type string (e.g. `POSTGRES`, `CLICKHOUSE`).
@@ -413,7 +413,7 @@ class PeerListItem(BaseModel):
     Single peer entry from the peer list API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L274
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L274
 
     Attributes:
         name: Peer name.
@@ -429,8 +429,8 @@ class ListPeersResponse(BaseModel):
     Peer list split into source, destination, and combined items.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L279
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/peer_data.go#L106
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L279
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/peer_data.go#L106
 
     Attributes:
         destination_items: Destination peers.
@@ -448,8 +448,8 @@ class RawCreatePeerResponse(BaseModel):
     Raw create-peer response from the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L98
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L606
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L98
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L621
 
     Attributes:
         message: Server message.
@@ -489,7 +489,7 @@ class RawCreateMirrorResponse(BaseModel):
     Raw create-mirror response from the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L12
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L12
 
     Attributes:
         workflow_id: Temporal workflow ID for the new mirror.
@@ -562,7 +562,7 @@ class CDCMirrorStatusColumnSetting(BaseModel):
     Mirrors the `ColumnSetting` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L25
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L25
 
     Attributes:
         source_name: Source column name.
@@ -588,7 +588,7 @@ class CDCMirrorStatusStructuredIngestionTableConfig(BaseModel):
     Mirrors the `StructuredIngestionTableConfig` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L64
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L75
 
     Attributes:
         enabled: Whether structured ingestion is enabled.
@@ -607,7 +607,7 @@ class CDCMirrorStatusTableMapping(BaseModel):
     Mirrors the `TableMapping` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L43
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L43
 
     Attributes:
         source_table_identifier: Source `schema.table` identifier.
@@ -650,7 +650,7 @@ class CDCMirrorStatusQueryCdcConfig(BaseModel):
     Mirrors the `QueryCdcConfig` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L87
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L98
 
     Attributes:
         pull_sync_parallelism: Number of tables queried and staged
@@ -672,7 +672,7 @@ class CDCMirrorStatusBigQueryCdcConfig(BaseModel):
     Mirrors the `BigqueryCdcConfig` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L98
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L113
 
     Attributes:
         replication_method: BigQuery replication method.
@@ -690,7 +690,7 @@ class CDCMirrorStatusConfig(BaseModel):
     Mirrors the `FlowConnectionConfigs` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L105
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L120
 
     Attributes:
         flow_job_name: Mirror (flow job) name.
@@ -773,7 +773,7 @@ class CDCMirrorStatusClone(BaseModel):
     Mirrors the `CloneTableSummary` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L337
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L337
 
     Attributes:
         table_name: Destination table name.
@@ -810,7 +810,7 @@ class CDCMirrorStatusSnapshot(BaseModel):
     Mirrors the `SnapshotStatus` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L351
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L351
 
     Attributes:
         clones: Initial-load summaries per table.
@@ -826,7 +826,7 @@ class CDCMirrorStatusBatch(BaseModel):
     Mirrors the `CDCBatch` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L124
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L124
 
     Attributes:
         start_lsn: Batch start LSN.
@@ -852,7 +852,7 @@ class CDCMirrorStatus(BaseModel):
     Mirrors the `CDCMirrorStatus` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L353
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L353
 
     Attributes:
         config: Mirror configuration.
@@ -876,9 +876,9 @@ class MirrorStatusResponse(BaseModel):
     Current status of a mirror.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L362
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/mirror_status.go#L68
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L586
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L362
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/mirror_status.go#L68
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L601
 
     Attributes:
         created_at: When the mirror workflow was created.
@@ -911,8 +911,8 @@ class ListMirrorsItem(BaseModel):
     Single mirror entry from the mirror list API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L447
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/mirror_status.go#L26
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L460
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/mirror_status.go#L26
 
     Attributes:
         id: Mirror ID.
@@ -944,7 +944,7 @@ class ListMirrorsResponse(BaseModel):
     Response listing mirrors.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L460
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L473
 
     Attributes:
         mirrors: Mirrors sorted by name by this library.
@@ -1051,7 +1051,7 @@ class ConfigPeerPeerDBClickHouse(BaseModel):
     PeerDB API payload wrapper for a ClickHouse peer.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L299
 
     Attributes:
         type: PeerDB numeric type for ClickHouse (8).
@@ -1133,7 +1133,7 @@ class ConfigPeerPeerDBPostgres(BaseModel):
     PeerDB API payload wrapper for a Postgres peer.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L299
 
     Attributes:
         type: PeerDB numeric type for Postgres (3).
@@ -1170,7 +1170,7 @@ class ConfigMirrorColumnSetting(BaseModel):
     and `partitioning` the destination `PARTITION BY` (1-based).
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L25
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L25
 
     Attributes:
         source_name: Source column name.
@@ -1196,7 +1196,7 @@ class ConfigMirrorTableMapping(BaseModel):
     Mirrors the `TableMapping` message in the PeerDB API.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/flow.proto#L43
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/flow.proto#L43
 
     Attributes:
         source_table_identifier: Source `schema.table` identifier.
@@ -1244,8 +1244,8 @@ class ConfigMirror(BaseModel):
     Mirrors `FlowConnectionConfigs` fields used by `CreateCDCFlow`.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L12
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L158
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L12
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L160
 
     Attributes:
         flow_job_name: Mirror (flow job) name.
@@ -1358,9 +1358,9 @@ class PeerDB:
     lifecycle helpers, and source-database introspection.
 
     See:
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/api.go
-        https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/api.go
+        https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go
 
     Attributes:
         _config_file: Resolved config file path.
@@ -1390,7 +1390,7 @@ class PeerDB:
         API numeric types (`POSTGRES=3`, `CLICKHOUSE=8`).
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/peers.proto#L289
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/peers.proto#L299
 
         Returns:
             Config: Parsed client settings, peers, mirrors, and settings.
@@ -1514,8 +1514,8 @@ class PeerDB:
         Sends `GET v1/version`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L823
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/version.go#L10
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L843
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/version.go#L10
 
         Returns:
             bool: True on HTTP success, False on HTTP or connection errors.
@@ -1845,8 +1845,8 @@ class PeerDB:
         Sends `GET v1/dynamic_settings`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L644
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/settings.go#L17
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L657
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/settings.go#L17
 
         Returns:
             GetDynamicSettingsResponse: Settings returned by the server.
@@ -1881,8 +1881,8 @@ class PeerDB:
         Sends `POST v1/dynamic_settings` with `{name, value}` per entry.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L650
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/settings.go#L61
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L663
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/settings.go#L61
 
         Args:
             settings: Mapping of setting names to new values.
@@ -1939,8 +1939,8 @@ class PeerDB:
         Sends `GET v1/peers/info/{peer_name}`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L806
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/peer_data.go#L46
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L826
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/peer_data.go#L46
 
         Args:
             peer_name: Peer name to inspect.
@@ -1978,8 +1978,8 @@ class PeerDB:
         Sends `GET v1/peers/type/{peer_name}`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L812
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/peer_data.go#L87
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L832
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/peer_data.go#L87
 
         Args:
             peer_name: Peer name to inspect.
@@ -2020,8 +2020,8 @@ class PeerDB:
         `CREATED`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L598
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L606
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L611
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L621
 
         Args:
             peer: Peer payload as built from the local config.
@@ -2100,8 +2100,8 @@ class PeerDB:
         `POST v1/peers/drop` with `{peerName}`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L604
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L631
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L617
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L646
 
         Args:
             peer_name: Peer name to drop.
@@ -2197,8 +2197,8 @@ class PeerDB:
         Sends `GET v1/peers/list`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L817
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/peer_data.go#L106
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L837
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/peer_data.go#L106
 
         Returns:
             ListPeersResponse: Source, destination, and combined peer items.
@@ -2272,9 +2272,9 @@ class PeerDB:
         HTTP 404 means the mirror does not exist.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L772
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/mirror_status.go#L68
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/mirror_status.go#L76
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L785
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/mirror_status.go#L68
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/mirror_status.go#L76
 
         Args:
             flow_job_name: Mirror (flow job) name to inspect.
@@ -2384,8 +2384,8 @@ class PeerDB:
         `{connection_configs}` and requires a `workflowId`.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L611
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L158
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L624
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L160
 
         Args:
             mirror: Mirror payload as built from the local config.
@@ -2512,8 +2512,8 @@ class PeerDB:
         until the mirror disappears.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L430
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L778
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L437
 
         Args:
             flow_job_name: Mirror (flow job) name to drop.
@@ -2629,9 +2629,9 @@ class PeerDB:
         terminated cannot be resynced.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L430
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L506
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L778
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L437
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L521
 
         Args:
             flow_job_name: Mirror (flow job) name to resync.
@@ -2717,9 +2717,9 @@ class PeerDB:
         message. A terminated mirror raises an error.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L430
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L490
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L778
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L437
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L505
 
         Args:
             flow_job_name: Mirror (flow job) name to pause.
@@ -2794,9 +2794,9 @@ class PeerDB:
         `STATUS_RUNNING`. Other non-terminated statuses return a no-op message.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L765
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L430
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/handler.go#L498
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L778
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L437
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/handler.go#L513
 
         Args:
             flow_job_name: Mirror (flow job) name to resume.
@@ -2927,9 +2927,9 @@ class PeerDB:
         slot from the source database.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/protos/route.proto#L753
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/cmd/mirror_status.go#L26
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/connectors/postgres/client.go#L888
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/protos/route.proto#L766
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/cmd/mirror_status.go#L26
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/connectors/postgres/client.go#L888
 
         Args:
             include_replication_slot: Whether to attach replication slot details.
@@ -3060,14 +3060,14 @@ class PeerDB:
         Modeled on the PeerDB slot query.
 
         See:
-            https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/connectors/postgres/client.go#L295
+            https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/connectors/postgres/client.go#L295
             https://www.postgresql.org/docs/17/view-pg-replication-slots.html
 
         Returns:
             list[ListReplicationSlotsItem]: Replication slots for the source
                 database.
         """
-        # Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.10/flow/connectors/postgres/client.go#L295
+        # Source: https://github.com/PeerDB-io/peerdb/blob/v0.37.15/flow/connectors/postgres/client.go#L295
         POSTGRES_13 = 130000
         POSTGRES_16 = 160000
 
